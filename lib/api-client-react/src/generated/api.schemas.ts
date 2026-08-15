@@ -19,6 +19,142 @@ export interface AiStatus {
 /**
  * @nullable
  */
+export type PlanningRequestPlanningStyle = typeof PlanningRequestPlanningStyle[keyof typeof PlanningRequestPlanningStyle] | null;
+
+
+export const PlanningRequestPlanningStyle = {
+  lighter: 'lighter',
+  balanced: 'balanced',
+  fuller: 'fuller',
+} as const;
+
+export interface PlanningTimeWindow {
+  /** @pattern ^\d{2}:\d{2}$ */
+  startTime: string;
+  /** @pattern ^\d{2}:\d{2}$ */
+  endTime: string;
+}
+
+export interface PlanningRequest {
+  /**
+     * @minLength 1
+     * @maxLength 2000
+     */
+  intention: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  currentDate: string;
+  /** @pattern ^\d{2}:\d{2}$ */
+  currentTime: string;
+  /** @maxItems 12 */
+  availableTime: PlanningTimeWindow[];
+  /** @nullable */
+  planningStyle?: PlanningRequestPlanningStyle;
+  useHistoricalContext?: boolean;
+  /**
+     * @maxLength 4000
+     * @nullable
+     */
+  historicalContext?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type ProposedActivityCategory = typeof ProposedActivityCategory[keyof typeof ProposedActivityCategory] | null;
+
+
+export const ProposedActivityCategory = {
+  work: 'work',
+  recovery: 'recovery',
+  managing: 'managing',
+  social: 'social',
+  fun: 'fun',
+} as const;
+
+export interface ProposedActivity {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate: string;
+  /** @pattern ^\d{2}:\d{2}$ */
+  startTime: string;
+  /** @pattern ^\d{2}:\d{2}$ */
+  endTime: string;
+  /** @nullable */
+  category: ProposedActivityCategory;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  note: string | null;
+}
+
+export interface PlanningTimeBlock {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate: string;
+  /** @pattern ^\d{2}:\d{2}$ */
+  startTime: string;
+  /** @pattern ^\d{2}:\d{2}$ */
+  endTime: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
+}
+
+export interface PlanningConflict {
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  description: string;
+  /**
+     * @maxItems 10
+     * @items.minLength 1
+     * @items.maxLength 200
+     */
+  relatedActivityTitles: string[];
+}
+
+export interface PlanningNotFittedItem {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
+}
+
+export interface PlanningProposal {
+  /** @maxItems 50 */
+  proposedActivities: ProposedActivity[];
+  /** @maxItems 50 */
+  buffers: PlanningTimeBlock[];
+  /** @maxItems 50 */
+  restPeriods: PlanningTimeBlock[];
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 500
+     */
+  assumptions: string[];
+  /** @maxItems 20 */
+  conflicts: PlanningConflict[];
+  /** @maxItems 50 */
+  didNotFit: PlanningNotFittedItem[];
+}
+
+/**
+ * @nullable
+ */
 export type ActivityCategory = typeof ActivityCategory[keyof typeof ActivityCategory] | null;
 
 

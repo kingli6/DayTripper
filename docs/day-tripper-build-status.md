@@ -4,13 +4,14 @@ Last reviewed: 2026-08-15
 
 ## Current milestone
 
-**Prompt 8 — Categories and neutral day distribution complete**
+**Prompt 9 — AI planning contract and server foundation complete**
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
 are complete. Prompt 7 is complete: the existing responsive activity surface
 supports safe editing and destructive-action recovery. Prompt 8 is complete:
 activities use the five contract categories and the day view includes a neutral
-duration mirror.
+duration mirror. Prompt 9 is complete: the server exposes a bounded, validated
+planning proposal endpoint that never mutates saved activities.
 
 ## Existing completed areas
 
@@ -69,6 +70,12 @@ duration mirror.
 - Neutral “How today is distributed” duration summary
 - Text labels and color cues for distribution rows
 - Ongoing activities kept separate from fixed-duration totals
+- Authenticated planning proposal endpoint
+- Server-loaded existing and locked activities in planning context
+- Optional historical context only when explicitly enabled
+- Server-side AI proposal shape and time-block validation
+- AI failures and malformed proposals return safe generic errors
+- Planning proposals never write to the activities table
 - Completion and ongoing-status controls in the activity detail surface
 - Unsaved-change confirmation on close
 - Focus management, keyboard escape handling, visible focus states, touch-sized controls, and reduced-motion handling
@@ -88,8 +95,8 @@ duration mirror.
 - Optional reflection does not exist.
 - Neutral pattern summaries do not exist.
 - Offline current-day resilience and sync status do not exist.
-- AI planning contract, validated proposals, AI Studio, proposal review, and
-  controlled re-planning do not exist.
+- AI Studio input, proposal review, acceptance, and controlled re-planning do
+  not exist.
 - PWA installability and Android preparation have not been completed.
 
 ## Known blockers and decisions
@@ -107,9 +114,8 @@ duration mirror.
 
 ## Next milestones
 
-1. Define and implement the bounded AI planning contract and server
-   integration.
-2. Build proposal input, review, acceptance, controlled re-planning,
+1. Build the AI Studio input experience using the planning proposal contract.
+2. Build proposal review, acceptance, controlled re-planning,
    reflection, pattern summaries, offline resilience, quality review, and
    Android/PWA preparation in that order.
 

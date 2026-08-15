@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: ai
     description: Server-side AI configuration operations
+  - name: planning
+    description: Bounded AI planning proposal operations
   - name: activities
     description: Day Tripper activity operations
 paths:
@@ -41,6 +43,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AiStatus"
+  /planning/proposals:
+    post:
+      operationId: createPlanningProposal
+      tags: [planning]
+      summary: Create a bounded planning proposal
+      description: Creates a validated AI proposal without changing saved activities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanningRequest"
+      responses:
+        "200":
+          description: Validated planning proposal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanningProposal"
+        "400":
+          description: Invalid planning request
+        "502":
+          description: The planning provider returned an invalid proposal
+        "503":
+          description: Planning service is unavailable
   /activities:
     get:
       operationId: listActivities
@@ -145,6 +172,173 @@ components:
         - model
         - configured
         - client
+    PlanningRequest:
+      type: object
+      properties:
+        intention:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        currentDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        currentTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        availableTime:
+          type: array
+          maxItems: 12
+          items:
+            $ref: "#/components/schemas/PlanningTimeWindow"
+        planningStyle:
+          type: ["string", "null"]
+          enum: [lighter, balanced, fuller, null]
+        useHistoricalContext:
+          type: boolean
+          default: false
+        historicalContext:
+          type: ["string", "null"]
+          maxLength: 4000
+      required:
+        - intention
+        - currentDate
+        - currentTime
+        - availableTime
+    PlanningTimeWindow:
+      type: object
+      properties:
+        startTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        endTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+      required:
+        - startTime
+        - endTime
+    PlanningProposal:
+      type: object
+      properties:
+        proposedActivities:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/ProposedActivity"
+        buffers:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PlanningTimeBlock"
+        restPeriods:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PlanningTimeBlock"
+        assumptions:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 500
+        conflicts:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/PlanningConflict"
+        didNotFit:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/PlanningNotFittedItem"
+      required:
+        - proposedActivities
+        - buffers
+        - restPeriods
+        - assumptions
+        - conflicts
+        - didNotFit
+    ProposedActivity:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        scheduledDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        startTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        endTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        category:
+          type: ["string", "null"]
+          enum: [work, recovery, managing, social, fun, null]
+        note:
+          type: ["string", "null"]
+          maxLength: 500
+      required:
+        - title
+        - scheduledDate
+        - startTime
+        - endTime
+        - category
+        - note
+    PlanningTimeBlock:
+      type: object
+      properties:
+        scheduledDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        startTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        endTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - scheduledDate
+        - startTime
+        - endTime
+        - reason
+    PlanningConflict:
+      type: object
+      properties:
+        description:
+          type: string
+          minLength: 1
+          maxLength: 500
+        relatedActivityTitles:
+          type: array
+          maxItems: 10
+          items:
+            type: string
+            minLength: 1
+            maxLength: 200
+      required:
+        - description
+        - relatedActivityTitles
+    PlanningNotFittedItem:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - title
+        - reason
     Activity:
       type: object
       properties:

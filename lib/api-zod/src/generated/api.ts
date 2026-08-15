@@ -30,6 +30,112 @@ export const GetAiStatusResponse = zod.object({
 
 
 /**
+ * Creates a validated AI proposal without changing saved activities
+ * @summary Create a bounded planning proposal
+ */
+export const createPlanningProposalBodyIntentionMax = 2000;
+
+export const createPlanningProposalBodyCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createPlanningProposalBodyCurrentTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalBodyAvailableTimeItemStartTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalBodyAvailableTimeItemEndTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalBodyAvailableTimeMax = 12;
+
+export const createPlanningProposalBodyUseHistoricalContextDefault = false;
+export const createPlanningProposalBodyHistoricalContextMax = 4000;
+
+
+
+export const CreatePlanningProposalBody = zod.object({
+  "intention": zod.string().min(1).max(createPlanningProposalBodyIntentionMax),
+  "currentDate": zod.string().regex(createPlanningProposalBodyCurrentDateRegExp),
+  "currentTime": zod.string().regex(createPlanningProposalBodyCurrentTimeRegExp),
+  "availableTime": zod.array(zod.object({
+  "startTime": zod.string().regex(createPlanningProposalBodyAvailableTimeItemStartTimeRegExp),
+  "endTime": zod.string().regex(createPlanningProposalBodyAvailableTimeItemEndTimeRegExp)
+})).max(createPlanningProposalBodyAvailableTimeMax),
+  "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish(),
+  "useHistoricalContext": zod.boolean().default(createPlanningProposalBodyUseHistoricalContextDefault),
+  "historicalContext": zod.string().max(createPlanningProposalBodyHistoricalContextMax).nullish()
+})
+
+export const createPlanningProposalResponseProposedActivitiesItemTitleMax = 200;
+
+export const createPlanningProposalResponseProposedActivitiesItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createPlanningProposalResponseProposedActivitiesItemStartTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalResponseProposedActivitiesItemEndTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalResponseProposedActivitiesItemNoteMax = 500;
+
+export const createPlanningProposalResponseProposedActivitiesMax = 50;
+
+export const createPlanningProposalResponseBuffersItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createPlanningProposalResponseBuffersItemStartTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalResponseBuffersItemEndTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalResponseBuffersItemReasonMax = 500;
+
+export const createPlanningProposalResponseBuffersMax = 50;
+
+export const createPlanningProposalResponseRestPeriodsItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createPlanningProposalResponseRestPeriodsItemStartTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalResponseRestPeriodsItemEndTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningProposalResponseRestPeriodsItemReasonMax = 500;
+
+export const createPlanningProposalResponseRestPeriodsMax = 50;
+
+export const createPlanningProposalResponseAssumptionsItemMax = 500;
+
+export const createPlanningProposalResponseAssumptionsMax = 20;
+
+export const createPlanningProposalResponseConflictsItemDescriptionMax = 500;
+
+export const createPlanningProposalResponseConflictsItemRelatedActivityTitlesItemMax = 200;
+
+export const createPlanningProposalResponseConflictsItemRelatedActivityTitlesMax = 10;
+
+export const createPlanningProposalResponseConflictsMax = 20;
+
+export const createPlanningProposalResponseDidNotFitItemTitleMax = 200;
+
+export const createPlanningProposalResponseDidNotFitItemReasonMax = 500;
+
+export const createPlanningProposalResponseDidNotFitMax = 50;
+
+
+
+export const CreatePlanningProposalResponse = zod.object({
+  "proposedActivities": zod.array(zod.object({
+  "title": zod.string().min(1).max(createPlanningProposalResponseProposedActivitiesItemTitleMax),
+  "scheduledDate": zod.string().regex(createPlanningProposalResponseProposedActivitiesItemScheduledDateRegExp),
+  "startTime": zod.string().regex(createPlanningProposalResponseProposedActivitiesItemStartTimeRegExp),
+  "endTime": zod.string().regex(createPlanningProposalResponseProposedActivitiesItemEndTimeRegExp),
+  "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
+  "note": zod.string().max(createPlanningProposalResponseProposedActivitiesItemNoteMax).nullable()
+})).max(createPlanningProposalResponseProposedActivitiesMax),
+  "buffers": zod.array(zod.object({
+  "scheduledDate": zod.string().regex(createPlanningProposalResponseBuffersItemScheduledDateRegExp),
+  "startTime": zod.string().regex(createPlanningProposalResponseBuffersItemStartTimeRegExp),
+  "endTime": zod.string().regex(createPlanningProposalResponseBuffersItemEndTimeRegExp),
+  "reason": zod.string().min(1).max(createPlanningProposalResponseBuffersItemReasonMax)
+})).max(createPlanningProposalResponseBuffersMax),
+  "restPeriods": zod.array(zod.object({
+  "scheduledDate": zod.string().regex(createPlanningProposalResponseRestPeriodsItemScheduledDateRegExp),
+  "startTime": zod.string().regex(createPlanningProposalResponseRestPeriodsItemStartTimeRegExp),
+  "endTime": zod.string().regex(createPlanningProposalResponseRestPeriodsItemEndTimeRegExp),
+  "reason": zod.string().min(1).max(createPlanningProposalResponseRestPeriodsItemReasonMax)
+})).max(createPlanningProposalResponseRestPeriodsMax),
+  "assumptions": zod.array(zod.string().min(1).max(createPlanningProposalResponseAssumptionsItemMax)).max(createPlanningProposalResponseAssumptionsMax),
+  "conflicts": zod.array(zod.object({
+  "description": zod.string().min(1).max(createPlanningProposalResponseConflictsItemDescriptionMax),
+  "relatedActivityTitles": zod.array(zod.string().min(1).max(createPlanningProposalResponseConflictsItemRelatedActivityTitlesItemMax)).max(createPlanningProposalResponseConflictsItemRelatedActivityTitlesMax)
+})).max(createPlanningProposalResponseConflictsMax),
+  "didNotFit": zod.array(zod.object({
+  "title": zod.string().min(1).max(createPlanningProposalResponseDidNotFitItemTitleMax),
+  "reason": zod.string().min(1).max(createPlanningProposalResponseDidNotFitItemReasonMax)
+})).max(createPlanningProposalResponseDidNotFitMax)
+})
+
+
+/**
  * @summary List activities for a day
  */
 export const listActivitiesQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');

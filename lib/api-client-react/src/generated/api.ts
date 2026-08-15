@@ -25,7 +25,9 @@ import type {
   ActivityUpdate,
   AiStatus,
   HealthStatus,
-  ListActivitiesParams
+  ListActivitiesParams,
+  PlanningProposal,
+  PlanningRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -210,6 +212,78 @@ export function useGetAiStatus<TData = Awaited<ReturnType<typeof getAiStatus>>, 
 
 
 
+
+export const getCreatePlanningProposalUrl = () => {
+
+
+
+
+  return `/api/planning/proposals`
+}
+
+/**
+ * Creates a validated AI proposal without changing saved activities
+ * @summary Create a bounded planning proposal
+ */
+export const createPlanningProposal = async (planningRequest: PlanningRequest, options?: Parameters<typeof customFetch>[1]): Promise<PlanningProposal> => {
+
+  return customFetch<PlanningProposal>(getCreatePlanningProposalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(planningRequest)
+  }
+);}
+
+
+
+
+
+export const getCreatePlanningProposalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningProposal>>, TError,{data: BodyType<PlanningRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlanningProposal>>, TError,{data: BodyType<PlanningRequest>}, TContext> => {
+
+const mutationKey = ['createPlanningProposal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlanningProposal>>, {data: BodyType<PlanningRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlanningProposal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlanningProposalMutationResult = NonNullable<Awaited<ReturnType<typeof createPlanningProposal>>>
+    export type CreatePlanningProposalMutationBody = BodyType<PlanningRequest>
+    export type CreatePlanningProposalMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a bounded planning proposal
+ */
+export const useCreatePlanningProposal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningProposal>>, TError,{data: BodyType<PlanningRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlanningProposal>>,
+        TError,
+        {data: BodyType<PlanningRequest>},
+        TContext
+      > => {
+      return useMutation(getCreatePlanningProposalMutationOptions(options));
+    }
 
 export const getListActivitiesUrl = (params: ListActivitiesParams,) => {
   const normalizedParams = new URLSearchParams();
