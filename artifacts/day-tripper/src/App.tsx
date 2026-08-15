@@ -203,6 +203,16 @@ function isCategory(value: string): value is Category {
   return CATEGORIES.includes(value as Category);
 }
 
+function isValidTime(value: string) {
+  if (!/^\d{2}:\d{2}$/.test(value)) return false;
+  const [hours, minutes] = value.split(':').map(Number);
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59;
+}
+
+function safeTimeLabel(value: string) {
+  return isValidTime(value) ? timeLabel(value) : value || 'Choose a time';
+}
+
 function draftFromActivity(activity: EditorActivity, date: string): ActivityDraft {
   return {
     title: activity?.title ?? '',
@@ -547,8 +557,37 @@ function DayDistribution({ activities }: { activities: Activity[] }) {
   );
 }
 
-function PlanningStudio({ date, activities, onClose }: { date: string; activities: Activity[]; onClose: () => void }) {
+type ProposalReviewItem = {
+  id: string;
+  title: string;
+  scheduledDate: string;
+  startTime: string;
+  endTime: string;
+  category: string;
+  note: string | null;
+  selected: boolean;
+  removed: boolean;
+  error?: string;
+};
+
+function proposalReviewItems(proposal: PlanningProposal): ProposalReviewItem[] {
+  return proposal.proposedActivities.map((item, index) => ({
+    id: `proposal-item-${index}`,
+    title: item.title,
+    scheduledDate: item.scheduledDate,
+    startTime: item.startTime,
+    endTime: item.endTime,
+    category: item.category ?? '',
+    note: item.note,
+    selected: true,
+    removed: false,
+  }));
+}
+
+function PlanningStudio({ date, activities, onClose, onAccepted }: { date: string; activities: Activity[]; onClose: () => void; onAccepted: (count: number) => Promise<void> | void }) {
   const createPlanningProposal = useCreatePlanningProposal();
+  const createActivity = useCreateActivity();
+  const queryClient = useQueryClient();
   const intentionRef = useRef<HTMLTextAreaElement>(null);
   const [intention, setIntention] = useState('');
   const [currentTime, setCurrentTime] = useState(currentTimeValue());
@@ -559,7 +598,10 @@ function PlanningStudio({ date, activities, onClose }: { date: string; activitie
   const [useHistoricalContext, setUseHistoricalContext] = useState(false);
   const [historicalContext, setHistoricalContext] = useState('');
   const [proposal, setProposal] = useState<PlanningProposal | null>(null);
+  const [reviewItems, setReviewItems] = useState<ProposalReviewItem[]>([]);
   const [formError, setFormError] = useState('');
+  const [reviewError, setReviewError] = useState('');
+  const [accepting, setAccepting] = useState(false);
   const lockedActivities = activities.filter((activity) => activity.locked);
   const pending = createPlanningProposal.isPending;
 
@@ -599,13 +641,109 @@ function PlanningStudio({ date, activities, onClose }: { date: string; activitie
         },
       });
       setProposal(result);
+      setReviewItems(proposalReviewItems(result));
+      setReviewError('');
     } catch {
       setFormError('The planner could not prepare a proposal. Check the connection and try again.');
     }
   }
 
+  function returnToIntention() {
+    setProposal(null);
+    setReviewItems([]);
+    setReviewError('');
+    setFormError('');
+    window.requestAnimationFrame(() => intentionRef.current?.focus());
+  }
+
+  function updateReviewItem(id: string, updates: Partial<Pick<ProposalReviewItem, 'title' | 'startTime' | 'endTime' | 'category'>>) {
+    setReviewItems((current) => current.map((item) => item.id === id ? { ...item, ...updates, error: undefined } : item));
+    setReviewError('');
+  }
+
+  function toggleReviewItem(id: string) {
+    setReviewItems((current) => current.map((item) => item.id === id ? { ...item, selected: !item.selected, error: undefined } : item));
+    setReviewError('');
+  }
+
+  function removeReviewItem(id: string) {
+    setReviewItems((current) => current.map((item) => item.id === id ? { ...item, removed: true, selected: false, error: undefined } : item));
+    setReviewError('');
+  }
+
+  function restoreReviewItem(id: string) {
+    setReviewItems((current) => current.map((item) => item.id === id ? { ...item, removed: false, selected: true, error: undefined } : item));
+    setReviewError('');
+  }
+
+  async function acceptReview(mode: 'selected' | 'remaining') {
+    const candidates = reviewItems.filter((item) => !item.removed && (mode === 'remaining' || item.selected));
+    if (!candidates.length) {
+      setReviewError(mode === 'selected' ? 'Choose at least one suggested activity to add.' : 'There are no remaining suggested activities to add.');
+      return;
+    }
+
+    const invalidIds = new Set(
+      candidates
+        .filter((item) => !item.title.trim() || !isValidTime(item.startTime) || !isValidTime(item.endTime) || minutesFromTime(item.endTime) <= minutesFromTime(item.startTime))
+        .map((item) => item.id),
+    );
+    if (invalidIds.size) {
+      setReviewItems((current) => current.map((item) => {
+        if (!invalidIds.has(item.id)) return item;
+        if (!item.title.trim()) return { ...item, error: 'Add a title before accepting this suggestion.' };
+        if (!isValidTime(item.startTime) || !isValidTime(item.endTime)) return { ...item, error: 'Choose valid start and end times.' };
+        return { ...item, error: 'The end time needs to be after the start time.' };
+      }));
+      setReviewError('A few suggestions need a small correction before they can be added.');
+      return;
+    }
+
+    setReviewError('');
+    setAccepting(true);
+    let savedCount = 0;
+    const unsavedIds: string[] = [];
+
+    for (const item of candidates) {
+      try {
+        await createActivity.mutateAsync({
+          data: {
+            title: item.title.trim(),
+            scheduledDate: item.scheduledDate,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            category: isCategory(item.category) ? item.category : null,
+            completed: false,
+            locked: false,
+            pinned: false,
+            note: item.note?.trim() || null,
+          },
+        });
+        savedCount += 1;
+        setReviewItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, removed: true, selected: false, error: undefined } : currentItem));
+      } catch {
+        unsavedIds.push(item.id);
+        setReviewItems((current) => current.map((currentItem) => currentItem.id === item.id ? { ...currentItem, error: 'This suggestion could not be added yet.' } : currentItem));
+      }
+    }
+
+    if (savedCount > 0 && unsavedIds.length > 0) {
+      await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
+    }
+
+    setAccepting(false);
+    if (unsavedIds.length > 0) {
+      setReviewError(savedCount > 0
+        ? `${savedCount} ${savedCount === 1 ? 'suggestion was' : 'suggestions were'} added. ${unsavedIds.length} ${unsavedIds.length === 1 ? 'suggestion needs' : 'suggestions need'} another try.`
+        : 'Nothing was added yet. Check the connection, then try the remaining suggestions again.');
+      return;
+    }
+
+    await onAccepted(savedCount);
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending && !accepting) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="planning-studio-title" aria-describedby="planning-studio-description" className="paper-grain max-h-[94dvh] w-full max-w-[720px] overflow-y-auto rounded-t-[28px] border border-border bg-background p-5 shadow-[0_24px_80px_hsl(205_32%_20%/0.2)] sm:max-h-[90dvh] sm:rounded-[28px] sm:p-7" data-testid="dialog-planning-studio">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -613,7 +751,7 @@ function PlanningStudio({ date, activities, onClose }: { date: string; activitie
             <h2 id="planning-studio-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">Shape a possible day.</h2>
             <p id="planning-studio-description" className="mt-2 max-w-[550px] text-sm leading-6 text-muted-foreground">Describe what matters. Day Tripper will return a proposal to review, without changing the schedule you already saved.</p>
           </div>
-          <button type="button" onClick={onClose} disabled={pending} aria-label="Close AI Studio" data-testid="button-close-planning-studio" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
+          <button type="button" onClick={onClose} disabled={pending || accepting} aria-label="Close AI Studio" data-testid="button-close-planning-studio" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
             <X className="size-4" strokeWidth={1.8} />
           </button>
         </div>
@@ -621,25 +759,148 @@ function PlanningStudio({ date, activities, onClose }: { date: string; activitie
         {proposal ? (
           <div className="mt-8 space-y-5" data-testid="status-planning-proposal-ready">
             <div className="rounded-[22px] border border-primary/20 bg-primary/[0.06] p-5">
-              <p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Proposal prepared</p>
-              <h3 className="mt-2 font-display text-[27px] leading-tight tracking-[-0.03em]">A possible shape is ready.</h3>
-              <p className="mt-2 text-sm leading-6 text-muted-foreground">Nothing has been added, moved, or completed. The proposal is separate from your saved day and can be reviewed in the next step.</p>
-              {proposal.proposedActivities.length === 0 ? (
-                <p className="mt-5 rounded-xl bg-background/70 px-3 py-3 text-xs leading-5 text-muted-foreground" data-testid="status-planning-proposal-empty">Nothing needed to be proposed for this version. Open time is still allowed to stay open.</p>
-              ) : (
-                <div className="mt-5 grid gap-2 sm:grid-cols-3">
-                  <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{proposal.proposedActivities.length}</p><p className="mt-1 text-[11px] text-muted-foreground">possible activities</p></div>
-                  <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{proposal.restPeriods.length}</p><p className="mt-1 text-[11px] text-muted-foreground">rest periods</p></div>
-                  <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{proposal.didNotFit.length}</p><p className="mt-1 text-[11px] text-muted-foreground">items that did not fit</p></div>
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Suggested plan</p>
+                  <h3 className="mt-2 font-display text-[27px] leading-tight tracking-[-0.03em]">One workable version to review.</h3>
                 </div>
-              )}
-              {(proposal.assumptions.length > 0 || proposal.conflicts.length > 0) && (
-                <p className="mt-4 text-xs leading-5 text-muted-foreground">{proposal.assumptions.length ? `${proposal.assumptions.length} assumption${proposal.assumptions.length === 1 ? '' : 's'}` : 'No assumptions'}{proposal.conflicts.length ? ` · ${proposal.conflicts.length} conflict${proposal.conflicts.length === 1 ? '' : 's'} to review` : ''}</p>
-              )}
+                <span className="rounded-full border border-primary/20 bg-background/70 px-3 py-1.5 font-mono-ui text-[10px] text-primary" data-testid="status-proposal-count">{reviewItems.filter((item) => !item.removed).length} remaining</span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">This is a possible way to shape the day, not a change to your saved activities. Adjust, remove, or leave any suggestion behind before accepting it.</p>
+              <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{reviewItems.filter((item) => item.selected && !item.removed).length}</p><p className="mt-1 text-[11px] text-muted-foreground">selected to add</p></div>
+                <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{proposal.buffers.length + proposal.restPeriods.length}</p><p className="mt-1 text-[11px] text-muted-foreground">buffers and rest periods</p></div>
+                <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{proposal.didNotFit.length}</p><p className="mt-1 text-[11px] text-muted-foreground">items still outside</p></div>
+              </div>
             </div>
-            <div className="flex flex-col-reverse gap-3 border-t border-border/65 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <button type="button" onClick={() => setProposal(null)} data-testid="button-plan-again" className="min-h-11 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Try another version</button>
-              <button type="button" onClick={onClose} data-testid="button-close-planning-result" className="min-h-11 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Return to my day</button>
+
+            <div className="rounded-[22px] border border-border/75 bg-card/55 p-4 sm:p-5" data-testid="section-proposal-items">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Review each suggestion</p>
+                  <h3 className="mt-2 font-display text-[23px] leading-tight tracking-[-0.03em]">What might belong in the day?</h3>
+                </div>
+                <p className="text-[11px] text-muted-foreground">Nothing is saved until you accept it.</p>
+              </div>
+              <div className="mt-5 space-y-3">
+                {reviewItems.filter((item) => !item.removed).map((item, index) => {
+                  const category = isCategory(item.category) ? categoryMeta[item.category] : null;
+                  return (
+                    <article key={item.id} className={`rounded-[18px] border bg-background/65 p-4 transition-colors ${item.error ? 'border-destructive/40' : item.selected ? 'border-primary/35' : 'border-border/75'}`} data-testid={`card-proposal-item-${index}`}>
+                      <div className="flex items-start gap-3">
+                        <input type="checkbox" checked={item.selected} onChange={() => toggleReviewItem(item.id)} aria-label={`Select ${item.title || 'suggested activity'}`} data-testid={`checkbox-proposal-item-${index}`} className="mt-1 size-5 shrink-0 accent-[hsl(var(--primary))]" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <label htmlFor={`proposal-title-${item.id}`} className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Suggested activity</label>
+                              <input id={`proposal-title-${item.id}`} value={item.title} onChange={(event) => updateReviewItem(item.id, { title: event.target.value })} aria-invalid={Boolean(item.error && !item.title.trim())} data-testid={`input-proposal-title-${index}`} className="mt-1 min-h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                            </div>
+                            <button type="button" onClick={() => removeReviewItem(item.id)} aria-label={`Remove ${item.title || 'suggested activity'} from this review`} data-testid={`button-remove-proposal-item-${index}`} className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                              <Trash2 className="size-4" strokeWidth={1.8} />
+                            </button>
+                          </div>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_1.1fr]">
+                            <div>
+                              <span className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Date</span>
+                              <p className="mt-1 flex min-h-10 items-center rounded-lg border border-border/65 bg-card/55 px-3 text-xs text-foreground" data-testid={`text-proposal-date-${index}`}>{formatShortDate(item.scheduledDate)}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Time</span>
+                              <div className="mt-1 grid grid-cols-2 gap-1.5">
+                                <input type="time" value={item.startTime} onChange={(event) => updateReviewItem(item.id, { startTime: event.target.value })} aria-label={`Start time for ${item.title || 'suggested activity'}`} data-testid={`input-proposal-start-${index}`} className="min-h-10 w-full rounded-lg border border-input bg-card px-2.5 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                                <input type="time" value={item.endTime} onChange={(event) => updateReviewItem(item.id, { endTime: event.target.value })} aria-label={`End time for ${item.title || 'suggested activity'}`} data-testid={`input-proposal-end-${index}`} className="min-h-10 w-full rounded-lg border border-input bg-card px-2.5 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                              </div>
+                              <p className="mt-1 text-[10px] text-muted-foreground">{safeTimeLabel(item.startTime)} – {safeTimeLabel(item.endTime)}</p>
+                            </div>
+                            <div>
+                              <label htmlFor={`proposal-category-${item.id}`} className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Category</label>
+                              <select id={`proposal-category-${item.id}`} value={item.category} onChange={(event) => updateReviewItem(item.id, { category: event.target.value })} data-testid={`select-proposal-category-${index}`} className="mt-1 min-h-10 w-full rounded-lg border border-input bg-card px-2.5 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+                                <option value="">Uncategorized</option>
+                                {CATEGORIES.map((categoryName) => <option key={categoryName} value={categoryName}>{categoryMeta[categoryName].label}</option>)}
+                              </select>
+                              {category && <span className="mt-1 inline-flex rounded-full px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.1em]" style={{ backgroundColor: category.soft, color: category.color }}>{category.label}</span>}
+                            </div>
+                          </div>
+                          {item.note && <p className="mt-3 border-t border-border/55 pt-3 text-xs leading-5 text-muted-foreground" data-testid={`text-proposal-note-${index}`}><span className="font-semibold text-foreground">Note:</span> {item.note}</p>}
+                          {item.error && <p className="mt-3 rounded-lg bg-destructive/[0.07] px-3 py-2 text-xs leading-5 text-destructive" role="alert" data-testid={`status-proposal-item-error-${index}`}>{item.error}</p>}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+                {reviewItems.filter((item) => item.removed).map((item, index) => (
+                  <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-dashed border-border/80 bg-background/35 px-4 py-3" data-testid={`status-proposal-item-removed-${index}`}>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-muted-foreground line-through">{item.title || 'Untitled suggestion'}</p>
+                      <p className="mt-1 text-[11px] text-muted-foreground/75">Left out of this review</p>
+                    </div>
+                    <button type="button" onClick={() => restoreReviewItem(item.id)} data-testid={`button-restore-proposal-item-${index}`} className="min-h-10 rounded-full border border-border bg-background px-3 py-2 text-[11px] font-semibold text-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Keep suggestion</button>
+                  </div>
+                ))}
+                {!reviewItems.length && <p className="rounded-xl bg-background/70 px-3 py-3 text-xs leading-5 text-muted-foreground" data-testid="status-planning-proposal-empty">Nothing was suggested for this version. Open time is still allowed to stay open.</p>}
+              </div>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-2">
+              <details className="rounded-[20px] border border-border/75 bg-card/55 p-4" data-testid="section-proposal-context">
+                <summary className="cursor-pointer list-none text-xs font-semibold text-foreground [&::-webkit-details-marker]:hidden">Context held alongside this version</summary>
+                <div className="mt-4 space-y-4 border-t border-border/60 pt-4">
+                  <div>
+                    <p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Locked activities stay as context</p>
+                    {lockedActivities.length ? <ul className="mt-2 space-y-2">{lockedActivities.map((activity) => <li key={activity.id} className="flex items-start gap-2 text-xs leading-5 text-foreground" data-testid={`text-proposal-locked-${activity.id}`}><LockKeyhole className="mt-0.5 size-3.5 shrink-0 text-primary" strokeWidth={1.8} />{activity.title} · {timeLabel(activity.startTime)}</li>)}</ul> : <p className="mt-2 text-xs leading-5 text-muted-foreground">No locked activities were on this day.</p>}
+                    <p className="mt-2 text-[11px] leading-5 text-muted-foreground">These saved activities were not edited by the proposal.</p>
+                  </div>
+                  <div>
+                    <p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Assumptions</p>
+                    {proposal.assumptions.length ? <ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5 text-muted-foreground">{proposal.assumptions.map((assumption, index) => <li key={`${assumption}-${index}`} data-testid={`text-proposal-assumption-${index}`}>{assumption}</li>)}</ul> : <p className="mt-2 text-xs text-muted-foreground">No assumptions were listed.</p>}
+                  </div>
+                </div>
+              </details>
+              <details className="rounded-[20px] border border-border/75 bg-card/55 p-4" data-testid="section-proposal-shape-notes">
+                <summary className="cursor-pointer list-none text-xs font-semibold text-foreground [&::-webkit-details-marker]:hidden">Space around the suggestions</summary>
+                <div className="mt-4 space-y-4 border-t border-border/60 pt-4">
+                  <div>
+                    <p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Buffers</p>
+                    {proposal.buffers.length ? <ul className="mt-2 space-y-2">{proposal.buffers.map((buffer, index) => <li key={`${buffer.scheduledDate}-${buffer.startTime}-${index}`} className="text-xs leading-5 text-muted-foreground" data-testid={`text-proposal-buffer-${index}`}><span className="font-medium text-foreground">{formatShortDate(buffer.scheduledDate)} · {safeTimeLabel(buffer.startTime)}–{safeTimeLabel(buffer.endTime)}</span><br />{buffer.reason}</li>)}</ul> : <p className="mt-2 text-xs text-muted-foreground">No buffer was listed.</p>}
+                  </div>
+                  <div>
+                    <p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Rest periods</p>
+                    {proposal.restPeriods.length ? <ul className="mt-2 space-y-2">{proposal.restPeriods.map((rest, index) => <li key={`${rest.scheduledDate}-${rest.startTime}-${index}`} className="text-xs leading-5 text-muted-foreground" data-testid={`text-proposal-rest-${index}`}><span className="font-medium text-foreground">{formatShortDate(rest.scheduledDate)} · {safeTimeLabel(rest.startTime)}–{safeTimeLabel(rest.endTime)}</span><br />{rest.reason}</li>)}</ul> : <p className="mt-2 text-xs text-muted-foreground">No rest period was listed.</p>}
+                  </div>
+                </div>
+              </details>
+              <details className="rounded-[20px] border border-border/75 bg-card/55 p-4 lg:col-span-2" data-testid="section-proposal-boundaries">
+                <summary className="cursor-pointer list-none text-xs font-semibold text-foreground [&::-webkit-details-marker]:hidden">What stayed outside this version</summary>
+                <div className="mt-4 grid gap-4 border-t border-border/60 pt-4 sm:grid-cols-2">
+                  <div>
+                    <p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Conflicts to notice</p>
+                    {proposal.conflicts.length ? <ul className="mt-2 space-y-3">{proposal.conflicts.map((conflict, index) => <li key={`${conflict.description}-${index}`} className="text-xs leading-5 text-muted-foreground" data-testid={`text-proposal-conflict-${index}`}><span className="font-medium text-foreground">{conflict.description}</span>{conflict.relatedActivityTitles.length > 0 && <span className="mt-1 block">Related: {conflict.relatedActivityTitles.join(', ')}</span>}</li>)}</ul> : <p className="mt-2 text-xs text-muted-foreground">No conflicts were listed.</p>}
+                  </div>
+                  <div>
+                    <p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Did not fit</p>
+                    {proposal.didNotFit.length ? <ul className="mt-2 space-y-3">{proposal.didNotFit.map((item, index) => <li key={`${item.title}-${index}`} className="text-xs leading-5 text-muted-foreground" data-testid={`text-proposal-did-not-fit-${index}`}><span className="font-medium text-foreground">{item.title}</span><span className="mt-1 block">{item.reason}</span></li>)}</ul> : <p className="mt-2 text-xs text-muted-foreground">Nothing was listed outside this version.</p>}
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            {reviewError && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid="status-planning-review-error">{reviewError}</p>}
+            <div className="flex flex-col gap-3 border-t border-border/65 pt-5">
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <button type="button" onClick={returnToIntention} disabled={accepting} data-testid="button-plan-again" className="min-h-11 self-start rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-45">Try another version</button>
+                <button type="button" onClick={onClose} disabled={accepting} data-testid="button-reject-planning-proposal" className="min-h-11 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold text-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-45">Reject proposal</button>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => void acceptReview('selected')} disabled={accepting || !reviewItems.some((item) => item.selected && !item.removed)} data-testid="button-accept-selected-proposal" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-primary/35 bg-primary/[0.06] px-5 py-2.5 text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+                  {accepting && <LoaderCircle className="size-3.5 animate-spin" />}
+                  Accept selected
+                </button>
+                <button type="button" onClick={() => void acceptReview('remaining')} disabled={accepting || !reviewItems.some((item) => !item.removed)} data-testid="button-accept-remaining-proposal" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+                  {accepting && <LoaderCircle className="size-3.5 animate-spin" />}
+                  Accept complete remaining version
+                </button>
+              </div>
+              <p className="text-right text-[11px] leading-5 text-muted-foreground">Only the suggestions you accept become saved activities. Existing activities remain untouched.</p>
             </div>
           </div>
         ) : (
@@ -1000,6 +1261,7 @@ function Today() {
   const [now, setNow] = useState(currentMinutes());
   const [editorActivity, setEditorActivity] = useState<EditorActivity | undefined>(undefined);
   const [planningOpen, setPlanningOpen] = useState(false);
+  const [acceptedNotice, setAcceptedNotice] = useState('');
   const [deletedActivity, setDeletedActivity] = useState<Activity | null>(null);
   const [undoPending, setUndoPending] = useState(false);
   const [undoError, setUndoError] = useState('');
@@ -1035,6 +1297,12 @@ function Today() {
   async function refreshAfterMutation() {
     await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
     setEditorActivity(undefined);
+  }
+
+  async function handleAccepted(count: number) {
+    await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
+    setPlanningOpen(false);
+    setAcceptedNotice(`${count} ${count === 1 ? 'suggested activity was' : 'suggested activities were'} added to your day.`);
   }
 
   function handleDeleted(deleted: Activity) {
@@ -1178,6 +1446,17 @@ function Today() {
           </main>
         </div>
       </div>
+      {acceptedNotice && (
+        <div className="fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)]" role="status" data-testid="status-planning-accepted">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Check className="size-3.5" strokeWidth={2.4} /></span>
+            <p className="text-xs font-semibold text-foreground">{acceptedNotice}</p>
+          </div>
+          <button type="button" onClick={() => setAcceptedNotice('')} aria-label="Dismiss saved suggestion message" data-testid="button-dismiss-planning-accepted" className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <X className="size-3.5" strokeWidth={1.8} />
+          </button>
+        </div>
+      )}
       {deletedActivity && (
         <div className="fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)]" role="status" data-testid="status-activity-deleted">
           <div className="min-w-0">
@@ -1187,7 +1466,7 @@ function Today() {
           {!undoError && <button type="button" onClick={() => void undoDelete()} disabled={undoPending} data-testid="button-undo-delete" className="min-h-11 shrink-0 rounded-full border border-primary/35 px-4 py-2 text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{undoPending ? 'Restoring…' : 'Undo'}</button>}
         </div>
       )}
-      {planningOpen && <PlanningStudio date={date} activities={activities} onClose={() => setPlanningOpen(false)} />}
+      {planningOpen && <PlanningStudio date={date} activities={activities} onClose={() => setPlanningOpen(false)} onAccepted={handleAccepted} />}
       {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSaved={() => void refreshAfterMutation()} onDeleted={handleDeleted} />}
     </div>
   );

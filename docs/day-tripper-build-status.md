@@ -4,7 +4,7 @@ Last reviewed: 2026-08-15
 
 ## Current milestone
 
-**Prompt 10 — AI Studio input experience complete**
+**Prompt 11 — Proposal review and acceptance complete**
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
 are complete. Prompt 7 is complete: the existing responsive activity surface
@@ -13,7 +13,10 @@ activities use the five contract categories and the day view includes a neutral
 duration mirror. Prompt 9 is complete: the server exposes a bounded, validated
 planning proposal endpoint that never mutates saved activities. Prompt 10 is
 complete: authenticated users can describe a day, add planning context, and
-request a proposal without changing the saved timeline.
+request a proposal without changing the saved timeline. Prompt 11 is complete:
+users can review detailed suggested activities, edit or remove individual items,
+reject or revise the proposal, and explicitly accept selected or remaining items
+into the saved timeline.
 
 ## Existing completed areas
 
@@ -85,6 +88,10 @@ request a proposal without changing the saved timeline.
 - Optional fixed commitments and explicitly approved historical context
 - Clear proposal-only and internet-connection messaging
 - Loading, error, retry, and empty-proposal states
+- Detailed proposal review with editable suggested activities
+- Proposal item selection, removal, restoration, and rejection
+- Explicit partial or complete proposal acceptance
+- Server-persisted accepted proposal activities with refreshed timeline
 - Completion and ongoing-status controls in the activity detail surface
 - Unsaved-change confirmation on close
 - Focus management, keyboard escape handling, visible focus states, touch-sized controls, and reduced-motion handling
@@ -104,7 +111,7 @@ request a proposal without changing the saved timeline.
 - Optional reflection does not exist.
 - Neutral pattern summaries do not exist.
 - Offline current-day resilience and sync status do not exist.
-- Proposal review, acceptance, and controlled re-planning do not exist.
+- Controlled re-planning and change history do not exist.
 - PWA installability and Android preparation have not been completed.
 
 ## Known blockers and decisions
@@ -122,9 +129,9 @@ request a proposal without changing the saved timeline.
 
 ## Next milestones
 
-1. Build proposal review, acceptance, and controlled re-planning.
-2. Build reflection, pattern summaries, offline resilience, quality review, and
-   reflection, pattern summaries, offline resilience, quality review, and
+1. Build live edits and change history.
+2. Build controlled re-planning.
+3. Build reflection, pattern summaries, offline resilience, quality review, and
    Android/PWA preparation in that order.
 
 No next milestone should be started automatically.
