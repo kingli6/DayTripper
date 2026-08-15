@@ -18,6 +18,8 @@ export interface Activity {
   /** @nullable */
   category: ActivityCategory;
   completed: boolean;
+  locked: boolean;
+  pinned: boolean;
   /** @nullable */
   note: string | null;
 }

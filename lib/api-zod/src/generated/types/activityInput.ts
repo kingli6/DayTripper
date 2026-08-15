@@ -18,6 +18,8 @@ export interface ActivityInput {
   /** @nullable */
   category?: ActivityInputCategory;
   completed?: boolean;
+  locked?: boolean;
+  pinned?: boolean;
   /** @nullable */
   note?: string | null;
 }

@@ -50,6 +50,8 @@ export const ListActivitiesResponseItem = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "locked": zod.boolean(),
+  "pinned": zod.boolean(),
   "note": zod.string().nullable()
 })
 export const ListActivitiesResponse = zod.array(ListActivitiesResponseItem)
@@ -69,6 +71,8 @@ export const CreateActivityBody = zod.object({
   "endTime": zod.string().nullish(),
   "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullish(),
   "completed": zod.boolean().optional(),
+  "locked": zod.boolean().optional(),
+  "pinned": zod.boolean().optional(),
   "note": zod.string().nullish()
 })
 
@@ -83,6 +87,8 @@ export const CreateActivityResponse = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "locked": zod.boolean(),
+  "pinned": zod.boolean(),
   "note": zod.string().nullable()
 })
 
@@ -105,6 +111,8 @@ export const UpdateActivityBody = zod.object({
   "endTime": zod.string().nullish(),
   "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullish(),
   "completed": zod.boolean().optional(),
+  "locked": zod.boolean().optional(),
+  "pinned": zod.boolean().optional(),
   "note": zod.string().nullish()
 })
 
@@ -119,6 +127,8 @@ export const UpdateActivityResponse = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "locked": zod.boolean(),
+  "pinned": zod.boolean(),
   "note": zod.string().nullable()
 })
 

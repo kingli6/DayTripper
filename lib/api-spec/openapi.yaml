@@ -164,6 +164,10 @@ components:
           enum: [focused, managing, fun, social, break, null]
         completed:
           type: boolean
+        locked:
+          type: boolean
+        pinned:
+          type: boolean
         note:
           type: ["string", "null"]
       required:
@@ -174,6 +178,8 @@ components:
         - endTime
         - category
         - completed
+        - locked
+        - pinned
         - note
     ActivityInput:
       type: object
@@ -192,6 +198,10 @@ components:
           type: ["string", "null"]
           enum: [focused, managing, fun, social, break, null]
         completed:
+          type: boolean
+        locked:
+          type: boolean
+        pinned:
           type: boolean
         note:
           type: ["string", "null"]
@@ -216,6 +226,10 @@ components:
           type: ["string", "null"]
           enum: [focused, managing, fun, social, break, null]
         completed:
+          type: boolean
+        locked:
+          type: boolean
+        pinned:
           type: boolean
         note:
           type: ["string", "null"]

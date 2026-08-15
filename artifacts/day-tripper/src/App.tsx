@@ -14,8 +14,10 @@ import {
   Clock3,
   Cloud,
   LoaderCircle,
+  LockKeyhole,
   Menu,
   Pencil,
+  Pin,
   Plus,
   RotateCcw,
   ShieldCheck,
@@ -364,6 +366,8 @@ function ActivityCard({ activity, now, onEdit, onToggle }: { activity: Activity;
                 {isCurrent && <span className="rounded-full bg-accent/20 px-2 py-1 font-mono-ui text-[9px] font-medium uppercase tracking-[0.14em] text-accent-foreground">Now</span>}
                 {isPast && !activity.completed && <span className="font-mono-ui text-[9px] uppercase tracking-[0.12em] text-muted-foreground/65">passed by</span>}
                 {category && <span className="rounded-full px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em]" style={{ backgroundColor: category.soft, color: category.color }}>{category.label}</span>}
+                {activity.locked && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-secondary-foreground"><LockKeyhole className="size-3" strokeWidth={1.8} /> Locked</span>}
+                {activity.pinned && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-secondary-foreground"><Pin className="size-3" strokeWidth={1.8} /> Pinned</span>}
               </div>
               <h3 className={`mt-2 text-[15px] font-semibold leading-5 ${activity.completed ? 'text-muted-foreground line-through decoration-primary/40' : 'text-foreground'}`} data-testid={`text-activity-title-${activity.id}`}>{activity.title}</h3>
               {activity.note && <p className="mt-1.5 max-w-[520px] text-xs leading-5 text-muted-foreground" data-testid={`text-activity-note-${activity.id}`}>{activity.note}</p>}
@@ -422,6 +426,8 @@ function ActivityModal({ date, activity, onClose, onSaved }: { date: string; act
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('');
   const [category, setCategory] = useState<Category | ''>('');
+  const [locked, setLocked] = useState(false);
+  const [pinned, setPinned] = useState(false);
   const [note, setNote] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [formError, setFormError] = useState('');
@@ -434,6 +440,8 @@ function ActivityModal({ date, activity, onClose, onSaved }: { date: string; act
     setStartTime(activity?.startTime ?? '09:00');
     setEndTime(activity?.endTime ?? '');
     setCategory(activity?.category && isCategory(activity.category) ? activity.category : '');
+    setLocked(activity?.locked ?? false);
+    setPinned(activity?.pinned ?? false);
     setNote(activity?.note ?? '');
     setConfirmDelete(false);
     setFormError('');
@@ -460,6 +468,8 @@ function ActivityModal({ date, activity, onClose, onSaved }: { date: string; act
       startTime,
       endTime: endTime || null,
       category: category || null,
+      locked,
+      pinned,
       note: note.trim() || null,
     };
     try {
@@ -548,6 +558,22 @@ function ActivityModal({ date, activity, onClose, onSaved }: { date: string; act
             <div>
               <label htmlFor="activity-note" className="text-xs font-semibold text-foreground">A note <span className="font-normal text-muted-foreground">(optional)</span></label>
               <textarea id="activity-note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Anything future-you should know?" rows={3} data-testid="input-activity-note" className="mt-2 w-full resize-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/75 bg-card/55 p-3.5 transition-colors hover:border-primary/35">
+                <input type="checkbox" checked={locked} onChange={(event) => setLocked(event.target.checked)} data-testid="checkbox-activity-locked" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" />
+                <span>
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><LockKeyhole className="size-3.5 text-primary" strokeWidth={1.8} /> Lock this activity</span>
+                  <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Protect it from future planning changes.</span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/75 bg-card/55 p-3.5 transition-colors hover:border-primary/35">
+                <input type="checkbox" checked={pinned} onChange={(event) => setPinned(event.target.checked)} data-testid="checkbox-activity-pinned" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" />
+                <span>
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><Pin className="size-3.5 text-primary" strokeWidth={1.8} /> Pin for reuse</span>
+                  <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Keep this activity marked as a reusable template.</span>
+                </span>
+              </label>
             </div>
             {formError && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid="status-activity-form-error">{formError}</p>}
             <div className="flex flex-col-reverse gap-3 border-t border-border/65 pt-5 sm:flex-row sm:items-center sm:justify-between">

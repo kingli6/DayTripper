@@ -4,10 +4,11 @@ Last reviewed: 2026-08-15
 
 ## Current milestone
 
-**Prompt 1 — Product contract and build status**
+**Core Activity contract — lock and pin complete**
 
-This documentation milestone is complete. The next implementation milestone
-requires explicit approval before work continues.
+The Prompt 1 documentation milestone is complete. This milestone is now in
+complete: persisted lock and pin state now travels through the Activity
+contract, API, database, timeline labels, and existing editor.
 
 ## Existing completed areas
 
@@ -56,12 +57,17 @@ requires explicit approval before work continues.
 - Responsive activity editor
 - Category display and editing
 - Optional activity notes
+- Persisted lock status
+- Persisted pin status
+- Lock and pin controls in the existing activity editor
+- Lock and pin labels on timeline activities
 
 ## Missing or incomplete areas
 
 - Product contract and build-status documentation was missing until this
   milestone.
-- Activity lock and pin fields and behavior are not implemented.
+- Pinned activities are marked for future reuse, but a reusable-template
+  selection flow is intentionally deferred.
 - Current category labels do not fully match the contract:
   the implementation uses Focused and Break where the contract calls for Work
   and Recovery.
@@ -93,15 +99,13 @@ requires explicit approval before work continues.
 
 ## Next milestones
 
-1. Complete the remaining core Activity contract requirements: lock and pin
-   data/API behavior, while preserving the current private ownership boundary.
-2. Complete the responsive activity detail experience and its interaction
+1. Complete the responsive activity detail experience and its interaction
    safeguards.
-3. Align category values with Work, Recovery, Managing, Social, and Fun, then
+2. Align category values with Work, Recovery, Managing, Social, and Fun, then
    add the neutral day-distribution summary.
-4. Define and implement the bounded AI planning contract and server
+3. Define and implement the bounded AI planning contract and server
    integration.
-5. Build proposal input, review, acceptance, controlled re-planning,
+4. Build proposal input, review, acceptance, controlled re-planning,
    reflection, pattern summaries, offline resilience, quality review, and
    Android/PWA preparation in that order.
 

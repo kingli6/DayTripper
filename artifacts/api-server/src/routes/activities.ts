@@ -59,6 +59,8 @@ router.post("/activities", async (req, res): Promise<void> => {
       endTime: parsed.data.endTime ?? null,
       category: parsed.data.category ?? null,
       completed: parsed.data.completed ?? false,
+      locked: parsed.data.locked ?? false,
+      pinned: parsed.data.pinned ?? false,
       note: parsed.data.note ?? null,
     })
     .returning();
@@ -95,6 +97,8 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
     ...(parsed.data.completed !== undefined && {
       completed: parsed.data.completed,
     }),
+    ...(parsed.data.locked !== undefined && { locked: parsed.data.locked }),
+    ...(parsed.data.pinned !== undefined && { pinned: parsed.data.pinned }),
     ...(parsed.data.note !== undefined && { note: parsed.data.note }),
   };
 

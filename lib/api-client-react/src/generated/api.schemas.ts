@@ -41,6 +41,8 @@ export interface Activity {
   /** @nullable */
   category: ActivityCategory;
   completed: boolean;
+  locked: boolean;
+  pinned: boolean;
   /** @nullable */
   note: string | null;
 }
@@ -70,6 +72,8 @@ export interface ActivityInput {
   /** @nullable */
   category?: ActivityInputCategory;
   completed?: boolean;
+  locked?: boolean;
+  pinned?: boolean;
   /** @nullable */
   note?: string | null;
 }
@@ -99,6 +103,8 @@ export interface ActivityUpdate {
   /** @nullable */
   category?: ActivityUpdateCategory;
   completed?: boolean;
+  locked?: boolean;
+  pinned?: boolean;
   /** @nullable */
   note?: string | null;
 }

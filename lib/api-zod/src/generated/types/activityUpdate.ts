@@ -18,6 +18,8 @@ export interface ActivityUpdate {
   /** @nullable */
   category?: ActivityUpdateCategory;
   completed?: boolean;
+  locked?: boolean;
+  pinned?: boolean;
   /** @nullable */
   note?: string | null;
 }
