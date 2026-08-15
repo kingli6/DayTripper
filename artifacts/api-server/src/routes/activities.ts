@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { db, activitiesTable } from "@workspace/db";
 import {
@@ -11,8 +11,11 @@ import {
   UpdateActivityParams,
   UpdateActivityResponse,
 } from "@workspace/api-zod";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
+
+router.use(requireAuth);
 
 router.get("/activities", async (req, res): Promise<void> => {
   const parsed = ListActivitiesQueryParams.safeParse(req.query);
@@ -26,7 +29,12 @@ router.get("/activities", async (req, res): Promise<void> => {
   const activities = await db
     .select()
     .from(activitiesTable)
-    .where(eq(activitiesTable.scheduledDate, parsed.data.date))
+    .where(
+      and(
+        eq(activitiesTable.ownerId, res.locals.userId as string),
+        eq(activitiesTable.scheduledDate, parsed.data.date),
+      ),
+    )
     .orderBy(asc(activitiesTable.startTime), asc(activitiesTable.id));
 
   res.json(ListActivitiesResponse.parse(activities));
@@ -44,6 +52,7 @@ router.post("/activities", async (req, res): Promise<void> => {
   const [activity] = await db
     .insert(activitiesTable)
     .values({
+      ownerId: res.locals.userId as string,
       title: parsed.data.title,
       scheduledDate: parsed.data.scheduledDate,
       startTime: parsed.data.startTime,
@@ -97,7 +106,12 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
   const [activity] = await db
     .update(activitiesTable)
     .set(updateValues)
-    .where(eq(activitiesTable.id, params.data.id))
+    .where(
+      and(
+        eq(activitiesTable.id, params.data.id),
+        eq(activitiesTable.ownerId, res.locals.userId as string),
+      ),
+    )
     .returning();
 
   if (!activity) {
@@ -118,7 +132,12 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
 
   const [activity] = await db
     .delete(activitiesTable)
-    .where(eq(activitiesTable.id, params.data.id))
+    .where(
+      and(
+        eq(activitiesTable.id, params.data.id),
+        eq(activitiesTable.ownerId, res.locals.userId as string),
+      ),
+    )
     .returning({ id: activitiesTable.id });
 
   if (!activity) {

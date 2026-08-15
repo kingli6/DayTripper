@@ -1,9 +1,10 @@
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, date, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
 export const activitiesTable = pgTable("activities", {
   id: serial("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
   title: text("title").notNull(),
   scheduledDate: date("scheduled_date", { mode: "string" }).notNull(),
   startTime: text("start_time").notNull(),

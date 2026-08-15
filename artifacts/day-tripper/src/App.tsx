@@ -1,5 +1,8 @@
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { ClerkProvider, SignIn, SignUp, useClerk, useUser } from '@clerk/react';
+import { publishableKeyFromHost } from '@clerk/react/internal';
+import { shadcn } from '@clerk/themes';
 import {
   Activity as ActivityIcon,
   ArrowLeft,
@@ -33,9 +36,74 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
-import { Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
+import { Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 
 const queryClient = new QueryClient();
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+);
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+
+if (!clerkPubKey) {
+  throw new Error('Missing VITE_CLERK_PUBLISHABLE_KEY in the app environment.');
+}
+
+function stripBase(path: string) {
+  return basePath && path.startsWith(basePath)
+    ? path.slice(basePath.length) || '/'
+    : path;
+}
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: 'clerk',
+  options: {
+    logoPlacement: 'inside' as const,
+    logoLinkUrl: basePath || '/',
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: 'hsl(177 28% 39%)',
+    colorForeground: 'hsl(205 32% 20%)',
+    colorMutedForeground: 'hsl(201 15% 47%)',
+    colorDanger: 'hsl(8 62% 54%)',
+    colorBackground: 'hsl(43 40% 97%)',
+    colorInput: 'hsl(43 40% 97%)',
+    colorInputForeground: 'hsl(205 32% 20%)',
+    colorNeutral: 'hsl(39 22% 84%)',
+    fontFamily: 'DM Sans, sans-serif',
+    borderRadius: '0.8rem',
+  },
+  elements: {
+    rootBox: 'w-full flex justify-center',
+    cardBox: 'bg-[#fbfaf5] rounded-2xl w-[440px] max-w-full overflow-hidden',
+    card: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    footer: '!shadow-none !border-0 !bg-transparent !rounded-none',
+    headerTitle: 'text-[#28383f]',
+    headerSubtitle: 'text-[#6a7779]',
+    socialButtonsBlockButtonText: 'text-[#28383f]',
+    formFieldLabel: 'text-[#28383f]',
+    footerActionLink: 'text-[#236f6b]',
+    footerActionText: 'text-[#6a7779]',
+    dividerText: 'text-[#6a7779]',
+    identityPreviewEditButton: 'text-[#236f6b]',
+    formFieldSuccessText: 'text-[#236f6b]',
+    alertText: 'text-[#8f332a]',
+    logoBox: 'h-12',
+    logoImage: 'h-12 w-12',
+    socialButtonsBlockButton: 'border-[#d8d0c2] bg-[#fbfaf5]',
+    formButtonPrimary: 'bg-[#236f6b] text-[#fbfaf5]',
+    formFieldInput: 'border-[#d8d0c2] bg-[#fbfaf5] text-[#28383f]',
+    footerAction: 'bg-transparent',
+    dividerLine: 'bg-[#d8d0c2]',
+    alert: 'border-[#e5c3bd] bg-[#fbefed]',
+    otpCodeFieldInput: 'border-[#d8d0c2] bg-[#fbfaf5] text-[#28383f]',
+    formFieldRow: 'text-[#28383f]',
+    main: 'bg-transparent',
+  },
+};
 
 const CATEGORIES = ['focused', 'managing', 'fun', 'social', 'break'] as const;
 type Category = (typeof CATEGORIES)[number];
@@ -188,6 +256,25 @@ function ApiStatus() {
           Retry
         </button>
       )}
+    </div>
+  );
+}
+
+function AccountControl() {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const label = user?.firstName || user?.primaryEmailAddress?.emailAddress || 'Your account';
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="hidden max-w-[220px] truncate text-xs text-muted-foreground sm:block">{label}</span>
+      <button
+        type="button"
+        onClick={() => void signOut({ redirectUrl: basePath || '/' })}
+        className="rounded-full border border-border bg-card px-3 py-2 text-[11px] font-semibold text-foreground transition-colors hover:border-primary/45 hover:text-primary"
+      >
+        Sign out
+      </button>
     </div>
   );
 }
@@ -534,7 +621,10 @@ function Today() {
                 <Circle className="size-2.5 fill-accent text-accent" strokeWidth={0} />
                 <span className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A private day planner</span>
               </div>
-              <span className="hidden text-xs text-muted-foreground/75 sm:block">Take the day as it comes</span>
+               <div className="flex items-center gap-3">
+                 <span className="hidden text-xs text-muted-foreground/75 md:block">Take the day as it comes</span>
+                 <AccountControl />
+               </div>
             </header>
             <div className="mt-9 flex flex-col gap-6 border-b border-border/60 pb-8 sm:mt-12 sm:flex-row sm:items-end sm:justify-between">
               <div className="animate-rise min-w-0">
@@ -605,10 +695,148 @@ function Router() {
   return (
     <RoutedErrorBoundary>
       <Switch>
-        <Route path="/" component={Today} />
+        <Route path="/" component={HomeRedirect} />
+        <Route path="/today" component={UserPortal} />
+        <Route path="/sign-in/*?" component={SignInPage} />
+        <Route path="/sign-up/*?" component={SignUpPage} />
         <Route component={NotFound} />
       </Switch>
     </RoutedErrorBoundary>
+  );
+}
+
+function AuthLoading() {
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-6 text-center">
+      <div>
+        <div className="mx-auto size-3 animate-breathe rounded-full bg-primary" />
+        <p className="mt-4 text-sm text-muted-foreground">Preparing your private day space…</p>
+      </div>
+    </div>
+  );
+}
+
+function Landing() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <main className="paper-grain flex min-h-[100dvh] items-center justify-center bg-background px-6 py-12 text-foreground">
+      <div className="w-full max-w-[720px]">
+        <div className="rounded-[32px] border border-border/75 bg-card/75 p-7 shadow-[0_24px_80px_hsl(205_32%_20%/0.08)] sm:p-12">
+          <div className="flex items-center gap-3">
+            <BrandMark />
+            <div>
+              <p className="font-display text-[22px] leading-none tracking-[-0.03em]">Day Tripper</p>
+              <p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.2em] text-muted-foreground">a softer daily practice</p>
+            </div>
+          </div>
+          <p className="mt-16 font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">A private day planner</p>
+          <h1 className="mt-4 max-w-[620px] font-display text-[clamp(3rem,8vw,6.4rem)] leading-[0.9] tracking-[-0.065em]">
+            Make room for the day you actually have.
+          </h1>
+          <p className="mt-7 max-w-[540px] text-[15px] leading-7 text-muted-foreground">
+            Keep the next thing close, leave room for what changes, and let your plans remain yours.
+          </p>
+          <div className="mt-9 flex flex-wrap gap-3">
+            <button type="button" onClick={() => setLocation('/sign-up')} className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5">
+              Create your day space
+            </button>
+            <button type="button" onClick={() => setLocation('/sign-in')} className="rounded-full border border-border bg-background px-5 py-3 text-sm font-semibold text-foreground transition-colors hover:border-primary/45 hover:text-primary">
+              Sign in
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function HomeRedirect() {
+  const { isLoaded, isSignedIn } = useUser();
+
+  if (!isLoaded) return <AuthLoading />;
+  if (isSignedIn) return <Redirect to="/today" />;
+  return <Landing />;
+}
+
+function UserPortal() {
+  const { isLoaded, isSignedIn } = useUser();
+
+  if (!isLoaded) return <AuthLoading />;
+  if (!isSignedIn) return <Redirect to="/" />;
+  return <Today />;
+}
+
+function SignInPage() {
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
+      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+    </div>
+  );
+}
+
+function SignUpPage() {
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
+      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+    </div>
+  );
+}
+
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk();
+  const previousUserId = useRef<string | null | undefined>(undefined);
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const userId = user?.id ?? null;
+      if (previousUserId.current !== undefined && previousUserId.current !== userId) {
+        queryClient.clear();
+      }
+      previousUserId.current = userId;
+    });
+    return unsubscribe;
+  }, [addListener, queryClient]);
+
+  return null;
+}
+
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation();
+
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      proxyUrl={clerkProxyUrl}
+      appearance={clerkAppearance}
+      signInUrl={`${basePath}/sign-in`}
+      signUpUrl={`${basePath}/sign-up`}
+      localization={{
+        signIn: {
+          start: {
+            title: 'Welcome back',
+            subtitle: 'Sign in to access your private day space',
+          },
+        },
+        signUp: {
+          start: {
+            title: 'Create your day space',
+            subtitle: 'A gentler way to plan what comes next',
+          },
+        },
+      }}
+      routerPush={(to) => setLocation(stripBase(to))}
+      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+    >
+      <QueryClientProvider client={queryClient}>
+        <ClerkQueryClientCacheInvalidator />
+        <TooltipProvider>
+          <Router />
+          <Toaster />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }
 
@@ -619,14 +847,9 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <WouterRouter base={basePath}>
+      <ClerkProviderWithRoutes />
+    </WouterRouter>
   );
 }
 
