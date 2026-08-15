@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: ai
+    description: Server-side AI configuration operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /ai/status:
+    get:
+      operationId: getAiStatus
+      tags: [ai]
+      summary: Get AI configuration status
+      description: Returns safe metadata about the server-side Gemini configuration without exposing credentials
+      responses:
+        "200":
+          description: AI configuration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiStatus"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +48,20 @@ components:
           type: string
       required:
         - status
+    AiStatus:
+      type: object
+      properties:
+        provider:
+          type: string
+        model:
+          type: string
+        configured:
+          type: boolean
+        client:
+          type: string
+      required:
+        - provider
+        - model
+        - configured
+        - client
 

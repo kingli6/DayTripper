@@ -6,5 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export * from './aiStatus';
-export * from './healthStatus';
+export interface AiStatus {
+  provider: string;
+  model: string;
+  configured: boolean;
+  client: string;
+}
