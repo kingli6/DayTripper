@@ -4,11 +4,11 @@ Last reviewed: 2026-08-15
 
 ## Current milestone
 
-**Core Activity contract — lock and pin complete**
+**Prompt 7 — Activity detail experience complete**
 
-The Prompt 1 documentation milestone is complete. This milestone is now in
-complete: persisted lock and pin state now travels through the Activity
-contract, API, database, timeline labels, and existing editor.
+The Prompt 1 documentation milestone and the core Activity contract milestone
+are complete. Prompt 7 is now complete: the existing responsive activity
+surface supports safe editing and destructive-action recovery.
 
 ## Existing completed areas
 
@@ -61,6 +61,11 @@ contract, API, database, timeline labels, and existing editor.
 - Persisted pin status
 - Lock and pin controls in the existing activity editor
 - Lock and pin labels on timeline activities
+- Responsive activity detail surface on mobile and desktop
+- Completion and ongoing-status controls in the activity detail surface
+- Unsaved-change confirmation on close
+- Focus management, keyboard escape handling, visible focus states, touch-sized controls, and reduced-motion handling
+- Delete confirmation with a short undo recovery action
 
 ## Missing or incomplete areas
 
@@ -99,13 +104,11 @@ contract, API, database, timeline labels, and existing editor.
 
 ## Next milestones
 
-1. Complete the responsive activity detail experience and its interaction
-   safeguards.
-2. Align category values with Work, Recovery, Managing, Social, and Fun, then
+1. Align category values with Work, Recovery, Managing, Social, and Fun, then
    add the neutral day-distribution summary.
-3. Define and implement the bounded AI planning contract and server
+2. Define and implement the bounded AI planning contract and server
    integration.
-4. Build proposal input, review, acceptance, controlled re-planning,
+3. Build proposal input, review, acceptance, controlled re-planning,
    reflection, pattern summaries, offline resilience, quality review, and
    Android/PWA preparation in that order.
 

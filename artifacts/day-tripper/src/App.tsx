@@ -110,6 +110,17 @@ const clerkAppearance = {
 const CATEGORIES = ['focused', 'managing', 'fun', 'social', 'break'] as const;
 type Category = (typeof CATEGORIES)[number];
 type EditorActivity = Activity | null;
+type ActivityDraft = {
+  title: string;
+  scheduledDate: string;
+  startTime: string;
+  endTime: string | null;
+  category: string | null;
+  completed: boolean;
+  locked: boolean;
+  pinned: boolean;
+  note: string | null;
+};
 
 const categoryMeta: Record<Category, { label: string; color: string; soft: string }> = {
   focused: { label: 'Focused', color: 'hsl(var(--primary))', soft: 'hsl(var(--primary) / 0.12)' },
@@ -170,6 +181,20 @@ function currentMinutes() {
 
 function isCategory(value: string): value is Category {
   return CATEGORIES.includes(value as Category);
+}
+
+function draftFromActivity(activity: EditorActivity, date: string): ActivityDraft {
+  return {
+    title: activity?.title ?? '',
+    scheduledDate: activity?.scheduledDate ?? date,
+    startTime: activity?.startTime ?? '09:00',
+    endTime: activity?.endTime ?? null,
+    category: activity?.category ?? null,
+    completed: activity?.completed ?? false,
+    locked: activity?.locked ?? false,
+    pinned: activity?.pinned ?? false,
+    note: activity?.note ?? null,
+  };
 }
 
 function BrandMark() {
@@ -417,43 +442,105 @@ function Timeline({ activities, now, onEdit, onToggle }: { activities: Activity[
   );
 }
 
-function ActivityModal({ date, activity, onClose, onSaved }: { date: string; activity: EditorActivity; onClose: () => void; onSaved: () => void }) {
+function ActivityModal({ date, activity, onClose, onSaved, onDeleted }: { date: string; activity: EditorActivity; onClose: () => void; onSaved: () => void; onDeleted: (activity: Activity) => void }) {
   const createActivity = useCreateActivity();
   const updateActivity = useUpdateActivity();
   const deleteActivity = useDeleteActivity();
+  const dialogRef = useRef<HTMLElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
   const [scheduledDate, setScheduledDate] = useState(date);
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('');
+  const [ongoing, setOngoing] = useState(true);
   const [category, setCategory] = useState<Category | ''>('');
+  const [completed, setCompleted] = useState(false);
   const [locked, setLocked] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [note, setNote] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [initialDraft, setInitialDraft] = useState<ActivityDraft>(() => draftFromActivity(activity, date));
+  const [confirmAction, setConfirmAction] = useState<'delete' | 'discard' | null>(null);
   const [formError, setFormError] = useState('');
   const editing = Boolean(activity);
   const pending = createActivity.isPending || updateActivity.isPending || deleteActivity.isPending;
 
   useEffect(() => {
-    setTitle(activity?.title ?? '');
-    setScheduledDate(activity?.scheduledDate ?? date);
-    setStartTime(activity?.startTime ?? '09:00');
-    setEndTime(activity?.endTime ?? '');
+    const nextDraft = draftFromActivity(activity, date);
+    setInitialDraft(nextDraft);
+    setTitle(nextDraft.title);
+    setScheduledDate(nextDraft.scheduledDate);
+    setStartTime(nextDraft.startTime);
+    setEndTime(nextDraft.endTime ?? '');
+    setOngoing(nextDraft.endTime === null);
     setCategory(activity?.category && isCategory(activity.category) ? activity.category : '');
-    setLocked(activity?.locked ?? false);
-    setPinned(activity?.pinned ?? false);
-    setNote(activity?.note ?? '');
-    setConfirmDelete(false);
+    setCompleted(nextDraft.completed);
+    setLocked(nextDraft.locked);
+    setPinned(nextDraft.pinned);
+    setNote(nextDraft.note ?? '');
+    setConfirmAction(null);
     setFormError('');
   }, [activity, date]);
 
+  const currentDraft: ActivityDraft = {
+    title,
+    scheduledDate,
+    startTime,
+    endTime: ongoing ? null : endTime || null,
+    category: category || null,
+    completed,
+    locked,
+    pinned,
+    note: note || null,
+  };
+  const hasUnsavedChanges = JSON.stringify(currentDraft) !== JSON.stringify(initialDraft);
+
+  function requestClose() {
+    if (pending) return;
+    if (confirmAction) {
+      setConfirmAction(null);
+      return;
+    }
+    if (hasUnsavedChanges) {
+      setConfirmAction('discard');
+      return;
+    }
+    onClose();
+  }
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const frame = window.requestAnimationFrame(() => titleInputRef.current?.focus());
+    return () => {
+      window.cancelAnimationFrame(frame);
+      previousFocus?.focus({ preventScroll: true });
+    };
+  }, []);
+
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !pending) onClose();
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        requestClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    window.addEventListener('keydown', listener);
-    return () => window.removeEventListener('keydown', listener);
-  }, [onClose, pending]);
+    document.addEventListener('keydown', listener);
+    return () => document.removeEventListener('keydown', listener);
+  }, [confirmAction, hasUnsavedChanges, pending]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -461,13 +548,30 @@ function ActivityModal({ date, activity, onClose, onSaved }: { date: string; act
       setFormError('Give this activity a short name first.');
       return;
     }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(scheduledDate)) {
+      setFormError('Choose a valid date for this activity.');
+      return;
+    }
+    if (!/^\d{2}:\d{2}$/.test(startTime)) {
+      setFormError('Choose a valid start time.');
+      return;
+    }
+    if (!ongoing && !endTime) {
+      setFormError('Add an end time or mark this activity as ongoing.');
+      return;
+    }
+    if (!ongoing && minutesFromTime(endTime) <= minutesFromTime(startTime)) {
+      setFormError('The end time needs to be after the start time.');
+      return;
+    }
     setFormError('');
     const payload = {
       title: title.trim(),
       scheduledDate,
       startTime,
-      endTime: endTime || null,
+      endTime: ongoing ? null : endTime,
       category: category || null,
+      completed,
       locked,
       pinned,
       note: note.trim() || null,
@@ -488,67 +592,98 @@ function ActivityModal({ date, activity, onClose, onSaved }: { date: string; act
     if (!activity) return;
     try {
       await deleteActivity.mutateAsync({ id: activity.id });
-      onSaved();
+      onDeleted(activity);
     } catch {
       setFormError('That did not delete. The activity is still here.');
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="activity-modal-title" className="paper-grain max-h-[92dvh] w-full max-w-[560px] overflow-y-auto rounded-t-[28px] border border-border bg-background p-5 shadow-[0_24px_80px_hsl(205_32%_20%/0.2)] sm:rounded-[28px] sm:p-7" data-testid="dialog-activity">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="activity-modal-title" aria-describedby="activity-modal-description" className="paper-grain max-h-[94dvh] w-full max-w-[680px] overflow-y-auto rounded-t-[28px] border border-border bg-background p-5 shadow-[0_24px_80px_hsl(205_32%_20%/0.2)] sm:max-h-[90dvh] sm:rounded-[28px] sm:p-7" data-testid="dialog-activity">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">{editing ? 'Make a change' : 'Add to the day'}</p>
             <h2 id="activity-modal-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">{editing ? 'Adjust the plan.' : 'What belongs here?'}</h2>
+            <p id="activity-modal-description" className="mt-2 max-w-[510px] text-sm leading-6 text-muted-foreground">{editing ? 'Change the schedule directly. Nothing is sent to AI or changed elsewhere without your save.' : 'Give this part of the day a shape that feels possible.'}</p>
           </div>
-          <button type="button" onClick={onClose} disabled={pending} aria-label="Close activity form" data-testid="button-close-activity" className="flex size-9 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary disabled:opacity-40">
+          <button type="button" onClick={requestClose} disabled={pending} aria-label="Close activity form" data-testid="button-close-activity" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
             <X className="size-4" strokeWidth={1.8} />
           </button>
         </div>
-        {confirmDelete ? (
+        {confirmAction === 'delete' ? (
           <div className="mt-8 rounded-[20px] border border-destructive/25 bg-destructive/[0.06] p-5">
             <div className="flex items-start gap-3">
               <Trash2 className="mt-0.5 size-5 text-destructive" strokeWidth={1.7} />
               <div>
                 <h3 className="font-semibold">Remove “{activity?.title}”?</h3>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">This will remove it from your day. There is no rush — you can keep it instead.</p>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">This removes it from the day. You will have a short chance to undo it after confirming.</p>
               </div>
             </div>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
-              <button type="button" onClick={() => setConfirmDelete(false)} disabled={pending} data-testid="button-cancel-delete" className="rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 disabled:opacity-40">Keep activity</button>
-              <button type="button" onClick={() => void remove()} disabled={pending} data-testid="button-confirm-delete" className="inline-flex items-center gap-2 rounded-full bg-destructive px-4 py-2.5 text-xs font-semibold text-destructive-foreground disabled:opacity-50">
+              <button type="button" onClick={() => setConfirmAction(null)} disabled={pending} data-testid="button-cancel-delete" className="min-h-11 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">Keep activity</button>
+              <button type="button" onClick={() => void remove()} disabled={pending} data-testid="button-confirm-delete" className="inline-flex min-h-11 items-center gap-2 rounded-full bg-destructive px-4 py-2.5 text-xs font-semibold text-destructive-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
                 {pending && <LoaderCircle className="size-3.5 animate-spin" />}
                 Remove it
               </button>
+            </div>
+          </div>
+        ) : confirmAction === 'discard' ? (
+          <div className="mt-8 rounded-[20px] border border-primary/20 bg-primary/[0.05] p-5">
+            <div className="flex items-start gap-3">
+              <Pencil className="mt-0.5 size-5 text-primary" strokeWidth={1.7} />
+              <div>
+                <h3 className="font-semibold">Leave without saving?</h3>
+                <p className="mt-1 text-sm leading-6 text-muted-foreground">Your changes are still here. Keep editing or discard them and return to the timeline.</p>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={() => setConfirmAction(null)} data-testid="button-keep-editing" className="min-h-11 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Keep editing</button>
+              <button type="button" onClick={onClose} data-testid="button-discard-changes" className="min-h-11 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Discard changes</button>
             </div>
           </div>
         ) : (
           <form onSubmit={(event) => void submit(event)} className="mt-7 space-y-5">
             <div>
               <label htmlFor="activity-title" className="text-xs font-semibold text-foreground">Activity</label>
-              <input id="activity-title" autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Call the school" data-testid="input-activity-title" className="mt-2 w-full rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
+              <input ref={titleInputRef} id="activity-title" required value={title} onChange={(event) => setTitle(event.target.value)} placeholder="e.g. Call the school" aria-invalid={Boolean(formError && !title.trim())} data-testid="input-activity-title" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
             </div>
             <div className="grid gap-4 sm:grid-cols-[1fr_1fr]">
               <div>
                 <label htmlFor="activity-date" className="text-xs font-semibold text-foreground">Date</label>
-                <input id="activity-date" type="date" value={scheduledDate} onChange={(event) => setScheduledDate(event.target.value)} data-testid="input-activity-date" className="mt-2 w-full rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                <input id="activity-date" required type="date" value={scheduledDate} onChange={(event) => setScheduledDate(event.target.value)} data-testid="input-activity-date" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label htmlFor="activity-start" className="text-xs font-semibold text-foreground">Starts</label>
-                  <input id="activity-start" type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} data-testid="input-activity-start" className="mt-2 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                  <input id="activity-start" required type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} data-testid="input-activity-start" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
                 </div>
                 <div>
                   <label htmlFor="activity-end" className="text-xs font-semibold text-foreground">Ends <span className="font-normal text-muted-foreground">(optional)</span></label>
-                  <input id="activity-end" type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} data-testid="input-activity-end" className="mt-2 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                  <input id="activity-end" type="time" disabled={ongoing} value={endTime} onChange={(event) => { setEndTime(event.target.value); if (event.target.value) setOngoing(false); }} data-testid="input-activity-end" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-45 focus:border-primary focus:ring-2 focus:ring-primary/15" />
                 </div>
               </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-border/75 bg-card/55 p-3.5 transition-colors hover:border-primary/35">
+                <input type="checkbox" checked={ongoing} onChange={(event) => { setOngoing(event.target.checked); if (event.target.checked) setEndTime(''); }} data-testid="checkbox-activity-ongoing" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" />
+                <span>
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><Clock3 className="size-3.5 text-primary" strokeWidth={1.8} /> Ongoing activity</span>
+                  <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Leave the end open for now.</span>
+                </span>
+              </label>
+              <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-border/75 bg-card/55 p-3.5 transition-colors hover:border-primary/35">
+                <input type="checkbox" checked={completed} onChange={(event) => setCompleted(event.target.checked)} data-testid="checkbox-activity-completed" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" />
+                <span>
+                  <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><Check className="size-3.5 text-primary" strokeWidth={2.2} /> Mark as complete</span>
+                  <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Completion is always your choice.</span>
+                </span>
+              </label>
             </div>
             <div>
               <label htmlFor="activity-category" className="text-xs font-semibold text-foreground">Kind <span className="font-normal text-muted-foreground">(optional)</span></label>
               <div className="relative mt-2">
-                <select id="activity-category" value={category} onChange={(event) => setCategory(event.target.value as Category | '')} data-testid="select-activity-category" className="w-full appearance-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+                <select id="activity-category" value={category} onChange={(event) => setCategory(event.target.value as Category | '')} data-testid="select-activity-category" className="min-h-11 w-full appearance-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
                   <option value="">No label</option>
                   {CATEGORIES.map((item) => <option key={item} value={item}>{categoryMeta[item].label}</option>)}
                 </select>
@@ -577,10 +712,10 @@ function ActivityModal({ date, activity, onClose, onSaved }: { date: string; act
             </div>
             {formError && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid="status-activity-form-error">{formError}</p>}
             <div className="flex flex-col-reverse gap-3 border-t border-border/65 pt-5 sm:flex-row sm:items-center sm:justify-between">
-              {editing ? <button type="button" onClick={() => setConfirmDelete(true)} disabled={pending} data-testid="button-delete-activity" className="inline-flex items-center gap-2 self-start text-xs font-semibold text-destructive hover:underline disabled:opacity-40"><Trash2 className="size-3.5" strokeWidth={1.8} /> Remove activity</button> : <span className="text-[11px] text-muted-foreground">You can always move it later.</span>}
+              {editing ? <button type="button" onClick={() => setConfirmAction('delete')} disabled={pending} data-testid="button-delete-activity" className="inline-flex min-h-11 items-center gap-2 self-start text-xs font-semibold text-destructive hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"><Trash2 className="size-3.5" strokeWidth={1.8} /> Remove activity</button> : <span className="text-[11px] text-muted-foreground">You can always move it later.</span>}
               <div className="flex justify-end gap-2">
-                <button type="button" onClick={onClose} disabled={pending} data-testid="button-cancel-activity" className="rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 disabled:opacity-40">Cancel</button>
-                <button type="submit" disabled={pending} data-testid="button-save-activity" className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-55">
+                <button type="button" onClick={requestClose} disabled={pending} data-testid="button-cancel-activity" className="min-h-11 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">Cancel</button>
+                <button type="submit" disabled={pending} data-testid="button-save-activity" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-55">
                   {pending && <LoaderCircle className="size-3.5 animate-spin" />}
                   {editing ? 'Save change' : 'Add activity'}
                 </button>
@@ -598,6 +733,11 @@ function Today() {
   const [date, setDate] = useState(today);
   const [now, setNow] = useState(currentMinutes());
   const [editorActivity, setEditorActivity] = useState<EditorActivity | undefined>(undefined);
+  const [deletedActivity, setDeletedActivity] = useState<Activity | null>(null);
+  const [undoPending, setUndoPending] = useState(false);
+  const [undoError, setUndoError] = useState('');
+  const deleteTimerRef = useRef<number | null>(null);
+  const createActivity = useCreateActivity();
   const updateActivity = useUpdateActivity();
   const queryClient = useQueryClient();
   const list = useListActivities({ date }, { query: { queryKey: getListActivitiesQueryKey({ date }) } });
@@ -606,6 +746,12 @@ function Today() {
   useEffect(() => {
     const timer = window.setInterval(() => setNow(currentMinutes()), 60_000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (deleteTimerRef.current !== null) window.clearTimeout(deleteTimerRef.current);
+    };
   }, []);
 
   const completedCount = activities.filter((activity) => activity.completed).length;
@@ -622,6 +768,51 @@ function Today() {
   async function refreshAfterMutation() {
     await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
     setEditorActivity(undefined);
+  }
+
+  function handleDeleted(deleted: Activity) {
+    if (deleteTimerRef.current !== null) window.clearTimeout(deleteTimerRef.current);
+    setEditorActivity(undefined);
+    setDeletedActivity(deleted);
+    setUndoError('');
+    void queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
+    deleteTimerRef.current = window.setTimeout(() => {
+      setDeletedActivity(null);
+      setUndoError('');
+      deleteTimerRef.current = null;
+    }, 8000);
+  }
+
+  async function undoDelete() {
+    if (!deletedActivity || undoPending) return;
+    const activityToRestore = deletedActivity;
+    setUndoPending(true);
+    setUndoError('');
+    try {
+      await createActivity.mutateAsync({
+        data: {
+          title: activityToRestore.title,
+          scheduledDate: activityToRestore.scheduledDate,
+          startTime: activityToRestore.startTime,
+          endTime: activityToRestore.endTime,
+          category: activityToRestore.category,
+          completed: activityToRestore.completed,
+          locked: activityToRestore.locked,
+          pinned: activityToRestore.pinned,
+          note: activityToRestore.note,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
+      setDeletedActivity(null);
+      if (deleteTimerRef.current !== null) {
+        window.clearTimeout(deleteTimerRef.current);
+        deleteTimerRef.current = null;
+      }
+    } catch {
+      setUndoError('Could not restore it. You can add the activity again.');
+    } finally {
+      setUndoPending(false);
+    }
   }
 
   async function toggle(activity: Activity) {
@@ -712,7 +903,16 @@ function Today() {
           </main>
         </div>
       </div>
-      {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSaved={() => void refreshAfterMutation()} />}
+      {deletedActivity && (
+        <div className="fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)]" role="status" data-testid="status-activity-deleted">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-foreground">{undoError || `“${deletedActivity.title}” was removed.`}</p>
+            {!undoError && <p className="mt-0.5 text-[11px] text-muted-foreground">You can restore it for a few seconds.</p>}
+          </div>
+          {!undoError && <button type="button" onClick={() => void undoDelete()} disabled={undoPending} data-testid="button-undo-delete" className="min-h-11 shrink-0 rounded-full border border-primary/35 px-4 py-2 text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{undoPending ? 'Restoring…' : 'Undo'}</button>}
+        </div>
+      )}
+      {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSaved={() => void refreshAfterMutation()} onDeleted={handleDeleted} />}
     </div>
   );
 }
