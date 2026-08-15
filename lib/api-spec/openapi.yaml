@@ -193,6 +193,9 @@ components:
         planningStyle:
           type: ["string", "null"]
           enum: [lighter, balanced, fuller, null]
+        fixedCommitments:
+          type: ["string", "null"]
+          maxLength: 2000
         useHistoricalContext:
           type: boolean
           default: false

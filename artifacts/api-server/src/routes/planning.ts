@@ -20,6 +20,7 @@ type PlanningRequest = {
   currentTime: string;
   availableTime: Array<{ startTime: string; endTime: string }>;
   planningStyle?: "lighter" | "balanced" | "fuller" | null;
+  fixedCommitments?: string | null;
   useHistoricalContext?: boolean;
   historicalContext?: string | null;
 };
@@ -154,6 +155,7 @@ ${JSON.stringify({
   currentTime: request.currentTime,
   availableTime: request.availableTime,
   planningStyle: request.planningStyle ?? "balanced",
+  fixedCommitments: request.fixedCommitments ?? null,
   existingActivities: activities,
   approvedHistoricalContext,
 }, null, 2)}`;

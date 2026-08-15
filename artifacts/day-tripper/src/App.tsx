@@ -21,6 +21,7 @@ import {
   Plus,
   RotateCcw,
   ShieldCheck,
+  Sparkles,
   Trash2,
   X,
 } from 'lucide-react';
@@ -31,9 +32,10 @@ import {
   useGetAiStatus,
   useHealthCheck,
   useListActivities,
+  useCreatePlanningProposal,
   useUpdateActivity,
 } from '@workspace/api-client-react';
-import type { Activity } from '@workspace/api-client-react';
+import type { Activity, PlanningProposal } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -192,6 +194,11 @@ function currentMinutes() {
   return now.getHours() * 60 + now.getMinutes();
 }
 
+function currentTimeValue() {
+  const now = new Date();
+  return `${`${now.getHours()}`.padStart(2, '0')}:${`${now.getMinutes()}`.padStart(2, '0')}`;
+}
+
 function isCategory(value: string): value is Category {
   return CATEGORIES.includes(value as Category);
 }
@@ -219,7 +226,7 @@ function BrandMark() {
   );
 }
 
-function Sidebar({ onAdd }: { onAdd: () => void }) {
+function Sidebar({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning: () => void }) {
   return (
     <aside className="hidden w-[264px] shrink-0 flex-col justify-between bg-sidebar px-5 py-6 text-sidebar-foreground lg:flex">
       <div>
@@ -251,6 +258,10 @@ function Sidebar({ onAdd }: { onAdd: () => void }) {
           <Plus className="size-4" strokeWidth={2.2} />
           Add to the day
         </button>
+        <button type="button" onClick={onOpenPlanning} data-testid="button-sidebar-planning" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-primary/35 px-3 py-3 text-sm font-semibold text-sidebar-foreground transition-colors hover:border-sidebar-primary/70 hover:bg-sidebar-accent">
+          <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+          Shape the day
+        </button>
         <div className="border-t border-sidebar-border/80 px-3 pt-5">
           <div className="flex items-center gap-2 text-[11px] text-sidebar-foreground/55">
             <ShieldCheck className="size-3.5 text-sidebar-primary/80" strokeWidth={1.8} />
@@ -263,16 +274,21 @@ function Sidebar({ onAdd }: { onAdd: () => void }) {
   );
 }
 
-function MobileHeader({ onAdd }: { onAdd: () => void }) {
+function MobileHeader({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning: () => void }) {
   return (
     <header className="flex items-center justify-between border-b border-border/70 bg-sidebar px-5 py-4 text-sidebar-foreground lg:hidden">
       <div className="flex items-center gap-3">
         <BrandMark />
         <p className="font-display text-[21px] tracking-[-0.03em]">Day Tripper</p>
       </div>
-      <button type="button" onClick={onAdd} aria-label="Add an activity" data-testid="button-mobile-add" className="flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
-        <Plus className="size-5" strokeWidth={2} />
-      </button>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={onOpenPlanning} aria-label="Shape the day with a suggestion" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
+          <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+        </button>
+        <button type="button" onClick={onAdd} aria-label="Add an activity" data-testid="button-mobile-add" className="flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
+          <Plus className="size-5" strokeWidth={2} />
+        </button>
+      </div>
     </header>
   );
 }
@@ -528,6 +544,167 @@ function DayDistribution({ activities }: { activities: Activity[] }) {
         <p className="mt-3 text-[11px] leading-5 text-muted-foreground/75">This only reflects the schedule you entered. It is not a target or a measure of how the day should look.</p>
       </div>
     </details>
+  );
+}
+
+function PlanningStudio({ date, activities, onClose }: { date: string; activities: Activity[]; onClose: () => void }) {
+  const createPlanningProposal = useCreatePlanningProposal();
+  const intentionRef = useRef<HTMLTextAreaElement>(null);
+  const [intention, setIntention] = useState('');
+  const [currentTime, setCurrentTime] = useState(currentTimeValue());
+  const [availableStart, setAvailableStart] = useState('09:00');
+  const [availableEnd, setAvailableEnd] = useState('17:00');
+  const [planningStyle, setPlanningStyle] = useState<'lighter' | 'balanced' | 'fuller'>('balanced');
+  const [fixedCommitments, setFixedCommitments] = useState('');
+  const [useHistoricalContext, setUseHistoricalContext] = useState(false);
+  const [historicalContext, setHistoricalContext] = useState('');
+  const [proposal, setProposal] = useState<PlanningProposal | null>(null);
+  const [formError, setFormError] = useState('');
+  const lockedActivities = activities.filter((activity) => activity.locked);
+  const pending = createPlanningProposal.isPending;
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => intentionRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!intention.trim()) {
+      setFormError('Tell the planner what you would like the day to hold.');
+      return;
+    }
+    if (!/^\d{2}:\d{2}$/.test(currentTime) || !/^\d{2}:\d{2}$/.test(availableStart) || !/^\d{2}:\d{2}$/.test(availableEnd)) {
+      setFormError('Choose valid times for the planning context.');
+      return;
+    }
+    if (minutesFromTime(availableEnd) <= minutesFromTime(availableStart)) {
+      setFormError('The open-time window needs to end after it starts.');
+      return;
+    }
+
+    setFormError('');
+    setProposal(null);
+    try {
+      const result = await createPlanningProposal.mutateAsync({
+        data: {
+          intention: intention.trim(),
+          currentDate: date,
+          currentTime,
+          availableTime: [{ startTime: availableStart, endTime: availableEnd }],
+          planningStyle,
+          fixedCommitments: fixedCommitments.trim() || null,
+          useHistoricalContext,
+          historicalContext: useHistoricalContext ? historicalContext.trim() || null : null,
+        },
+      });
+      setProposal(result);
+    } catch {
+      setFormError('The planner could not prepare a proposal. Check the connection and try again.');
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="planning-studio-title" aria-describedby="planning-studio-description" className="paper-grain max-h-[94dvh] w-full max-w-[720px] overflow-y-auto rounded-t-[28px] border border-border bg-background p-5 shadow-[0_24px_80px_hsl(205_32%_20%/0.2)] sm:max-h-[90dvh] sm:rounded-[28px] sm:p-7" data-testid="dialog-planning-studio">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="flex items-center gap-2 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary"><Sparkles className="size-3.5" strokeWidth={1.8} /> AI Studio</p>
+            <h2 id="planning-studio-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">Shape a possible day.</h2>
+            <p id="planning-studio-description" className="mt-2 max-w-[550px] text-sm leading-6 text-muted-foreground">Describe what matters. Day Tripper will return a proposal to review, without changing the schedule you already saved.</p>
+          </div>
+          <button type="button" onClick={onClose} disabled={pending} aria-label="Close AI Studio" data-testid="button-close-planning-studio" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
+            <X className="size-4" strokeWidth={1.8} />
+          </button>
+        </div>
+
+        {proposal ? (
+          <div className="mt-8 space-y-5" data-testid="status-planning-proposal-ready">
+            <div className="rounded-[22px] border border-primary/20 bg-primary/[0.06] p-5">
+              <p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Proposal prepared</p>
+              <h3 className="mt-2 font-display text-[27px] leading-tight tracking-[-0.03em]">A possible shape is ready.</h3>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">Nothing has been added, moved, or completed. The proposal is separate from your saved day and can be reviewed in the next step.</p>
+              {proposal.proposedActivities.length === 0 ? (
+                <p className="mt-5 rounded-xl bg-background/70 px-3 py-3 text-xs leading-5 text-muted-foreground" data-testid="status-planning-proposal-empty">Nothing needed to be proposed for this version. Open time is still allowed to stay open.</p>
+              ) : (
+                <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{proposal.proposedActivities.length}</p><p className="mt-1 text-[11px] text-muted-foreground">possible activities</p></div>
+                  <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{proposal.restPeriods.length}</p><p className="mt-1 text-[11px] text-muted-foreground">rest periods</p></div>
+                  <div className="rounded-xl bg-background/70 px-3 py-3"><p className="font-mono-ui text-lg text-primary">{proposal.didNotFit.length}</p><p className="mt-1 text-[11px] text-muted-foreground">items that did not fit</p></div>
+                </div>
+              )}
+              {(proposal.assumptions.length > 0 || proposal.conflicts.length > 0) && (
+                <p className="mt-4 text-xs leading-5 text-muted-foreground">{proposal.assumptions.length ? `${proposal.assumptions.length} assumption${proposal.assumptions.length === 1 ? '' : 's'}` : 'No assumptions'}{proposal.conflicts.length ? ` · ${proposal.conflicts.length} conflict${proposal.conflicts.length === 1 ? '' : 's'} to review` : ''}</p>
+              )}
+            </div>
+            <div className="flex flex-col-reverse gap-3 border-t border-border/65 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <button type="button" onClick={() => setProposal(null)} data-testid="button-plan-again" className="min-h-11 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Try another version</button>
+              <button type="button" onClick={onClose} data-testid="button-close-planning-result" className="min-h-11 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Return to my day</button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={(event) => void submit(event)} className="mt-7 space-y-5">
+            <div>
+              <label htmlFor="planning-intention" className="text-xs font-semibold text-foreground">What would you like the day to hold?</label>
+              <textarea ref={intentionRef} id="planning-intention" required value={intention} onChange={(event) => setIntention(event.target.value)} placeholder="I have work, groceries, dinner, and I would like some time to recover." rows={4} data-testid="input-planning-intention" className="mt-2 w-full resize-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div>
+                <label htmlFor="planning-current-time" className="text-xs font-semibold text-foreground">Current time</label>
+                <input id="planning-current-time" type="time" required value={currentTime} onChange={(event) => setCurrentTime(event.target.value)} data-testid="input-planning-current-time" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+              </div>
+              <div>
+                <label htmlFor="planning-open-start" className="text-xs font-semibold text-foreground">Open from</label>
+                <input id="planning-open-start" type="time" required value={availableStart} onChange={(event) => setAvailableStart(event.target.value)} data-testid="input-planning-open-start" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+              </div>
+              <div>
+                <label htmlFor="planning-open-end" className="text-xs font-semibold text-foreground">Open until</label>
+                <input id="planning-open-end" type="time" required value={availableEnd} onChange={(event) => setAvailableEnd(event.target.value)} data-testid="input-planning-open-end" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="planning-style" className="text-xs font-semibold text-foreground">How full should this version feel?</label>
+              <select id="planning-style" value={planningStyle} onChange={(event) => setPlanningStyle(event.target.value as 'lighter' | 'balanced' | 'fuller')} data-testid="select-planning-style" className="mt-2 min-h-11 w-full appearance-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+                <option value="lighter">Lighter — leave more room</option>
+                <option value="balanced">Balanced — a workable version</option>
+                <option value="fuller">Fuller — fit a little more in</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="planning-commitments" className="text-xs font-semibold text-foreground">Fixed commitments <span className="font-normal text-muted-foreground">(optional)</span></label>
+              <textarea id="planning-commitments" value={fixedCommitments} onChange={(event) => setFixedCommitments(event.target.value)} placeholder="School pickup at 3:30, or anything else that must stay in place." rows={2} data-testid="input-planning-commitments" className="mt-2 w-full resize-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
+            </div>
+            <div className="rounded-[18px] border border-border/75 bg-card/55 p-4">
+              <div className="flex items-start gap-3">
+                <LockKeyhole className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={1.8} />
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground">Saved activities stay in view</p>
+                  <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{activities.length ? `${activities.length} saved ${activities.length === 1 ? 'activity is' : 'activities are'} included automatically.` : 'There are no saved activities for this day yet.'} {lockedActivities.length ? `${lockedActivities.length} locked ${lockedActivities.length === 1 ? 'activity is' : 'activities are'} protected.` : 'Lock anything that must not move before asking for a proposal.'}</p>
+                  {lockedActivities.length > 0 && <p className="mt-2 truncate text-[11px] font-medium text-primary" title={lockedActivities.map((activity) => activity.title).join(', ')}>Protected: {lockedActivities.map((activity) => activity.title).join(', ')}</p>}
+                </div>
+              </div>
+            </div>
+            <details className="rounded-[18px] border border-border/75 bg-card/55 p-4">
+              <summary className="cursor-pointer text-xs font-semibold text-foreground">Use previous notes for this proposal</summary>
+              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Only notes you explicitly include here will be sent as historical context.</p>
+              <label className="mt-3 flex items-center gap-2 text-xs text-foreground">
+                <input type="checkbox" checked={useHistoricalContext} onChange={(event) => setUseHistoricalContext(event.target.checked)} data-testid="checkbox-planning-history" className="size-4 accent-[hsl(var(--primary))]" />
+                Include approved context
+              </label>
+              {useHistoricalContext && <textarea value={historicalContext} onChange={(event) => setHistoricalContext(event.target.value)} placeholder="What should the planner know from a previous day?" rows={3} data-testid="input-planning-history" className="mt-3 w-full resize-none rounded-xl border border-input bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />}
+            </details>
+            {formError && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid="status-planning-error">{formError}</p>}
+            <div className="flex flex-col-reverse gap-3 border-t border-border/65 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-[330px] text-[11px] leading-5 text-muted-foreground">Planning needs an internet connection. It creates a proposal only; your saved schedule will not change automatically.</p>
+              <button type="submit" disabled={pending} data-testid="button-create-planning-proposal" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-55">
+                {pending ? <LoaderCircle className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" strokeWidth={1.8} />}
+                {pending ? 'Preparing a proposal…' : 'Suggest a possible plan'}
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
+    </div>
   );
 }
 
@@ -822,6 +999,7 @@ function Today() {
   const [date, setDate] = useState(today);
   const [now, setNow] = useState(currentMinutes());
   const [editorActivity, setEditorActivity] = useState<EditorActivity | undefined>(undefined);
+  const [planningOpen, setPlanningOpen] = useState(false);
   const [deletedActivity, setDeletedActivity] = useState<Activity | null>(null);
   const [undoPending, setUndoPending] = useState(false);
   const [undoError, setUndoError] = useState('');
@@ -918,9 +1096,9 @@ function Today() {
       <div className="pointer-events-none absolute -right-24 -top-28 size-[430px] rounded-full bg-accent/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-[-180px] left-[25%] size-[420px] rounded-full bg-secondary/35 blur-3xl" />
       <div className="relative flex min-h-[100dvh]">
-        <Sidebar onAdd={openCreate} />
+        <Sidebar onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} />
         <div className="min-w-0 flex-1">
-          <MobileHeader onAdd={openCreate} />
+          <MobileHeader onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} />
           <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
             <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
               <div className="flex items-center gap-2">
@@ -949,11 +1127,18 @@ function Today() {
                     <h2 id="timeline-title" className="font-display text-[27px] tracking-[-0.035em]">The shape of things</h2>
                     <p className="mt-1 text-xs text-muted-foreground">{completedCount ? `${completedCount} already held` : 'Nothing needs to be finished to make this day count.'}</p>
                   </div>
-                  <button type="button" onClick={openCreate} data-testid="button-add-activity" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0">
+                  <div className="flex items-center gap-2">
+                   <button type="button" onClick={() => setPlanningOpen(true)} data-testid="button-open-planning" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.06] px-4 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
+                     <Sparkles className="size-3.5" strokeWidth={1.8} />
+                     <span className="hidden sm:inline">Shape the day</span>
+                     <span className="sm:hidden">Plan</span>
+                   </button>
+                   <button type="button" onClick={openCreate} data-testid="button-add-activity" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0">
                     <Plus className="size-3.5" strokeWidth={2.2} />
                     <span className="hidden sm:inline">Add activity</span>
                     <span className="sm:hidden">Add</span>
-                  </button>
+                   </button>
+                  </div>
                 </div>
                 {list.isLoading ? <TimelineSkeleton /> : list.isError ? (
                   <div className="rounded-[24px] border border-destructive/20 bg-destructive/[0.05] p-6" role="alert" data-testid="status-activities-error">
@@ -1002,6 +1187,7 @@ function Today() {
           {!undoError && <button type="button" onClick={() => void undoDelete()} disabled={undoPending} data-testid="button-undo-delete" className="min-h-11 shrink-0 rounded-full border border-primary/35 px-4 py-2 text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{undoPending ? 'Restoring…' : 'Undo'}</button>}
         </div>
       )}
+      {planningOpen && <PlanningStudio date={date} activities={activities} onClose={() => setPlanningOpen(false)} />}
       {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSaved={() => void refreshAfterMutation()} onDeleted={handleDeleted} />}
     </div>
   );

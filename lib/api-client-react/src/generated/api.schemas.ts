@@ -49,6 +49,11 @@ export interface PlanningRequest {
   availableTime: PlanningTimeWindow[];
   /** @nullable */
   planningStyle?: PlanningRequestPlanningStyle;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  fixedCommitments?: string | null;
   useHistoricalContext?: boolean;
   /**
      * @maxLength 4000

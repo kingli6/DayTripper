@@ -4,14 +4,16 @@ Last reviewed: 2026-08-15
 
 ## Current milestone
 
-**Prompt 9 — AI planning contract and server foundation complete**
+**Prompt 10 — AI Studio input experience complete**
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
 are complete. Prompt 7 is complete: the existing responsive activity surface
 supports safe editing and destructive-action recovery. Prompt 8 is complete:
 activities use the five contract categories and the day view includes a neutral
 duration mirror. Prompt 9 is complete: the server exposes a bounded, validated
-planning proposal endpoint that never mutates saved activities.
+planning proposal endpoint that never mutates saved activities. Prompt 10 is
+complete: authenticated users can describe a day, add planning context, and
+request a proposal without changing the saved timeline.
 
 ## Existing completed areas
 
@@ -76,6 +78,13 @@ planning proposal endpoint that never mutates saved activities.
 - Server-side AI proposal shape and time-block validation
 - AI failures and malformed proposals return safe generic errors
 - Planning proposals never write to the activities table
+- Authenticated AI Studio entry points on desktop and mobile
+- Natural-language day intention input
+- Current-time and available-time context
+- Lighter, balanced, and fuller planning styles
+- Optional fixed commitments and explicitly approved historical context
+- Clear proposal-only and internet-connection messaging
+- Loading, error, retry, and empty-proposal states
 - Completion and ongoing-status controls in the activity detail surface
 - Unsaved-change confirmation on close
 - Focus management, keyboard escape handling, visible focus states, touch-sized controls, and reduced-motion handling
@@ -95,8 +104,7 @@ planning proposal endpoint that never mutates saved activities.
 - Optional reflection does not exist.
 - Neutral pattern summaries do not exist.
 - Offline current-day resilience and sync status do not exist.
-- AI Studio input, proposal review, acceptance, and controlled re-planning do
-  not exist.
+- Proposal review, acceptance, and controlled re-planning do not exist.
 - PWA installability and Android preparation have not been completed.
 
 ## Known blockers and decisions
@@ -114,8 +122,8 @@ planning proposal endpoint that never mutates saved activities.
 
 ## Next milestones
 
-1. Build the AI Studio input experience using the planning proposal contract.
-2. Build proposal review, acceptance, controlled re-planning,
+1. Build proposal review, acceptance, and controlled re-planning.
+2. Build reflection, pattern summaries, offline resilience, quality review, and
    reflection, pattern summaries, offline resilience, quality review, and
    Android/PWA preparation in that order.
 

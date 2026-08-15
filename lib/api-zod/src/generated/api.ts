@@ -41,6 +41,8 @@ export const createPlanningProposalBodyAvailableTimeItemStartTimeRegExp = new Re
 export const createPlanningProposalBodyAvailableTimeItemEndTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
 export const createPlanningProposalBodyAvailableTimeMax = 12;
 
+export const createPlanningProposalBodyFixedCommitmentsMax = 2000;
+
 export const createPlanningProposalBodyUseHistoricalContextDefault = false;
 export const createPlanningProposalBodyHistoricalContextMax = 4000;
 
@@ -55,6 +57,7 @@ export const CreatePlanningProposalBody = zod.object({
   "endTime": zod.string().regex(createPlanningProposalBodyAvailableTimeItemEndTimeRegExp)
 })).max(createPlanningProposalBodyAvailableTimeMax),
   "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish(),
+  "fixedCommitments": zod.string().max(createPlanningProposalBodyFixedCommitmentsMax).nullish(),
   "useHistoricalContext": zod.boolean().default(createPlanningProposalBodyUseHistoricalContextDefault),
   "historicalContext": zod.string().max(createPlanningProposalBodyHistoricalContextMax).nullish()
 })
