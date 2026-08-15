@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Day Tripper"
+description = "A private, forgiving day planner that helps people see what matters next, recover when plans change, and optionally notice their own patterns without judgment."
+version = "1.0.0"
+id = "artifacts/day-tripper"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25445
+
+[services.development]
+run = "pnpm --filter @workspace/day-tripper run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/day-tripper", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/day-tripper/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25445"
+BASE_PATH = "/"
