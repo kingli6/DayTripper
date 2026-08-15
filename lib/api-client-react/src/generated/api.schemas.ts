@@ -23,11 +23,11 @@ export type ActivityCategory = typeof ActivityCategory[keyof typeof ActivityCate
 
 
 export const ActivityCategory = {
-  focused: 'focused',
+  work: 'work',
+  recovery: 'recovery',
   managing: 'managing',
-  fun: 'fun',
   social: 'social',
-  break: 'break',
+  fun: 'fun',
 } as const;
 
 export interface Activity {
@@ -54,11 +54,11 @@ export type ActivityInputCategory = typeof ActivityInputCategory[keyof typeof Ac
 
 
 export const ActivityInputCategory = {
-  focused: 'focused',
+  work: 'work',
+  recovery: 'recovery',
   managing: 'managing',
-  fun: 'fun',
   social: 'social',
-  break: 'break',
+  fun: 'fun',
 } as const;
 
 export interface ActivityInput {
@@ -85,11 +85,11 @@ export type ActivityUpdateCategory = typeof ActivityUpdateCategory[keyof typeof 
 
 
 export const ActivityUpdateCategory = {
-  focused: 'focused',
+  work: 'work',
+  recovery: 'recovery',
   managing: 'managing',
-  fun: 'fun',
   social: 'social',
-  break: 'break',
+  fun: 'fun',
 } as const;
 
 export interface ActivityUpdate {

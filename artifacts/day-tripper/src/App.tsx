@@ -107,7 +107,7 @@ const clerkAppearance = {
   },
 };
 
-const CATEGORIES = ['focused', 'managing', 'fun', 'social', 'break'] as const;
+const CATEGORIES = ['work', 'recovery', 'managing', 'social', 'fun'] as const;
 type Category = (typeof CATEGORIES)[number];
 type EditorActivity = Activity | null;
 type ActivityDraft = {
@@ -123,11 +123,11 @@ type ActivityDraft = {
 };
 
 const categoryMeta: Record<Category, { label: string; color: string; soft: string }> = {
-  focused: { label: 'Focused', color: 'hsl(var(--primary))', soft: 'hsl(var(--primary) / 0.12)' },
+  work: { label: 'Work', color: 'hsl(var(--primary))', soft: 'hsl(var(--primary) / 0.12)' },
+  recovery: { label: 'Recovery', color: 'hsl(45 48% 46%)', soft: 'hsl(46 64% 86% / 0.75)' },
   managing: { label: 'Managing', color: 'hsl(22 62% 53%)', soft: 'hsl(28 72% 84% / 0.62)' },
   fun: { label: 'Fun', color: 'hsl(310 32% 52%)', soft: 'hsl(309 42% 88% / 0.75)' },
   social: { label: 'Social', color: 'hsl(191 50% 42%)', soft: 'hsl(191 48% 84% / 0.66)' },
-  break: { label: 'Break', color: 'hsl(45 48% 46%)', soft: 'hsl(46 64% 86% / 0.75)' },
 };
 
 function localDate(date = new Date()) {
@@ -172,6 +172,19 @@ function timeLabel(time: string) {
 function minutesFromTime(time: string) {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + minutes;
+}
+
+function durationMinutes(activity: Activity) {
+  if (!activity.endTime) return null;
+  const duration = minutesFromTime(activity.endTime) - minutesFromTime(activity.startTime);
+  return duration > 0 ? duration : null;
+}
+
+function durationLabel(minutes: number) {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
 }
 
 function currentMinutes() {
@@ -442,6 +455,82 @@ function Timeline({ activities, now, onEdit, onToggle }: { activities: Activity[
   );
 }
 
+function DayDistribution({ activities }: { activities: Activity[] }) {
+  const distribution = useMemo(() => {
+    const totals = CATEGORIES.map((category) => ({
+      category,
+      minutes: activities.reduce((total, activity) => (
+        activity.category === category ? total + (durationMinutes(activity) ?? 0) : total
+      ), 0),
+    }));
+    const uncategorizedMinutes = activities.reduce((total, activity) => (
+      activity.category && isCategory(activity.category) ? total : total + (durationMinutes(activity) ?? 0)
+    ), 0);
+    const timedMinutes = totals.reduce((total, item) => total + item.minutes, 0) + uncategorizedMinutes;
+    const ongoingCount = activities.filter((activity) => activity.endTime === null).length;
+
+    return {
+      rows: [
+        ...totals.filter((item) => item.minutes > 0),
+        ...(uncategorizedMinutes > 0 ? [{ category: 'uncategorized' as const, minutes: uncategorizedMinutes }] : []),
+      ],
+      timedMinutes,
+      ongoingCount,
+    };
+  }, [activities]);
+
+  return (
+    <details open className="group rounded-[22px] border border-border/75 bg-card/65 p-5" data-testid="summary-day-distribution">
+      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 [&::-webkit-details-marker]:hidden">
+        <div>
+          <p className="font-mono-ui text-[10px] uppercase tracking-[0.15em] text-muted-foreground">A quiet mirror</p>
+          <h2 className="mt-2 font-display text-[23px] leading-tight tracking-[-0.03em]">How today is distributed</h2>
+        </div>
+        <ChevronDown className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" strokeWidth={1.8} />
+      </summary>
+      <div className="mt-5 border-t border-border/60 pt-4">
+        {distribution.timedMinutes > 0 ? (
+          <div className="space-y-3" role="list" aria-label="Timed activity distribution">
+            {distribution.rows.map((row) => {
+              const isUncategorized = row.category === 'uncategorized';
+              const meta = isUncategorized ? null : categoryMeta[row.category];
+              const percentage = Math.round((row.minutes / distribution.timedMinutes) * 100);
+              return (
+                <div key={row.category} role="listitem" data-testid={`distribution-row-${row.category}`}>
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: meta?.color ?? 'hsl(var(--muted-foreground))' }} aria-hidden="true" />
+                      <span>{meta?.label ?? 'Uncategorized'}</span>
+                    </span>
+                    <span className="shrink-0 font-mono-ui text-[10px] text-muted-foreground">{durationLabel(row.minutes)} · {percentage}%</span>
+                  </div>
+                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                    <div className="h-full rounded-full" style={{ width: `${percentage}%`, backgroundColor: meta?.color ?? 'hsl(var(--muted-foreground))' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm leading-6 text-muted-foreground" data-testid="status-distribution-empty">
+            No fixed durations to mirror yet. Open time is still part of the day.
+          </p>
+        )}
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/60 pt-3 text-[11px] leading-5 text-muted-foreground">
+          <span>{distribution.timedMinutes ? `${durationLabel(distribution.timedMinutes)} with an end time` : 'No fixed durations recorded'}</span>
+          {distribution.ongoingCount > 0 && (
+            <>
+              <span className="text-border" aria-hidden="true">/</span>
+              <span data-testid="text-distribution-ongoing">{distribution.ongoingCount} ongoing {distribution.ongoingCount === 1 ? 'activity' : 'activities'} kept separate</span>
+            </>
+          )}
+        </div>
+        <p className="mt-3 text-[11px] leading-5 text-muted-foreground/75">This only reflects the schedule you entered. It is not a target or a measure of how the day should look.</p>
+      </div>
+    </details>
+  );
+}
+
 function ActivityModal({ date, activity, onClose, onSaved, onDeleted }: { date: string; activity: EditorActivity; onClose: () => void; onSaved: () => void; onDeleted: (activity: Activity) => void }) {
   const createActivity = useCreateActivity();
   const updateActivity = useUpdateActivity();
@@ -684,7 +773,7 @@ function ActivityModal({ date, activity, onClose, onSaved, onDeleted }: { date: 
               <label htmlFor="activity-category" className="text-xs font-semibold text-foreground">Kind <span className="font-normal text-muted-foreground">(optional)</span></label>
               <div className="relative mt-2">
                 <select id="activity-category" value={category} onChange={(event) => setCategory(event.target.value as Category | '')} data-testid="select-activity-category" className="min-h-11 w-full appearance-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
-                  <option value="">No label</option>
+                   <option value="">Uncategorized</option>
                   {CATEGORIES.map((item) => <option key={item} value={item}>{categoryMeta[item].label}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -877,7 +966,8 @@ function Today() {
                   </div>
                 ) : activities.length === 0 ? <EmptyDay onAdd={openCreate} /> : <Timeline activities={activities} now={now} onEdit={openEdit} onToggle={(activity) => void toggle(activity)} />}
               </section>
-              <aside className="animate-rise delay-2 space-y-4 lg:pt-1">
+               <aside className="animate-rise delay-2 space-y-4 lg:pt-1">
+                 <DayDistribution activities={activities} />
                 <div className="rounded-[24px] border border-primary/15 bg-primary p-5 text-primary-foreground shadow-[0_20px_50px_hsl(177_28%_39%/0.14)]">
                   <div className="flex items-center justify-between">
                     <span className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary-foreground/65">A little orientation</span>

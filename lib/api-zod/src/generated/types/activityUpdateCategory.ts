@@ -13,9 +13,9 @@ export type ActivityUpdateCategory = typeof ActivityUpdateCategory[keyof typeof 
 
 
 export const ActivityUpdateCategory = {
-  focused: 'focused',
+  work: 'work',
+  recovery: 'recovery',
   managing: 'managing',
-  fun: 'fun',
   social: 'social',
-  break: 'break',
+  fun: 'fun',
 } as const;

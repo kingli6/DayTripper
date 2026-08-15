@@ -13,9 +13,9 @@ export type ActivityInputCategory = typeof ActivityInputCategory[keyof typeof Ac
 
 
 export const ActivityInputCategory = {
-  focused: 'focused',
+  work: 'work',
+  recovery: 'recovery',
   managing: 'managing',
-  fun: 'fun',
   social: 'social',
-  break: 'break',
+  fun: 'fun',
 } as const;

@@ -4,11 +4,13 @@ Last reviewed: 2026-08-15
 
 ## Current milestone
 
-**Prompt 7 — Activity detail experience complete**
+**Prompt 8 — Categories and neutral day distribution complete**
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
-are complete. Prompt 7 is now complete: the existing responsive activity
-surface supports safe editing and destructive-action recovery.
+are complete. Prompt 7 is complete: the existing responsive activity surface
+supports safe editing and destructive-action recovery. Prompt 8 is complete:
+activities use the five contract categories and the day view includes a neutral
+duration mirror.
 
 ## Existing completed areas
 
@@ -62,6 +64,11 @@ surface supports safe editing and destructive-action recovery.
 - Lock and pin controls in the existing activity editor
 - Lock and pin labels on timeline activities
 - Responsive activity detail surface on mobile and desktop
+- Contract categories: Work, Recovery, Managing, Social, and Fun
+- Optional category selection with an Uncategorized state
+- Neutral “How today is distributed” duration summary
+- Text labels and color cues for distribution rows
+- Ongoing activities kept separate from fixed-duration totals
 - Completion and ongoing-status controls in the activity detail surface
 - Unsaved-change confirmation on close
 - Focus management, keyboard escape handling, visible focus states, touch-sized controls, and reduced-motion handling
@@ -73,10 +80,6 @@ surface supports safe editing and destructive-action recovery.
   milestone.
 - Pinned activities are marked for future reuse, but a reusable-template
   selection flow is intentionally deferred.
-- Current category labels do not fully match the contract:
-  the implementation uses Focused and Break where the contract calls for Work
-  and Recovery.
-- The neutral “How today is distributed” duration summary is not implemented.
 - The activity editor is a modal rather than the planned responsive detail
   drawer/sheet experience.
 - Full unsaved-change handling, focus management, reduced-motion handling,
@@ -104,11 +107,9 @@ surface supports safe editing and destructive-action recovery.
 
 ## Next milestones
 
-1. Align category values with Work, Recovery, Managing, Social, and Fun, then
-   add the neutral day-distribution summary.
-2. Define and implement the bounded AI planning contract and server
+1. Define and implement the bounded AI planning contract and server
    integration.
-3. Build proposal input, review, acceptance, controlled re-planning,
+2. Build proposal input, review, acceptance, controlled re-planning,
    reflection, pattern summaries, offline resilience, quality review, and
    Android/PWA preparation in that order.
 
