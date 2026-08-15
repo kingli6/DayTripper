@@ -1,0 +1,879 @@
+```
+DAY TRIPPER BUILD SAFETY RULES
+
+We are building the existing Day Tripper product. Do not create a new app, duplicate an artifact, or replace working infrastructure.
+
+Work on only the milestone described in this prompt.
+
+Before editing:
+- Inspect the existing implementation and relevant files only.
+- Search before reading large files.
+- Do not read, print, expose, or modify secret values.
+- Preserve existing working behavior.
+- Do not rewrite unrelated files.
+- Do not invent new product features, entities, routes, or integrations.
+
+Follow the project’s existing workspace conventions and read any relevant skill instructions before implementing:
+- React/Vite guidance for frontend work.
+- Database guidance for schema work.
+- OpenAPI guidance for API work.
+- Clerk guidance for authentication.
+- Replit AI Integration guidance for AI work.
+- Offline/PWA guidance when those features are reached.
+
+For backend-backed features:
+- Update OpenAPI first.
+- Run API code generation after every OpenAPI change.
+- Use generated client hooks in the frontend.
+- Validate server input and output.
+- Enforce user ownership on every private record.
+- Never trust client-provided ownership fields.
+- Do not manually edit generated files.
+
+For secrets and integrations:
+- Never ask me to paste a secret into chat or source code.
+- Use Replit-managed integrations or the existing server-side configuration.
+- Keep AI credentials server-side.
+- If an external account must be connected, stop and explain what authorization is needed.
+
+Validation:
+- Run the smallest relevant typecheck or validation command.
+- Do not ignore new errors.
+- Distinguish pre-existing errors from errors introduced by this milestone.
+- Do not continue to the next milestone.
+
+At the end:
+1. Stop.
+2. List changed files.
+3. List validation commands and their results.
+4. List any decisions or blockers.
+5. State the exact next milestone, but do not implement it.
+```
+
+---
+
+# Prompt 0 — Audit the current project
+
+Use this first. It should not build product features.
+
+```
+Read the uploaded product vision file:
+
+attached_assets/Pasted--Product-vision-Day-Tripper-is-a-private-flexible-day-p_1786791676032.txt
+
+Also inspect the existing Day Tripper application, API server, shared libraries, database schema, OpenAPI specification, and project documentation.
+
+Do not modify application code yet.
+
+Audit the current state and report:
+
+1. Which parts of the original product plan already exist.
+2. Which parts are incomplete.
+3. Which parts conflict with the improved product direction below.
+4. Any existing technical debt or duplicated systems.
+5. The smallest safe next implementation milestone.
+
+Product direction:
+
+Day Tripper is a private, forgiving day planner. The user describes a messy list of responsibilities, and AI proposes one realistic version of the day containing work, managing tasks, social time, fun, recovery, buffers, and valid empty time.
+
+AI proposals are never silently applied.
+
+Manual user edits are saved immediately. The AI does not react to every edit automatically. Instead, the user can explicitly select “Review changes” or “Re-plan the rest of the day.” The AI then proposes changes for approval.
+
+The app records schedule changes and optional notes so future planning can become more realistic. It should show neutral information about focused work, managing tasks, recovery, social time, fun, and breaks. It must never use productivity scores, streaks, shame, ideal-day targets, or judgmental language.
+
+Do not create a new artifact. Do not build anything yet. Return only the audit and recommended milestone.
+```
+
+---
+
+# Prompt 1 — Create the product contract and build status
+
+This gives future Replit turns a stable reference without repeatedly pasting the whole plan.
+
+```
+Create two documentation files only:
+
+- docs/day-tripper-product-contract.md
+- docs/day-tripper-build-status.md
+
+Use the uploaded product vision and the improved product direction from this conversation.
+
+The product contract must define:
+
+- Product purpose.
+- Core daily user loop.
+- AI approval rules.
+- Manual edit behavior.
+- Review changes behavior.
+- Categories.
+- Lock and pin meanings.
+- Reflection rules.
+- Privacy rules.
+- Offline rules.
+- Explicitly deferred features.
+- Disallowed product language and patterns.
+
+The build status file must contain:
+
+- Existing completed areas based on the audit.
+- Missing areas.
+- Current milestone.
+- Known blockers.
+- A short list of the next milestones.
+
+Do not change application code, database schema, API routes, package files, or configuration.
+
+Keep the documentation concise enough to be read at the beginning of future coding sessions.
+```
+
+---
+
+# Prompt 2 — Harden the foundation
+
+Use this only for missing foundation work identified by the audit.
+
+```
+Complete only the missing foundation work for the existing Day Tripper application.
+
+Verify and, only where necessary, finish:
+
+- Frontend application shell.
+- Backend API shell.
+- Artifact routing.
+- Environment configuration.
+- Server health endpoint.
+- Privacy-safe error responses.
+- Server logging conventions.
+- Frontend-to-backend relative API communication.
+- Development and production commands.
+
+Do not build timeline features, authentication screens, AI planning, analytics, or offline behavior.
+
+Keep all credentials and AI configuration server-side.
+
+Use the existing managed workflows. Do not create replacement workflows. Do not use root-level development commands when the project already provides managed artifact workflows.
+
+Run the relevant foundation checks and stop.
+```
+
+---
+
+# Prompt 3 — Add private user ownership and authentication
+
+Use Clerk unless the project already has a correctly implemented approved authentication system.
+
+```
+Add the private user boundary for Day Tripper.
+
+Before coding, read and follow the Clerk authentication skill. Do not implement local authentication with passport, bcrypt, JWT, custom password storage, or a homemade session system.
+
+Implement only:
+
+- Sign-in and sign-out flow.
+- The authenticated application boundary.
+- Current-user access on the frontend.
+- Server-side user identity extraction.
+- A safe ownership check for private records.
+- An appropriate unauthenticated response.
+- A basic authenticated loading and error state.
+
+Do not build timeline CRUD yet.
+
+Every future user-owned record must be associated with the authenticated user on the server. Never accept an owner ID from the browser as the source of truth.
+
+If Clerk setup requires user authorization or configuration that is not already available, stop and explain exactly what is needed. Do not create fake authentication.
+
+Validate the authentication boundary without exposing secrets or tokens.
+```
+
+---
+
+# Prompt 4 — Define the core activity contract
+
+This is the first real data milestone.
+
+```
+Add the minimum activity data model and API contract for Day Tripper.
+
+Read the database and OpenAPI workspace guidance first.
+
+Define only the core Activity entity with fields needed for the first timeline:
+
+- Server-owned ID.
+- Authenticated owner.
+- Date.
+- Title.
+- Start time.
+- Optional end time.
+- Ongoing status.
+- One optional category.
+- Completion status.
+- Optional note.
+- Lock status.
+- Pin status.
+- Created timestamp.
+- Updated timestamp.
+
+Do not add AI proposals, reflection, pattern analytics, change history, or offline sync yet.
+
+Update the database schema and OpenAPI specification as the sources of truth. Generate the client and validation types after changing OpenAPI.
+
+Do not manually edit generated files.
+
+Do not build frontend UI or API route handlers in this milestone.
+```
+
+---
+
+# Prompt 5 — Implement activity API persistence
+
+```
+Implement only the server-side Activity API using the existing OpenAPI contract.
+
+Support:
+
+- List activities for one authenticated user and date.
+- Create an activity.
+- Update an activity.
+- Mark an activity complete.
+- Undo completion.
+- Delete an activity safely.
+
+Requirements:
+
+- Enforce authenticated ownership on every operation.
+- Validate all input and output with the project’s existing validation approach.
+- Never trust a client-provided owner ID.
+- Do not automatically complete activities when their end time passes.
+- Preserve ongoing activities.
+- Return privacy-safe errors to clients.
+- Keep detailed diagnostics in server logs.
+- Do not implement AI, proposals, reflections, or offline sync.
+
+Use the generated API types and keep the OpenAPI contract consistent.
+
+Run the API package typecheck and any focused validation available.
+```
+
+---
+
+# Prompt 6 — Build the Today timeline
+
+```
+Build only the Today’s Timeline frontend experience using the generated API hooks.
+
+The timeline must support:
+
+- Current date.
+- Current-time indicator.
+- Current activity.
+- Upcoming activities.
+- Completed activities.
+- Empty time.
+- Add activity action.
+- Edit activity action.
+- Explicit completion.
+- Undo completion.
+- Safe deletion.
+- Previous-day navigation.
+- Loading state.
+- Empty state.
+- Error state.
+
+Use real API persistence. Do not use fake permanent client-only data.
+
+Use accessible labels, keyboard navigation, visible focus states, and touch-friendly controls.
+
+Do not build drag-and-drop, AI planning, analytics, reflection, or offline support yet.
+
+Use the existing application’s visual language and do not replace unrelated components.
+```
+
+---
+
+# Prompt 7 — Build the activity detail drawer
+
+```
+Build only the responsive Activity Detail experience.
+
+Desktop and mobile should use an appropriate contained editing surface for the current project.
+
+Support editing:
+
+- Activity title.
+- Start time.
+- End time.
+- Ongoing status.
+- Category.
+- Completion status.
+- Lock status.
+- Pin status.
+- Note.
+- Delete action.
+
+Keep schedule editing separate from reflection. Do not add effort ratings, energy impact, daily review, or AI features yet.
+
+Include:
+
+- Form validation.
+- Unsaved-change handling.
+- Focus management.
+- Screen-reader labels.
+- Visible focus states.
+- At least 44px touch targets.
+- Reduced-motion behavior.
+- Confirmation and undo for destructive actions.
+
+Use the existing generated hooks and invalidate or refresh the correct queries after mutations.
+```
+
+---
+
+# Prompt 8 — Add categories and neutral day distribution
+
+```
+Add the five Day Tripper activity categories:
+
+- Work.
+- Managing.
+- Recovery.
+- Social.
+- Fun.
+
+Update the existing activity forms and timeline to support one optional primary category.
+
+Add a neutral “How today is distributed” summary using valid activity durations.
+
+Requirements:
+
+- Use color plus text or icons.
+- Never rely on color alone.
+- Handle uncategorized activities.
+- Handle ongoing activities safely.
+- Handle empty days.
+- Do not create target percentages.
+- Do not label a day good or bad.
+- Do not imply that one category balance is healthier.
+- Treat the visualization as a mirror of the user’s entered schedule.
+
+Keep the summary compact or collapsible on small screens.
+
+Do not add analytics, pattern detection, AI, or reflection.
+```
+
+---
+
+# Prompt 9 — Add the AI planning contract and server integration
+
+This is a sensitive milestone. It should not yet build the full AI Studio UI.
+
+```
+Add the server-side AI planning foundation for Day Tripper.
+
+Before coding, read:
+
+- Replit AI Integration guidance.
+- The existing AI implementation.
+- The integrations guidance.
+- The OpenAPI guidance.
+
+Prefer Replit-managed AI access where supported. If the existing server-side Gemini configuration is already the approved project approach, preserve it safely. Never expose an API key to browser or mobile code. Never ask me to paste a key into source code or chat.
+
+Define a bounded planning API that accepts only the context needed for a proposed day, such as:
+
+- User intention.
+- Current date and time.
+- Existing activities.
+- Locked activities.
+- Available time.
+- Optional user-selected preferences.
+- Optional explicitly approved historical context.
+
+The AI response must be validated into a proposal containing:
+
+- Proposed activities.
+- Proposed times.
+- Categories.
+- Buffers.
+- Rest periods.
+- Assumptions.
+- Conflicts.
+- Activities that did not fit.
+
+The server must reject malformed AI output.
+
+The AI must not directly mutate saved activities.
+
+Do not build the AI Studio UI or proposal acceptance yet.
+```
+
+---
+
+# Prompt 10 — Build the AI Studio input experience
+
+```
+Build only the frontend input experience for the Day Tripper AI Studio.
+
+The user should be able to describe their day in natural language, for example:
+
+“I have work, grocery shopping, dinner preparation, family time, and I would like to exercise if I have the energy.”
+
+Allow the user to provide optional context such as:
+
+- Current time.
+- Fixed commitments.
+- Activities they do not want moved.
+- Whether they want a lighter or fuller version of the day.
+- Whether relevant previous notes may be used.
+
+Make it clear that:
+
+- AI planning requires an internet connection.
+- AI will create a proposal.
+- The saved schedule will not be changed automatically.
+- The user will review the proposal before accepting it.
+
+Use the real generated API hook from the AI contract. Handle loading, error, empty, and retry states.
+
+Do not yet implement acceptance into the saved timeline.
+```
+
+---
+
+# Prompt 11 — Build proposal review and acceptance
+
+```
+Build the proposal review experience for Day Tripper.
+
+Keep the AI proposal visually separate from confirmed activities.
+
+The user must be able to:
+
+- Edit proposed titles.
+- Edit proposed times.
+- Change categories.
+- Remove individual proposed items.
+- Accept selected items.
+- Accept the complete proposal.
+- Reject the proposal.
+- Return to the original intention.
+- Ask for another proposal.
+
+Show:
+
+- Buffers.
+- Rest periods.
+- Assumptions.
+- Conflicts.
+- Activities that did not fit.
+- Locked activities.
+- Optional activities.
+
+Use language such as:
+
+- Suggested plan.
+- One workable version.
+- Possible way to shape the day.
+
+Do not use:
+
+- Optimized schedule.
+- Perfect day.
+- Productivity score.
+- Failed plan.
+
+Only accepted items may become saved activities. Rejected or unaccepted proposal items must not be saved as confirmed activities.
+
+Use server-owned IDs and timestamps for accepted activities.
+```
+
+---
+
+# Prompt 12 — Add live edits and change history
+
+This is the milestone that captures the core idea from your explanation.
+
+```
+Add Day Tripper’s live day-adjustment behavior.
+
+Manual user edits must:
+
+- Save immediately.
+- Remain authoritative.
+- Never require AI approval.
+- Never trigger an automatic AI re-plan.
+
+Record useful schedule change information for future planning:
+
+- Activity moved.
+- Activity extended.
+- Activity shortened.
+- Activity renamed.
+- Activity removed.
+- Activity replaced.
+- Activity completed later than planned.
+- Optional user note.
+- Time of change.
+- Whether the change was manual or AI-approved.
+
+Do not expose a complicated audit log as a primary user interface.
+
+Add a clear optional action:
+
+- Review changes.
+
+The user should be able to continue with the changed schedule without opening AI.
+
+Do not implement the AI interpretation of changes yet. This milestone should establish reliable persistence and the user-facing entry point.
+```
+
+---
+
+# Prompt 13 — Implement “Review changes” and controlled re-planning
+
+```
+Implement the controlled re-planning flow for the rest of the day.
+
+When the user selects “Review changes,” allow them to:
+
+- See what changed.
+- Add an optional explanation.
+- Choose whether the AI should review the remaining day.
+- Request a new plan.
+
+The AI proposal must consider:
+
+- Current time.
+- Completed activities.
+- Remaining activities.
+- Locked activities.
+- Manual changes.
+- User notes attached to changes.
+- Empty time.
+- Buffers and recovery.
+- Activities that no longer fit.
+
+The proposal must clearly show:
+
+- What stays.
+- What moves.
+- What is shortened.
+- What is removed.
+- What remains optional.
+- What assumptions were made.
+
+The AI must never apply changes automatically.
+
+The user must be able to:
+
+- Accept the full re-plan.
+- Accept selected changes.
+- Edit the proposed changes.
+- Reject the re-plan.
+- Continue with the current schedule.
+
+Do not add pattern analysis or automatic behavioral conclusions.
+```
+
+---
+
+# Prompt 14 — Add optional activity and daily reflection
+
+```
+Add optional reflection to Day Tripper.
+
+For selected activities, allow the user to record:
+
+Effort:
+- Very easy.
+- Easy.
+- Moderate.
+- Demanding.
+- Very demanding.
+
+Energy impact:
+- Restorative.
+- Neutral.
+- Draining.
+
+Also add optional daily reflection fields:
+
+- What worked?
+- What did not work?
+- What was unexpectedly difficult?
+- What would the user change next time?
+- What was disappointing or encouraging?
+
+Requirements:
+
+- Reflection is optional.
+- Do not ask after every activity by default.
+- Missing reflection is neutral.
+- Do not create streaks.
+- Do not create productivity scores.
+- Do not calculate an ideal daily balance.
+- Do not diagnose the user.
+- Do not present correlations yet.
+
+Keep activity editing separate from reflection so a user can change a schedule without being forced to reflect.
+```
+
+---
+
+# Prompt 15 — Add neutral pattern summaries
+
+```
+Add a small, privacy-safe pattern summary based only on information the user has explicitly stored or allowed the app to use.
+
+The app may show neutral observations such as:
+
+- An activity often takes longer than originally planned.
+- An activity is often moved later.
+- The user often replaces one activity with another.
+- Certain activities are often recorded as demanding or draining.
+- The user has recorded more recovery time on some days.
+
+Do not claim causation.
+
+Use language such as:
+
+- You often recorded…
+- This activity was frequently moved…
+- You might want to explore whether…
+- There may be a pattern between…
+
+Do not use:
+
+- Diagnosis.
+- Health claims.
+- Productivity scores.
+- Ideal targets.
+- Good-day or bad-day labels.
+- Streaks.
+
+Do not add mood tracking, personal value scoring, habit formation systems, or automated coaching.
+
+Make it possible for the user to exclude reflections or personal notes from future AI planning.
+```
+
+---
+
+# Prompt 16 — Add limited current-day offline resilience
+
+```
+Add a limited offline-resilience layer for the current day only.
+
+When temporarily offline, the user should be able to:
+
+- View the recently loaded current day.
+- Add a basic activity.
+- Edit basic activity details.
+- Mark an activity complete.
+- Add a note.
+- See which changes are waiting to sync.
+
+Show clear statuses:
+
+- Synced.
+- Saving.
+- Offline.
+- Waiting to sync.
+- Sync failed.
+
+Rules:
+
+- Never silently discard local edits.
+- Never store credentials in browser storage.
+- Never pretend AI planning works offline.
+- Explain that AI planning requires connectivity.
+- Keep the server as the permanent source of truth.
+- Do not build complex multi-device conflict resolution.
+- Do not support offline AI generation.
+
+Implement the smallest reliable sync queue possible and document any limitations.
+```
+
+---
+
+# Prompt 17 — Accessibility, responsive behavior, and PWA readiness
+
+```
+Perform an accessibility and responsive-quality pass on the existing Day Tripper application.
+
+Do not add new product features.
+
+Verify and fix only issues related to:
+
+- Keyboard navigation.
+- Screen-reader labels.
+- Focus management.
+- Visible focus states.
+- Color contrast.
+- Color plus text/icon meaning.
+- Touch targets of at least 44px.
+- Reduced-motion preferences.
+- Mobile layout.
+- Desktop layout.
+- Drawers and dialogs.
+- Loading states.
+- Empty states.
+- Error states.
+- AI failure states.
+- Offline and sync failure states.
+- Manual completion and undo.
+- Safe deletion.
+- Locked activities.
+- Proposal review.
+- Partial proposal acceptance.
+- Review changes.
+- Controlled re-planning.
+
+Then verify the basic PWA requirements:
+
+- Appropriate manifest.
+- Installable behavior.
+- Service worker behavior if already supported by the project.
+- Correct artifact routing.
+- Refresh persistence.
+- No broken relative paths.
+
+Do not prepare Android yet.
+```
+
+---
+
+# Prompt 18 — Final release-readiness review
+
+Use this only after the previous milestones are complete.
+
+```
+Perform a release-readiness review of the existing Day Tripper application.
+
+Do not add new features.
+
+Check:
+
+- Authentication boundary.
+- User data ownership.
+- Server-side AI credential handling.
+- API validation.
+- Activity CRUD.
+- Timeline persistence.
+- Manual edits.
+- Completion and undo.
+- Lock behavior.
+- Pin behavior.
+- Categories.
+- Neutral day distribution.
+- AI proposal generation.
+- Proposal rejection.
+- Partial proposal acceptance.
+- Review changes.
+- Controlled re-planning.
+- Optional reflection.
+- Pattern summaries.
+- Offline current-day behavior.
+- Sync failure handling.
+- Refresh persistence.
+- Mobile responsiveness.
+- Desktop responsiveness.
+- Accessibility.
+- Privacy-safe error handling.
+- Build and typecheck status.
+
+Run the smallest appropriate checks, then run the project’s canonical typecheck and build validation.
+
+Do not hide errors or silently modify unrelated code.
+
+Return:
+
+1. Release blockers.
+2. High-priority bugs.
+3. Medium-priority polish issues.
+4. Security or privacy concerns.
+5. What is safe for an early beta.
+6. What should remain deferred.
+```
+
+---
+
+# Optional Prompt 19 — Android preparation
+
+Do not use this until the web and PWA experience are stable.
+
+```
+Prepare the existing Day Tripper application for Android packaging using Capacitor.
+
+Before changing anything:
+
+- Read the Expo/mobile or Capacitor guidance available for this project.
+- Confirm that the web/PWA experience is already stable.
+- Confirm that the same frontend and API can be reused.
+- Confirm that authentication and privacy behavior remain unchanged.
+
+Implement only the preparation required for Android packaging.
+
+Do not:
+
+- Build iOS.
+- Create a separate Android data model.
+- Create a separate authentication system.
+- Move AI credentials into mobile code.
+- Build a native desktop application.
+- Add unrelated native features.
+
+Document:
+
+- Android preparation completed.
+- Native permissions needed.
+- Remaining setup steps.
+- What must be tested on a real Android device.
+- Any limitations compared with the web/PWA version.
+```
+
+---
+
+# Checkpoint prompt
+
+Use this after every 3–4 milestones.
+
+```
+Perform a focused checkpoint review of only the work completed so far.
+
+Do not add features.
+
+Compare the current implementation with:
+
+- docs/day-tripper-product-contract.md
+- docs/day-tripper-build-status.md
+- The original uploaded product vision.
+
+Check for:
+
+- Scope creep.
+- Duplicate systems.
+- Broken existing behavior.
+- Missing validation.
+- Client-side secrets.
+- Missing user ownership checks.
+- OpenAPI/client-codegen drift.
+- AI behavior that could silently change the schedule.
+- Product language that sounds judgmental.
+- Unnecessary complexity.
+
+Run the relevant typecheck or validation commands.
+
+Update docs/day-tripper-build-status.md with only the current milestone status and known blockers.
+
+Stop after the review and report whether it is safe to continue.
+```
+
+---
+
+# Recovery prompt if Replit gets confused
+
+Use this if a turn becomes too large, starts changing unrelated features, or reaches the context limit.
+
+`Stop expanding the scope.Continue only the current milestone already in progress. Do not start the next milestone. Do not reread the entire repository.Read:- docs/day-tripper-product-contract.md- docs/day-tripper-build-status.md- Only the files directly related to the current milestone.First summarize what is already complete in this milestone. Then finish only the smallest remaining part. Run the narrowest relevant validation.If the milestone cannot safely fit in this turn, stop and report the exact remaining work instead of attempting a larger rewrite.`
