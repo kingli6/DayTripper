@@ -16,3 +16,97 @@ export interface AiStatus {
   client: string;
 }
 
+/**
+ * @nullable
+ */
+export type ActivityCategory = typeof ActivityCategory[keyof typeof ActivityCategory] | null;
+
+
+export const ActivityCategory = {
+  focused: 'focused',
+  managing: 'managing',
+  fun: 'fun',
+  social: 'social',
+  break: 'break',
+} as const;
+
+export interface Activity {
+  id: number;
+  title: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate: string;
+  startTime: string;
+  /** @nullable */
+  endTime: string | null;
+  /** @nullable */
+  category: ActivityCategory;
+  completed: boolean;
+  /** @nullable */
+  note: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type ActivityInputCategory = typeof ActivityInputCategory[keyof typeof ActivityInputCategory] | null;
+
+
+export const ActivityInputCategory = {
+  focused: 'focused',
+  managing: 'managing',
+  fun: 'fun',
+  social: 'social',
+  break: 'break',
+} as const;
+
+export interface ActivityInput {
+  /** @minLength 1 */
+  title: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate: string;
+  startTime: string;
+  /** @nullable */
+  endTime?: string | null;
+  /** @nullable */
+  category?: ActivityInputCategory;
+  completed?: boolean;
+  /** @nullable */
+  note?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type ActivityUpdateCategory = typeof ActivityUpdateCategory[keyof typeof ActivityUpdateCategory] | null;
+
+
+export const ActivityUpdateCategory = {
+  focused: 'focused',
+  managing: 'managing',
+  fun: 'fun',
+  social: 'social',
+  break: 'break',
+} as const;
+
+export interface ActivityUpdate {
+  /** @minLength 1 */
+  title?: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate?: string;
+  startTime?: string;
+  /** @nullable */
+  endTime?: string | null;
+  /** @nullable */
+  category?: ActivityUpdateCategory;
+  completed?: boolean;
+  /** @nullable */
+  note?: string | null;
+}
+
+export type ListActivitiesParams = {
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+date: string;
+};
+

@@ -64,7 +64,9 @@ export default defineConfig({
             response: ['bigint', 'date'],
           },
         },
-        useDates: true,
+        // Date-only fields are persisted as YYYY-MM-DD strings in PostgreSQL.
+        // Keep them as strings at the API boundary to avoid timezone shifts.
+        useDates: false,
         useBigInt: true,
       },
     },

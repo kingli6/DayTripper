@@ -29,3 +29,107 @@ export const GetAiStatusResponse = zod.object({
 })
 
 
+/**
+ * @summary List activities for a day
+ */
+export const listActivitiesQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListActivitiesQueryParams = zod.object({
+  "date": zod.coerce.string().regex(listActivitiesQueryDateRegExp)
+})
+
+export const listActivitiesResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListActivitiesResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "scheduledDate": zod.string().regex(listActivitiesResponseScheduledDateRegExp),
+  "startTime": zod.string(),
+  "endTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullable(),
+  "completed": zod.boolean(),
+  "note": zod.string().nullable()
+})
+export const ListActivitiesResponse = zod.array(ListActivitiesResponseItem)
+
+
+/**
+ * @summary Add an activity to a day
+ */
+
+export const createActivityBodyScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const CreateActivityBody = zod.object({
+  "title": zod.string().min(1),
+  "scheduledDate": zod.string().regex(createActivityBodyScheduledDateRegExp),
+  "startTime": zod.string(),
+  "endTime": zod.string().nullish(),
+  "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullish(),
+  "completed": zod.boolean().optional(),
+  "note": zod.string().nullish()
+})
+
+export const createActivityResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const CreateActivityResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "scheduledDate": zod.string().regex(createActivityResponseScheduledDateRegExp),
+  "startTime": zod.string(),
+  "endTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullable(),
+  "completed": zod.boolean(),
+  "note": zod.string().nullable()
+})
+
+
+/**
+ * @summary Update an activity
+ */
+export const UpdateActivityParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateActivityBodyScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const UpdateActivityBody = zod.object({
+  "title": zod.string().min(1).optional(),
+  "scheduledDate": zod.string().regex(updateActivityBodyScheduledDateRegExp).optional(),
+  "startTime": zod.string().optional(),
+  "endTime": zod.string().nullish(),
+  "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullish(),
+  "completed": zod.boolean().optional(),
+  "note": zod.string().nullish()
+})
+
+export const updateActivityResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const UpdateActivityResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "scheduledDate": zod.string().regex(updateActivityResponseScheduledDateRegExp),
+  "startTime": zod.string(),
+  "endTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('focused'),zod.literal('managing'),zod.literal('fun'),zod.literal('social'),zod.literal('break'),zod.literal(null)]).nullable(),
+  "completed": zod.boolean(),
+  "note": zod.string().nullable()
+})
+
+
+/**
+ * @summary Delete an activity
+ */
+export const DeleteActivityParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteActivityResponse = zod.void()
+
+

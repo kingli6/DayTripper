@@ -6,5 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './activity';
+export * from './activityCategory';
+export * from './activityInput';
+export * from './activityInputCategory';
+export * from './activityUpdate';
+export * from './activityUpdateCategory';
 export * from './aiStatus';
 export * from './healthStatus';
+export * from './listActivitiesParams';

@@ -8,6 +8,13 @@
       "when": 1786783979001,
       "tag": "0000_real_kabuki",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786786477659,
+      "tag": "0001_blushing_crystal",
+      "breakpoints": true
     }
   ]
 }

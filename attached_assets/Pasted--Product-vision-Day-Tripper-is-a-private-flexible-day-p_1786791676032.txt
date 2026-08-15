@@ -1,0 +1,484 @@
+## Product vision
+
+Day Tripper is a private, flexible day planner that combines:
+
+1. A focused timeline showing what matters next
+2. An AI Studio that turns plain-language intentions into a realistic proposed day
+3. Optional reflection that helps users notice personal patterns without judgment
+
+The product should feel forgiving and realistic, not like a productivity scoreboard.
+
+## Core promises
+
+- See what matters next
+- Recover when plans change
+- Learn from your own patterns without being judged
+
+## Initial platforms
+
+- Desktop web application
+- Responsive mobile web application
+- Installable PWA
+- Android packaging after the web/PWA experience is stable
+
+Do not build iOS in the first version.
+Do not build a separate native desktop application initially.
+
+## Technology direction
+
+Use:
+
+- React
+- TypeScript
+- Tailwind CSS
+- A server-side API
+- PostgreSQL or the platform’s built-in database
+- Server-side Gemini integration
+- Capacitor later for Android packaging
+
+The server/database should be the source of truth. A client-side cache may be added for temporary offline resilience, but browser storage must not be the only permanent storage.
+
+AI must require an internet connection. The timeline should eventually remain usable during temporary connectivity loss.
+
+## Important product rules
+
+- AI creates proposals, not silent schedule changes.
+- Users must review and approve AI proposals.
+- AI must never silently create, move, complete, or delete activities.
+- Locked activities must remain protected.
+- Empty time is valid and should not be filled automatically.
+- Reflection is optional.
+- Analytics applies only to selected activities.
+- Do not use streaks, productivity scores, shame-based notifications, or ideal lifestyle targets.
+- Use one primary category per activity:
+  - Work
+  - Recovery
+  - Managing
+  - Social
+  - Fun
+- Lock means protecting an activity on today’s schedule.
+- Pin means saving an activity as a reusable template.
+- Use accessible icons and text labels instead of emoji as important UI controls.
+- Never expose an AI API key in browser or mobile code.
+- Do not make BYO API keys part of normal user onboarding.
+- Do not add third-party analytics until there is a clear privacy reason and consent plan.
+
+## Build discipline
+
+Build one section at a time.
+
+Before each section:
+- Inspect the current project.
+- Reuse existing patterns within this new project.
+- Do not create duplicate systems.
+
+After each section:
+- Stop.
+- Explain what was built.
+- Explain what was tested.
+- List any decisions that need approval.
+- Do not continue automatically to the next section.
+
+Do not build the entire product in one step.
+
+Section 0 — New Project Foundation
+Build only the foundation for the new Day Tripper application.
+
+Create:
+
+- The React and TypeScript application shell
+- The backend API shell
+- Database connection and initial migration setup
+- Environment configuration
+- Server-side AI integration configuration
+- Development and production build commands
+- Basic routing
+- A simple health-check endpoint
+- A basic privacy-safe error handling strategy
+
+Do not build the full timeline yet.
+Do not build AI generation yet.
+Do not add mock persistence that will later be mistaken for real storage.
+Do not add user-facing features beyond a basic shell.
+
+At the end, stop and report:
+1. What was created
+2. How frontend and backend communicate
+3. Which database is being used
+4. How AI credentials remain server-side
+5. What the next section should build
+
+Section 1 — Timeline Core
+Build the core Today’s Timeline experience.
+
+The timeline should include:
+
+- A focused day view
+- Current date
+- Current-time NOW indicator
+- Current activity
+- Upcoming activities
+- Completed activities
+- Empty time
+- Add activity action
+- Edit activity action
+- Explicit completion and undo
+- Safe deletion
+- Previous-day navigation
+- Loading, empty, and error states
+
+An activity should support:
+
+- Title
+- Date
+- Start time
+- Optional end time
+- Ongoing status when no end time exists
+- One optional primary category
+- Completion status
+- Optional note
+
+Rules:
+
+- An activity must never become completed just because its end time passed.
+- Empty time is valid.
+- Do not force users to plan every hour.
+- Do not build drag-and-drop yet.
+- Use real API persistence, not only client state.
+- Use accessible labels and keyboard navigation.
+
+Stop after completing this section.
+
+Section 2 — Activity Detail Drawer
+Build the activity detail experience as a responsive drawer.
+
+On mobile, use a bottom drawer or sheet.
+On desktop, use a side detail panel or similarly contained editing surface.
+
+Separate the experience into two intentions:
+
+## Edit Schedule
+
+- Activity title
+- Start time
+- End time
+- Ongoing activity option
+- Category
+- Completion status
+- Lock control
+- Delete or move-to-trash action
+
+## Review Activity
+
+- Optional note
+- Optional checklist
+- Optional effort review
+- Optional energy-impact review
+
+The user must be able to edit an activity without being forced to reflect on it.
+
+Define these controls clearly:
+
+- Lock: protects the activity on today’s schedule
+- Pin: saves the activity as a reusable template
+
+Support:
+
+- Keyboard-safe layout
+- Safe-area spacing
+- Focus management
+- Unsaved-change handling
+- Screen readers
+- Visible focus states
+- At least 44px touch targets
+- Reduced-motion preferences
+- Confirmation and undo for destructive actions
+
+Stop after completing this section.
+
+Section 3 — Categories and Day Distribution
+Add the five primary activity categories:
+
+- Work
+- Recovery
+- Managing
+- Social
+- Fun
+
+Each activity may have one primary category.
+
+Add a visual “How today is distributed” summary above or near the timeline.
+
+Requirements:
+
+- Use color plus text or icon.
+- Never rely on color alone.
+- Display category durations only when the data is valid.
+- Handle uncategorized activities safely.
+- Handle ongoing activities safely.
+- Handle empty days safely.
+- Do not imply that one category balance is healthier or better.
+- Do not create ideal targets.
+- Treat the visualization as a neutral mirror of what the user entered.
+
+Make the visualization compact or collapsible on small screens.
+Stop after completing this section.
+
+Section 4 — AI Studio
+Build the AI Studio as a major feature of Day Tripper.
+
+The user should be able to write plain-language intentions such as:
+
+“I want to exercise, complete two hours of focused work, clean the kitchen, rest, and spend time with my family.”
+
+The AI should produce a temporary proposed plan containing:
+
+- Suggested activities
+- Suggested start and end times
+- Work blocks
+- Recovery and rest
+- Managing tasks such as chores and errands
+- Social time
+- Fun or personal time
+- Reasonable buffers
+- Assumptions made by the AI
+
+The AI must not directly modify the saved timeline.
+
+Use this flow:
+
+1. User writes an intention
+2. Server sends bounded context to Gemini
+3. Server validates the response
+4. Frontend displays the proposal
+5. User edits, rejects, or accepts the proposal
+6. Only accepted items become saved activities
+
+Rules:
+
+- Keep AI credentials server-side.
+- Do not send personal notes unless the user explicitly opts in.
+- Do not invent deadlines or commitments.
+- Do not mark activities complete.
+- Do not move locked activities.
+- Do not save AI output automatically.
+- Handle AI failure gracefully.
+- Make it clear that AI requires an internet connection.
+- Do not add BYO API keys for ordinary users.
+
+Stop after the proposal can be generated and displayed safely.
+
+Section 5 — Proposal Review and Acceptance
+Improve the AI proposal review flow.
+
+The user must be able to:
+
+- See proposed activities separately from confirmed activities
+- Edit proposed titles
+- Edit proposed times
+- Change categories
+- Remove individual proposal items
+- Accept selected items
+- Accept the complete proposal
+- Reject the proposal
+- Return to the original intention and revise it
+
+Show:
+
+- Rest periods
+- Buffers
+- Assumptions
+- Potential conflicts
+- Activities that could not fit
+
+Use language such as:
+
+- Suggested plan
+- One workable version
+- Possible way to shape the day
+
+Avoid language such as:
+
+- Optimized schedule
+- Perfect day
+- Productivity score
+- You failed to complete this plan
+
+When the user accepts items, create normal saved activities with server-owned IDs and timestamps.
+
+Stop after this section.
+
+Section 6 — Optional Activity Learning
+Add optional activity reviews.
+
+Start with only these two dimensions:
+
+## Effort
+
+Use a clearly labeled 1–5 scale from:
+
+- Very easy
+- Easy
+- Moderate
+- Demanding
+- Very demanding
+
+## Energy impact
+
+Use:
+
+- Restorative
+- Neutral
+- Draining
+
+Rules:
+
+- Reviews are optional.
+- Do not ask after every activity.
+- Let users enable reviews only for selected activities or reusable templates.
+- Missing reviews are not negative.
+- Do not create streaks or productivity scores.
+- Do not calculate an ideal daily balance.
+- Display what the user recorded without diagnosing them.
+- Show sample counts for repeated activities.
+- Keep Personal Value, mood tracking, and before/after surveys deferred.
+
+Stop after this section.
+
+Section 7 — Offline Resilience
+Add a small offline-resilience layer.
+
+The server remains the permanent source of truth.
+
+When temporarily offline, the user should be able to:
+
+- View the recently loaded current day
+- Add basic activities
+- Edit basic activity details
+- Mark activities complete
+- Add notes
+- See that changes are waiting to sync
+
+Display clear states:
+
+- Synced
+- Saving
+- Offline
+- Waiting to sync
+- Sync failed
+
+Rules:
+
+- Never silently discard local edits.
+- Do not store credentials in browser storage.
+- Do not pretend that AI works offline.
+- When offline, show that AI planning will return when connectivity is restored.
+- Keep this limited to current-day resilience; do not build complex multi-device conflict resolution yet.
+
+Stop after this section.
+
+Section 8 — Controlled Re-planning
+Add schedule recovery and controlled re-planning.
+
+When an activity runs long or conflicts with another activity:
+
+1. Detect the conflict
+2. Identify locked and flexible activities
+3. Explain the problem
+4. Offer a suggested new plan
+5. Show which activities would move
+6. Preserve locked activities
+7. Require explicit user approval
+8. Apply only the approved changes
+
+Call this feature:
+
+- Suggest a new plan
+- Re-plan the rest of the day
+- Resolve schedule conflicts
+
+Do not call it automatic optimization or automatic balancing.
+
+The AI must never silently:
+- Move activities
+- Delete activities
+- Complete activities
+- Change locked activities
+- Create obligations
+
+Stop after this section.
+
+Section 9 — Accessibility and Quality Review
+Perform a complete accessibility and reliability pass.
+
+Verify:
+
+- Keyboard navigation
+- Screen-reader behavior
+- Focus management
+- Visible focus states
+- Color contrast
+- Color plus text/icon meaning
+- Touch targets of at least 44px
+- Reduced-motion behavior
+- Responsive desktop layout
+- Responsive mobile layout
+- Drawer and dialog behavior
+- Loading states
+- Empty states
+- Error states
+- AI failure states
+- Offline and sync failure states
+- Refresh persistence
+- Safe deletion and undo
+- Locked activities
+- Partial AI proposal acceptance
+- Ongoing activities
+- Completion and undo
+
+Do not add new features during this pass.
+
+Stop and provide a list of any remaining release blockers.
+
+Section 10 — PWA and Android Preparation
+Prepare the new Day Tripper app for desktop PWA use and Android packaging.
+
+First validate:
+
+- Desktop browser use
+- Mobile browser use
+- Installable PWA behavior
+- Current-day offline resilience
+- Sync indicators
+- AI unavailable messaging
+- Responsive drawers
+- Keyboard and touch interaction
+- Privacy disclosures
+- Data export and deletion
+
+Only after the web/PWA experience is stable:
+
+- Prepare Android packaging using Capacitor.
+- Reuse the same frontend and API.
+- Preserve the same authentication and privacy behavior.
+- Do not build iOS.
+- Do not create a separate Android data model.
+- Do not build a native desktop shell unless the PWA proves insufficient.
+
+Stop after Android preparation and report what remains before beta testing.
+
+Recommended order
+Use the prompts in this order:
+Master Instruction
+Section 0 — Foundation
+Section 1 — Timeline
+Section 2 — Detail Drawer
+Section 3 — Categories
+Section 4 — AI Studio
+Section 5 — Proposal Acceptance
+Section 6 — Optional Learning
+Section 7 — Offline Resilience
+Section 8 — Re-planning
+Section 9 — Quality Review
+Section 10 — Android/PWA Preparation
+
