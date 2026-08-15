@@ -147,6 +147,46 @@ paths:
           description: Activity deleted
         "404":
           description: Activity not found
+  /activity-changes:
+    get:
+      operationId: listActivityChanges
+      tags: [activities]
+      summary: List manual changes for a day
+      description: Returns a private, chronological record of schedule changes for the requested day
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+      responses:
+        "200":
+          description: Schedule changes for the requested day
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityChange"
+    post:
+      operationId: addActivityChangeNote
+      tags: [activities]
+      summary: Add an optional note to the change review
+      description: Records an optional user explanation without changing the saved schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActivityChangeNoteInput"
+      responses:
+        "201":
+          description: Review note saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityChange"
 components:
   schemas:
     HealthStatus:
@@ -430,4 +470,66 @@ components:
           type: boolean
         note:
           type: ["string", "null"]
+    ActivityChange:
+      type: object
+      properties:
+        id:
+          type: number
+        activityId:
+          type: ["number", "null"]
+        scheduledDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        activityTitle:
+          type: ["string", "null"]
+        changeType:
+          type: string
+          enum: [moved, extended, shortened, renamed, removed, replaced, completed_later, review_note]
+        previousTitle:
+          type: ["string", "null"]
+        nextTitle:
+          type: ["string", "null"]
+        previousStartTime:
+          type: ["string", "null"]
+        nextStartTime:
+          type: ["string", "null"]
+        previousEndTime:
+          type: ["string", "null"]
+        nextEndTime:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+        source:
+          type: string
+          enum: [manual, ai_approved]
+        changedAt:
+          type: string
+      required:
+        - id
+        - activityId
+        - scheduledDate
+        - activityTitle
+        - changeType
+        - previousTitle
+        - nextTitle
+        - previousStartTime
+        - nextStartTime
+        - previousEndTime
+        - nextEndTime
+        - note
+        - source
+        - changedAt
+    ActivityChangeNoteInput:
+      type: object
+      properties:
+        scheduledDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        note:
+          type: string
+          minLength: 1
+          maxLength: 1000
+      required:
+        - scheduledDate
+        - note
 

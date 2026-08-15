@@ -8,6 +8,10 @@
 
 export * from './activity';
 export * from './activityCategory';
+export * from './activityChange';
+export * from './activityChangeChangeType';
+export * from './activityChangeNoteInput';
+export * from './activityChangeSource';
 export * from './activityInput';
 export * from './activityInputCategory';
 export * from './activityUpdate';
@@ -15,6 +19,7 @@ export * from './activityUpdateCategory';
 export * from './aiStatus';
 export * from './healthStatus';
 export * from './listActivitiesParams';
+export * from './listActivityChangesParams';
 export * from './planningConflict';
 export * from './planningNotFittedItem';
 export * from './planningProposal';

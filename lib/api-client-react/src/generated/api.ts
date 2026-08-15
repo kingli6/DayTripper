@@ -21,11 +21,14 @@ import type {
 
 import type {
   Activity,
+  ActivityChange,
+  ActivityChangeNoteInput,
   ActivityInput,
   ActivityUpdate,
   AiStatus,
   HealthStatus,
   ListActivitiesParams,
+  ListActivityChangesParams,
   PlanningProposal,
   PlanningRequest
 } from './api.schemas';
@@ -581,5 +584,162 @@ export const useDeleteActivity = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteActivityMutationOptions(options));
+    }
+
+export const getListActivityChangesUrl = (params: ListActivityChangesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/activity-changes?${stringifiedParams}` : `/api/activity-changes`
+}
+
+/**
+ * Returns a private, chronological record of schedule changes for the requested day
+ * @summary List manual changes for a day
+ */
+export const listActivityChanges = async (params: ListActivityChangesParams, options?: Parameters<typeof customFetch>[1]): Promise<ActivityChange[]> => {
+
+  return customFetch<ActivityChange[]>(getListActivityChangesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListActivityChangesQueryKey = (params?: ListActivityChangesParams,) => {
+    return [
+    `/api/activity-changes`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListActivityChangesQueryOptions = <TData = Awaited<ReturnType<typeof listActivityChanges>>, TError = ErrorType<unknown>>(params: ListActivityChangesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listActivityChanges>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListActivityChangesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listActivityChanges>>> = ({ signal }) => listActivityChanges(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listActivityChanges>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListActivityChangesQueryResult = NonNullable<Awaited<ReturnType<typeof listActivityChanges>>>
+export type ListActivityChangesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List manual changes for a day
+ */
+
+export function useListActivityChanges<TData = Awaited<ReturnType<typeof listActivityChanges>>, TError = ErrorType<unknown>>(
+ params: ListActivityChangesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listActivityChanges>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListActivityChangesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAddActivityChangeNoteUrl = () => {
+
+
+
+
+  return `/api/activity-changes`
+}
+
+/**
+ * Records an optional user explanation without changing the saved schedule
+ * @summary Add an optional note to the change review
+ */
+export const addActivityChangeNote = async (activityChangeNoteInput: ActivityChangeNoteInput, options?: Parameters<typeof customFetch>[1]): Promise<ActivityChange> => {
+
+  return customFetch<ActivityChange>(getAddActivityChangeNoteUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(activityChangeNoteInput)
+  }
+);}
+
+
+
+
+
+export const getAddActivityChangeNoteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addActivityChangeNote>>, TError,{data: BodyType<ActivityChangeNoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addActivityChangeNote>>, TError,{data: BodyType<ActivityChangeNoteInput>}, TContext> => {
+
+const mutationKey = ['addActivityChangeNote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addActivityChangeNote>>, {data: BodyType<ActivityChangeNoteInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  addActivityChangeNote(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddActivityChangeNoteMutationResult = NonNullable<Awaited<ReturnType<typeof addActivityChangeNote>>>
+    export type AddActivityChangeNoteMutationBody = BodyType<ActivityChangeNoteInput>
+    export type AddActivityChangeNoteMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add an optional note to the change review
+ */
+export const useAddActivityChangeNote = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addActivityChangeNote>>, TError,{data: BodyType<ActivityChangeNoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addActivityChangeNote>>,
+        TError,
+        {data: BodyType<ActivityChangeNoteInput>},
+        TContext
+      > => {
+      return useMutation(getAddActivityChangeNoteMutationOptions(options));
     }
 

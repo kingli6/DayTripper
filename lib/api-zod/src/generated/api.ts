@@ -252,3 +252,71 @@ export const DeleteActivityParams = zod.object({
 export const DeleteActivityResponse = zod.void()
 
 
+/**
+ * Returns a private, chronological record of schedule changes for the requested day
+ * @summary List manual changes for a day
+ */
+export const listActivityChangesQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListActivityChangesQueryParams = zod.object({
+  "date": zod.coerce.string().regex(listActivityChangesQueryDateRegExp)
+})
+
+export const listActivityChangesResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListActivityChangesResponseItem = zod.object({
+  "id": zod.number(),
+  "activityId": zod.number().nullable(),
+  "scheduledDate": zod.string().regex(listActivityChangesResponseScheduledDateRegExp),
+  "activityTitle": zod.string().nullable(),
+  "changeType": zod.enum(['moved', 'extended', 'shortened', 'renamed', 'removed', 'replaced', 'completed_later', 'review_note']),
+  "previousTitle": zod.string().nullable(),
+  "nextTitle": zod.string().nullable(),
+  "previousStartTime": zod.string().nullable(),
+  "nextStartTime": zod.string().nullable(),
+  "previousEndTime": zod.string().nullable(),
+  "nextEndTime": zod.string().nullable(),
+  "note": zod.string().nullable(),
+  "source": zod.enum(['manual', 'ai_approved']),
+  "changedAt": zod.string()
+})
+export const ListActivityChangesResponse = zod.array(ListActivityChangesResponseItem)
+
+
+/**
+ * Records an optional user explanation without changing the saved schedule
+ * @summary Add an optional note to the change review
+ */
+export const addActivityChangeNoteBodyScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const addActivityChangeNoteBodyNoteMax = 1000;
+
+
+
+export const AddActivityChangeNoteBody = zod.object({
+  "scheduledDate": zod.string().regex(addActivityChangeNoteBodyScheduledDateRegExp),
+  "note": zod.string().min(1).max(addActivityChangeNoteBodyNoteMax)
+})
+
+export const addActivityChangeNoteResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const AddActivityChangeNoteResponse = zod.object({
+  "id": zod.number(),
+  "activityId": zod.number().nullable(),
+  "scheduledDate": zod.string().regex(addActivityChangeNoteResponseScheduledDateRegExp),
+  "activityTitle": zod.string().nullable(),
+  "changeType": zod.enum(['moved', 'extended', 'shortened', 'renamed', 'removed', 'replaced', 'completed_later', 'review_note']),
+  "previousTitle": zod.string().nullable(),
+  "nextTitle": zod.string().nullable(),
+  "previousStartTime": zod.string().nullable(),
+  "nextStartTime": zod.string().nullable(),
+  "previousEndTime": zod.string().nullable(),
+  "nextEndTime": zod.string().nullable(),
+  "note": zod.string().nullable(),
+  "source": zod.enum(['manual', 'ai_approved']),
+  "changedAt": zod.string()
+})
+
+

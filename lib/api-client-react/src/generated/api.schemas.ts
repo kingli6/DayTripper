@@ -250,7 +250,73 @@ export interface ActivityUpdate {
   note?: string | null;
 }
 
+export type ActivityChangeChangeType = typeof ActivityChangeChangeType[keyof typeof ActivityChangeChangeType];
+
+
+export const ActivityChangeChangeType = {
+  moved: 'moved',
+  extended: 'extended',
+  shortened: 'shortened',
+  renamed: 'renamed',
+  removed: 'removed',
+  replaced: 'replaced',
+  completed_later: 'completed_later',
+  review_note: 'review_note',
+} as const;
+
+export type ActivityChangeSource = typeof ActivityChangeSource[keyof typeof ActivityChangeSource];
+
+
+export const ActivityChangeSource = {
+  manual: 'manual',
+  ai_approved: 'ai_approved',
+} as const;
+
+export interface ActivityChange {
+  id: number;
+  /** @nullable */
+  activityId: number | null;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate: string;
+  /** @nullable */
+  activityTitle: string | null;
+  changeType: ActivityChangeChangeType;
+  /** @nullable */
+  previousTitle: string | null;
+  /** @nullable */
+  nextTitle: string | null;
+  /** @nullable */
+  previousStartTime: string | null;
+  /** @nullable */
+  nextStartTime: string | null;
+  /** @nullable */
+  previousEndTime: string | null;
+  /** @nullable */
+  nextEndTime: string | null;
+  /** @nullable */
+  note: string | null;
+  source: ActivityChangeSource;
+  changedAt: string;
+}
+
+export interface ActivityChangeNoteInput {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  note: string;
+}
+
 export type ListActivitiesParams = {
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+date: string;
+};
+
+export type ListActivityChangesParams = {
 /**
  * @pattern ^\d{4}-\d{2}-\d{2}$
  */

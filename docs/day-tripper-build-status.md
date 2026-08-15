@@ -4,7 +4,7 @@ Last reviewed: 2026-08-15
 
 ## Current milestone
 
-**Prompt 11 — Proposal review and acceptance complete**
+**Prompt 12 — Live edits and change history complete**
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
 are complete. Prompt 7 is complete: the existing responsive activity surface
@@ -17,6 +17,9 @@ request a proposal without changing the saved timeline. Prompt 11 is complete:
 users can review detailed suggested activities, edit or remove individual items,
 reject or revise the proposal, and explicitly accept selected or remaining items
 into the saved timeline.
+Prompt 12 is complete: manual activity edits remain authoritative, schedule
+changes are recorded privately with server timestamps, and users can open an
+optional change review with an explanation note without triggering AI.
 
 ## Existing completed areas
 
@@ -92,6 +95,9 @@ into the saved timeline.
 - Proposal item selection, removal, restoration, and rejection
 - Explicit partial or complete proposal acceptance
 - Server-persisted accepted proposal activities with refreshed timeline
+- Private schedule change history for manual moves, duration changes, renames,
+  removals, and late completion
+- Optional “Review changes” surface with an explanation note
 - Completion and ongoing-status controls in the activity detail surface
 - Unsaved-change confirmation on close
 - Focus management, keyboard escape handling, visible focus states, touch-sized controls, and reduced-motion handling
@@ -107,11 +113,10 @@ into the saved timeline.
   drawer/sheet experience.
 - Full unsaved-change handling, focus management, reduced-motion handling,
   and destructive-action undo need a dedicated quality pass.
-- Change history and “Review changes” do not exist.
 - Optional reflection does not exist.
 - Neutral pattern summaries do not exist.
 - Offline current-day resilience and sync status do not exist.
-- Controlled re-planning and change history do not exist.
+- Controlled re-planning does not exist.
 - PWA installability and Android preparation have not been completed.
 
 ## Known blockers and decisions
@@ -129,9 +134,8 @@ into the saved timeline.
 
 ## Next milestones
 
-1. Build live edits and change history.
-2. Build controlled re-planning.
-3. Build reflection, pattern summaries, offline resilience, quality review, and
+1. Build controlled re-planning.
+2. Build reflection, pattern summaries, offline resilience, quality review, and
    Android/PWA preparation in that order.
 
 No next milestone should be started automatically.

@@ -18,4 +18,5 @@
 //   export type Post = typeof postsTable.$inferSelect;
 
 export * from "./activities";
+export * from "./activityChanges";
 export * from "./appMetadata";

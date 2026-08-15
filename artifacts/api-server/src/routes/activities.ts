@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { db, activitiesTable } from "@workspace/db";
+import { activityChangesTable, db, activitiesTable } from "@workspace/db";
 import {
   CreateActivityBody,
   CreateActivityResponse,
@@ -16,6 +16,19 @@ import { requireAuth } from "../middlewares/requireAuth";
 const router: IRouter = Router();
 
 router.use(requireAuth);
+
+function durationMinutes(startTime: string, endTime: string | null) {
+  if (!endTime) return null;
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+  const duration = endHour * 60 + endMinute - (startHour * 60 + startMinute);
+  return duration > 0 ? duration : null;
+}
+
+function currentTimeValue() {
+  const now = new Date();
+  return `${`${now.getHours()}`.padStart(2, "0")}:${`${now.getMinutes()}`.padStart(2, "0")}`;
+}
 
 router.get("/activities", async (req, res): Promise<void> => {
   const parsed = ListActivitiesQueryParams.safeParse(req.query);
@@ -107,16 +120,92 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [activity] = await db
-    .update(activitiesTable)
-    .set(updateValues)
-    .where(
-      and(
-        eq(activitiesTable.id, params.data.id),
-        eq(activitiesTable.ownerId, res.locals.userId as string),
-      ),
-    )
-    .returning();
+  const activity = await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select()
+      .from(activitiesTable)
+      .where(
+        and(
+          eq(activitiesTable.id, params.data.id),
+          eq(activitiesTable.ownerId, res.locals.userId as string),
+        ),
+      )
+      .limit(1);
+
+    if (!before) return null;
+
+    const [updated] = await tx
+      .update(activitiesTable)
+      .set(updateValues)
+      .where(
+        and(
+          eq(activitiesTable.id, params.data.id),
+          eq(activitiesTable.ownerId, res.locals.userId as string),
+        ),
+      )
+      .returning();
+
+    if (!updated) return null;
+
+    const changes: Array<typeof activityChangesTable.$inferInsert> = [];
+    const effectiveDate = updated.scheduledDate;
+    const common = {
+      ownerId: res.locals.userId as string,
+      activityId: updated.id,
+      scheduledDate: effectiveDate,
+      activityTitle: updated.title,
+      previousTitle: before.title,
+      nextTitle: updated.title,
+      previousStartTime: before.startTime,
+      nextStartTime: updated.startTime,
+      previousEndTime: before.endTime,
+      nextEndTime: updated.endTime,
+      note: null,
+      source: "manual" as const,
+    };
+
+    if (
+      before.scheduledDate !== updated.scheduledDate ||
+      before.startTime !== updated.startTime
+    ) {
+      changes.push({ ...common, changeType: "moved" });
+    }
+
+    const beforeDuration = durationMinutes(before.startTime, before.endTime);
+    const updatedDuration = durationMinutes(updated.startTime, updated.endTime);
+    if (
+      beforeDuration !== null &&
+      updatedDuration !== null &&
+      updatedDuration > beforeDuration
+    ) {
+      changes.push({ ...common, changeType: "extended" });
+    } else if (
+      beforeDuration !== null &&
+      updatedDuration !== null &&
+      updatedDuration < beforeDuration
+    ) {
+      changes.push({ ...common, changeType: "shortened" });
+    }
+
+    if (before.title !== updated.title) {
+      changes.push({ ...common, changeType: "renamed" });
+    }
+
+    if (
+      !before.completed &&
+      updated.completed &&
+      before.endTime &&
+      currentTimeValue() > before.endTime
+    ) {
+      changes.push({ ...common, changeType: "completed_later" });
+    }
+
+    if (changes.length > 0) {
+      await tx.insert(activityChangesTable).values(changes);
+    }
+
+    return updated;
+  });
 
   if (!activity) {
     res.status(404).json({ error: "Activity not found." });
@@ -134,15 +223,50 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const [activity] = await db
-    .delete(activitiesTable)
-    .where(
-      and(
-        eq(activitiesTable.id, params.data.id),
-        eq(activitiesTable.ownerId, res.locals.userId as string),
-      ),
-    )
-    .returning({ id: activitiesTable.id });
+  const activity = await db.transaction(async (tx) => {
+    const [before] = await tx
+      .select()
+      .from(activitiesTable)
+      .where(
+        and(
+          eq(activitiesTable.id, params.data.id),
+          eq(activitiesTable.ownerId, res.locals.userId as string),
+        ),
+      )
+      .limit(1);
+
+    if (!before) return null;
+
+    const [deleted] = await tx
+      .delete(activitiesTable)
+      .where(
+        and(
+          eq(activitiesTable.id, params.data.id),
+          eq(activitiesTable.ownerId, res.locals.userId as string),
+        ),
+      )
+      .returning({ id: activitiesTable.id });
+
+    if (!deleted) return null;
+
+    await tx.insert(activityChangesTable).values({
+      ownerId: res.locals.userId as string,
+      activityId: before.id,
+      scheduledDate: before.scheduledDate,
+      activityTitle: before.title,
+      changeType: "removed",
+      previousTitle: before.title,
+      nextTitle: null,
+      previousStartTime: before.startTime,
+      nextStartTime: null,
+      previousEndTime: before.endTime,
+      nextEndTime: null,
+      note: null,
+      source: "manual",
+    });
+
+    return deleted;
+  });
 
   if (!activity) {
     res.status(404).json({ error: "Activity not found." });

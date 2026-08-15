@@ -36,6 +36,7 @@ import {
   useUpdateActivity,
 } from '@workspace/api-client-react';
 import type { Activity, PlanningProposal } from '@workspace/api-client-react';
+import { ChangeReviewPanel } from '@/components/change-review-panel';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -1261,6 +1262,7 @@ function Today() {
   const [now, setNow] = useState(currentMinutes());
   const [editorActivity, setEditorActivity] = useState<EditorActivity | undefined>(undefined);
   const [planningOpen, setPlanningOpen] = useState(false);
+  const [changeReviewOpen, setChangeReviewOpen] = useState(false);
   const [acceptedNotice, setAcceptedNotice] = useState('');
   const [deletedActivity, setDeletedActivity] = useState<Activity | null>(null);
   const [undoPending, setUndoPending] = useState(false);
@@ -1401,6 +1403,11 @@ function Today() {
                      <span className="hidden sm:inline">Shape the day</span>
                      <span className="sm:hidden">Plan</span>
                    </button>
+                    <button type="button" onClick={() => setChangeReviewOpen(true)} data-testid="button-open-change-review" className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <Clock3 className="size-3.5" strokeWidth={1.8} />
+                      <span className="hidden sm:inline">Review changes</span>
+                      <span className="sm:hidden">Review</span>
+                    </button>
                    <button type="button" onClick={openCreate} data-testid="button-add-activity" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0">
                     <Plus className="size-3.5" strokeWidth={2.2} />
                     <span className="hidden sm:inline">Add activity</span>
@@ -1467,6 +1474,7 @@ function Today() {
         </div>
       )}
       {planningOpen && <PlanningStudio date={date} activities={activities} onClose={() => setPlanningOpen(false)} onAccepted={handleAccepted} />}
+      {changeReviewOpen && <ChangeReviewPanel date={date} onClose={() => setChangeReviewOpen(false)} />}
       {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSaved={() => void refreshAfterMutation()} onDeleted={handleDeleted} />}
     </div>
   );
