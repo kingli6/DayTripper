@@ -348,6 +348,8 @@ function OfflineSyncBanner({
     saving: 'Saving your change…',
     syncing: 'Syncing saved changes…',
     pending: 'Changes are waiting to sync.',
+    'auth-required': 'Sign in to sync your changes.',
+    conflict: 'This day changed elsewhere. Review before syncing.',
     offline: hasCachedDay
       ? 'Offline — your recent current day is still available.'
       : 'Offline — this day has not been saved on this device yet.',
