@@ -177,8 +177,75 @@ function extractGeminiText(payload: unknown): string | null {
 }
 
 function parseJsonText(text: string): unknown {
-  const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  return JSON.parse(fenced ? fenced[1] : text);
+  const candidates = [text.trim()];
+  const fencedBlocks = [...text.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/gi)]
+    .map((match) => match[1].trim())
+    .filter(Boolean);
+
+  candidates.unshift(...fencedBlocks);
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      // Gemini can occasionally add a short explanation before or after JSON.
+      // Keep looking for the first complete JSON value, then validate it below.
+    }
+
+    const starts = [candidate.indexOf("{"), candidate.indexOf("[")]
+      .filter((index) => index >= 0)
+      .sort((first, second) => first - second);
+
+    for (const start of starts) {
+      const stack: string[] = [];
+      let inString = false;
+      let escaped = false;
+
+      for (let index = start; index < candidate.length; index += 1) {
+        const character = candidate[index];
+
+        if (inString) {
+          if (escaped) {
+            escaped = false;
+          } else if (character === "\\") {
+            escaped = true;
+          } else if (character === "\"") {
+            inString = false;
+          }
+          continue;
+        }
+
+        if (character === "\"") {
+          inString = true;
+          continue;
+        }
+
+        if (character === "{" || character === "[") {
+          stack.push(character);
+          continue;
+        }
+
+        if (character === "}" || character === "]") {
+          const opening = stack.at(-1);
+          const matches = (opening === "{" && character === "}")
+            || (opening === "[" && character === "]");
+
+          if (!matches) break;
+          stack.pop();
+
+          if (stack.length === 0) {
+            try {
+              return JSON.parse(candidate.slice(start, index + 1));
+            } catch {
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  throw new SyntaxError("Planning provider response did not contain valid JSON");
 }
 
 function validateProposalSemantics(
@@ -292,7 +359,13 @@ router.post("/planning/proposals", async (req, res): Promise<void> => {
     try {
       candidate = parseJsonText(text);
     } catch {
-      req.log.warn("Planning provider returned malformed JSON");
+      req.log.warn(
+        {
+          textLength: text.length,
+          wrappedInCodeFence: /^```/i.test(text),
+        },
+        "Planning provider returned malformed JSON",
+      );
       res.status(502).json({ error: "The planning service returned an invalid proposal." });
       return;
     }
