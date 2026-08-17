@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AdminAccountMetric } from './adminAccountMetric';
+import type { AdminActionMetric } from './adminActionMetric';
 import type { AdminOverviewAccess } from './adminOverviewAccess';
 import type { AdminOverviewDatabase } from './adminOverviewDatabase';
 import type { AdminTableMetric } from './adminTableMetric';
@@ -17,6 +18,7 @@ export interface AdminOverview {
   database: AdminOverviewDatabase;
   tables: AdminTableMetric[];
   accountActivity: AdminAccountMetric[];
+  recentAdminActions: AdminActionMetric[];
   /** @nullable */
   recentActivityAt: string | null;
 }

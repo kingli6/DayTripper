@@ -304,7 +304,7 @@ paths:
       operationId: getAdminOverview
       tags: [admin]
       summary: Get protected database diagnostics
-      description: Returns aggregate account, table, and database storage metrics without user-authored content
+      description: Returns protected aggregate account, table, database, and admin-action metrics without user-authored content
       responses:
         "200":
           description: Database diagnostics
@@ -314,27 +314,35 @@ paths:
                 $ref: "#/components/schemas/AdminOverview"
         "403":
           description: Admin access is not configured for this account
-  /admin/reset:
+  /admin/accounts/{accountId}/reset:
     post:
-      operationId: resetAdminData
+      operationId: resetAdminAccountData
       tags: [admin]
-      summary: Reset planner data from the protected admin surface
-      description: Clears either the signed-in admin's planner data or all planner data after an explicit confirmation phrase
+      summary: Reset one account's planner data
+      description: Clears planner records for one selected account after an explicit confirmation phrase
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AdminResetRequest"
+              $ref: "#/components/schemas/AdminAccountResetRequest"
       responses:
         "200":
           description: Reset completed
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AdminResetResult"
+                $ref: "#/components/schemas/AdminAccountResetResult"
         "400":
           description: Invalid reset confirmation
+        "404":
+          description: Account has no saved planner data
         "403":
           description: Admin access is not configured for this account
 components:
@@ -989,6 +997,10 @@ components:
       properties:
         accountId:
           type: string
+        email:
+          type: ["string", "null"]
+        displayName:
+          type: ["string", "null"]
         activityCount:
           type: number
         journalEntryCount:
@@ -1001,6 +1013,8 @@ components:
           type: ["string", "null"]
       required:
         - accountId
+        - email
+        - displayName
         - activityCount
         - journalEntryCount
         - changeCount
@@ -1056,6 +1070,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdminAccountMetric"
+        recentAdminActions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminActionMetric"
         recentActivityAt:
           type: ["string", "null"]
       required:
@@ -1065,30 +1083,54 @@ components:
         - database
         - tables
         - accountActivity
+        - recentAdminActions
         - recentActivityAt
-    AdminResetRequest:
+    AdminActionMetric:
       type: object
       properties:
-        scope:
+        id:
+          type: number
+        actionType:
           type: string
-          enum: [my_account, all_planner_data]
+        targetAccountId:
+          type: string
+        targetEmail:
+          type: ["string", "null"]
+        deletedRows:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - actionType
+        - targetAccountId
+        - targetEmail
+        - deletedRows
+        - createdAt
+    AdminAccountResetRequest:
+      type: object
+      properties:
         confirmation:
           type: string
       required:
-        - scope
         - confirmation
-    AdminResetResult:
+    AdminAccountResetResult:
       type: object
       properties:
-        scope:
+        accountId:
           type: string
-          enum: [my_account, all_planner_data]
         deletedRows:
           type: number
         message:
           type: string
+        actionId:
+          type: number
+        createdAt:
+          type: string
       required:
-        - scope
+        - accountId
         - deletedRows
         - message
+        - actionId
+        - createdAt
 

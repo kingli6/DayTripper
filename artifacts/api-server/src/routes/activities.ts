@@ -39,17 +39,27 @@ router.get("/activities", async (req, res): Promise<void> => {
     return;
   }
 
+  // The calendar date is intentionally compared as a date-only string. Do
+  // not construct a JS Date here: converting a YYYY-MM-DD value through UTC
+  // would move the activity across a user's local-midnight boundary.
+  const ownerId = res.locals.userId;
+  if (!ownerId) {
+    res.status(401).json({ error: "Authentication is required." });
+    return;
+  }
+
   const activities = await db
     .select()
     .from(activitiesTable)
     .where(
       and(
-        eq(activitiesTable.ownerId, res.locals.userId as string),
+        eq(activitiesTable.ownerId, ownerId),
         eq(activitiesTable.scheduledDate, parsed.data.date),
       ),
     )
     .orderBy(asc(activitiesTable.startTime), asc(activitiesTable.id));
 
+  res.setHeader("Cache-Control", "private, no-store");
   res.json(ListActivitiesResponse.parse(activities));
 });
 

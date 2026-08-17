@@ -5,9 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminResetRequestScope } from './adminResetRequestScope';
 
-export interface AdminResetRequest {
-  scope: AdminResetRequestScope;
+export interface AdminAccountResetRequest {
   confirmation: string;
 }

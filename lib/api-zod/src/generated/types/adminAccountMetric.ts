@@ -8,6 +8,10 @@
 
 export interface AdminAccountMetric {
   accountId: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  displayName: string | null;
   activityCount: number;
   journalEntryCount: number;
   changeCount: number;

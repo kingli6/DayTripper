@@ -19,5 +19,6 @@
 
 export * from "./activities";
 export * from "./activityChanges";
+export * from "./adminActions";
 export * from "./appMetadata";
 export * from "./journalEntries";

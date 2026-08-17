@@ -360,7 +360,16 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  // React Query owns client-side freshness for these API calls. Disable the
+  // browser/edge HTTP cache so a conditional request cannot surface a 304 to
+  // the JSON parser as `null` (and so one Clerk session cannot reuse another
+  // session's private response).
+  const response = await fetch(input, {
+    ...init,
+    method,
+    headers,
+    cache: init.cache ?? "no-store",
+  });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);

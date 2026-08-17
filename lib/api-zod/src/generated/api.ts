@@ -561,7 +561,7 @@ export const DeleteJournalEntryResponse = zod.void()
 
 
 /**
- * Returns aggregate account, table, and database storage metrics without user-authored content
+ * Returns protected aggregate account, table, database, and admin-action metrics without user-authored content
  * @summary Get protected database diagnostics
  */
 export const GetAdminOverviewResponse = zod.object({
@@ -588,29 +588,44 @@ export const GetAdminOverviewResponse = zod.object({
 })),
   "accountActivity": zod.array(zod.object({
   "accountId": zod.string(),
+  "email": zod.string().nullable(),
+  "displayName": zod.string().nullable(),
   "activityCount": zod.number(),
   "journalEntryCount": zod.number(),
   "changeCount": zod.number(),
   "firstActivityAt": zod.string().nullable(),
   "lastActivityAt": zod.string().nullable()
 })),
+  "recentAdminActions": zod.array(zod.object({
+  "id": zod.number(),
+  "actionType": zod.string(),
+  "targetAccountId": zod.string(),
+  "targetEmail": zod.string().nullable(),
+  "deletedRows": zod.number(),
+  "createdAt": zod.string()
+})),
   "recentActivityAt": zod.string().nullable()
 })
 
 
 /**
- * Clears either the signed-in admin's planner data or all planner data after an explicit confirmation phrase
- * @summary Reset planner data from the protected admin surface
+ * Clears planner records for one selected account after an explicit confirmation phrase
+ * @summary Reset one account's planner data
  */
-export const ResetAdminDataBody = zod.object({
-  "scope": zod.enum(['my_account', 'all_planner_data']),
+export const ResetAdminAccountDataParams = zod.object({
+  "accountId": zod.coerce.string()
+})
+
+export const ResetAdminAccountDataBody = zod.object({
   "confirmation": zod.string()
 })
 
-export const ResetAdminDataResponse = zod.object({
-  "scope": zod.enum(['my_account', 'all_planner_data']),
+export const ResetAdminAccountDataResponse = zod.object({
+  "accountId": zod.string(),
   "deletedRows": zod.number(),
-  "message": zod.string()
+  "message": zod.string(),
+  "actionId": zod.number(),
+  "createdAt": zod.string()
 })
 
 

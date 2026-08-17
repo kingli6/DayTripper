@@ -5,10 +5,11 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminResetResultScope } from './adminResetResultScope';
 
-export interface AdminResetResult {
-  scope: AdminResetResultScope;
+export interface AdminAccountResetResult {
+  accountId: string;
   deletedRows: number;
   message: string;
+  actionId: number;
+  createdAt: string;
 }

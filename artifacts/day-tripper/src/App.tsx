@@ -1270,6 +1270,7 @@ function ActivityModal({ date, activity, onClose, onSaved, onDeleted }: { date: 
 
 function Today() {
   const today = localDate();
+  const { user } = useUser();
   const [date, setDate] = useState(today);
   const [now, setNow] = useState(currentMinutes());
   const [editorActivity, setEditorActivity] = useState<EditorActivity | undefined>(undefined);
@@ -1285,7 +1286,15 @@ function Today() {
   const createActivity = useCreateActivity();
   const updateActivity = useUpdateActivity();
   const queryClient = useQueryClient();
-  const list = useListActivities({ date }, { query: { queryKey: getListActivitiesQueryKey({ date }) } });
+  const userQueryKey = user?.id ?? 'signed-out';
+  const list = useListActivities({ date }, {
+    query: {
+      // Activity data is private to the active Clerk session. Keep the
+      // generated API key shape but add the user to the client cache key so
+      // switching accounts cannot reuse the previous user's list.
+      queryKey: [...getListActivitiesQueryKey({ date }), userQueryKey],
+    },
+  });
   const activities = list.data ?? [];
 
   useEffect(() => {

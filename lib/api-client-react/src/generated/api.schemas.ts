@@ -580,6 +580,10 @@ export interface AdminTableMetric {
 
 export interface AdminAccountMetric {
   accountId: string;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  displayName: string | null;
   activityCount: number;
   journalEntryCount: number;
   changeCount: number;
@@ -609,6 +613,16 @@ export type AdminOverviewDatabase = {
   percentUsed: number | null;
 };
 
+export interface AdminActionMetric {
+  id: number;
+  actionType: string;
+  targetAccountId: string;
+  /** @nullable */
+  targetEmail: string | null;
+  deletedRows: number;
+  createdAt: string;
+}
+
 export interface AdminOverview {
   access: AdminOverviewAccess;
   accounts: number;
@@ -616,35 +630,21 @@ export interface AdminOverview {
   database: AdminOverviewDatabase;
   tables: AdminTableMetric[];
   accountActivity: AdminAccountMetric[];
+  recentAdminActions: AdminActionMetric[];
   /** @nullable */
   recentActivityAt: string | null;
 }
 
-export type AdminResetRequestScope = typeof AdminResetRequestScope[keyof typeof AdminResetRequestScope];
-
-
-export const AdminResetRequestScope = {
-  my_account: 'my_account',
-  all_planner_data: 'all_planner_data',
-} as const;
-
-export interface AdminResetRequest {
-  scope: AdminResetRequestScope;
+export interface AdminAccountResetRequest {
   confirmation: string;
 }
 
-export type AdminResetResultScope = typeof AdminResetResultScope[keyof typeof AdminResetResultScope];
-
-
-export const AdminResetResultScope = {
-  my_account: 'my_account',
-  all_planner_data: 'all_planner_data',
-} as const;
-
-export interface AdminResetResult {
-  scope: AdminResetResultScope;
+export interface AdminAccountResetResult {
+  accountId: string;
   deletedRows: number;
   message: string;
+  actionId: number;
+  createdAt: string;
 }
 
 export type ListActivitiesParams = {
