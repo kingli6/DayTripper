@@ -62,6 +62,37 @@ explicit planning permission.
 - Development and production commands
 - Server-side Gemini configuration status without exposing credentials
 
+### Deployment database setup
+
+- Supabase PostgreSQL is configured as the external deployment database.
+- The existing Drizzle schema was successfully pushed to Supabase on
+  2026-08-17.
+- The Supabase pooler required encrypted TLS handling; adding
+  `?sslmode=require` alone caused the current Node PostgreSQL driver to reject
+  the pooler's certificate chain before authentication.
+- The application now normalizes Supabase pooler SSL parameters while keeping
+  certificate verification relaxed only for the Supabase connection.
+- Replit local development continues using its runtime-managed `DATABASE_URL`.
+  Render must provide the Supabase URI as its own encrypted `DATABASE_URL`.
+- Cloudflare Pages is not a direct replacement for the current Express API.
+  Moving the backend to Cloudflare Workers would be a separate rewrite.
+
+#### Future database setup procedure
+
+1. Create or confirm the Supabase database password.
+2. Copy the generated URI from Supabase **Connect → Session pooler** for the
+   same project. Do not manually reconstruct the username or hostname.
+3. Replace `[YOUR-PASSWORD]` with the database password. URL-encode special
+   characters, or use a temporary letters-and-numbers-only password.
+4. Store the URI in the hosting provider's encrypted environment settings as
+   `DATABASE_URL`; never paste it into chat, source files, or shell history.
+5. Run the schema push from a secure environment. If the Node driver reports a
+   Supabase certificate-chain error, preserve encrypted TLS and use the app's
+   Supabase-specific SSL handling; never deploy with
+   `NODE_TLS_REJECT_UNAUTHORIZED=0`.
+6. Verify the tables in Supabase Table Editor, then restart or redeploy the
+   API service.
+
 ### Private activity boundary
 
 - Clerk-managed sign-in and sign-up routes
