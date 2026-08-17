@@ -1,0 +1,573 @@
+# Part 3: Set up authentication
+
+## 7. Decide which authentication provider to use
+
+The existing app uses **Clerk**, not Supabase Auth.
+
+Supabase can provide the database without providing authentication.
+
+You have two choices:
+
+### Recommended: keep Clerk
+
+This requires the least application work.
+
+Create or use an external Clerk project and obtain:
+
+```
+CLERK_PUBLISHABLE_KEY
+CLERK_SECRET_KEY
+```
+
+The publishable key normally begins with something like:
+
+```
+pk_test_
+```
+
+The secret key normally begins with something like:
+
+```
+sk_test_
+```
+
+Do not share the secret key.
+
+### Alternative: migrate to Supabase Auth
+
+This would allow you to use only Supabase for authentication, but it requires changing:
+
+- The Clerk provider in the React app
+- Sign-in and sign-up screens
+- API authentication middleware
+- User identity extraction
+- Potentially user ownership handling
+
+That is a separate migration project. Do not try to mix Clerk and Supabase Auth during the first deployment.
+
+For this walkthrough, keep Clerk.
+
+## 8. Configure Clerk for the external domain
+
+In Clerk, configure these domains after you know the final domain:
+
+- Local development URL
+- Preview URL
+- Production URL
+
+For example:
+
+```
+<http://localhost:5173>
+<https://your-project.pages.dev>
+<https://app.yourdomain.com>
+```
+
+Configure:
+
+- Allowed origins
+- Sign-in redirect URL
+- Sign-up redirect URL
+- Any OAuth providers you want to use
+
+The current app has routes for:
+
+```
+/sign-in
+/sign-up
+/today
+```
+
+## 9. Disable the Replit-specific Clerk proxy
+
+The current project contains a Clerk proxy designed for Replit-managed deployments.
+
+Outside Replit, the frontend should use Clerk directly. That means:
+
+- Use your external Clerk publishable key.
+- Do not set `VITE_CLERK_PROXY_URL`.
+- Keep the API’s external Clerk secret key on the server only.
+
+The existing frontend code already allows the proxy URL to be absent, so setting only the normal Clerk key should let Clerk use its standard external service.
+
+---
+
+# Part 4: Make local development work outside Replit
+
+The Replit environment automatically routes frontend requests to the API using `/api`.
+
+When running locally, Vite and Express use different ports:
+
+```
+Frontend: <http://localhost:5173>
+API:      <http://localhost:5000>
+```
+
+The frontend currently calls paths such as:
+
+```
+/api/healthz
+/api/activities
+```
+
+You need Vite to forward those paths to the API.
+
+## 10. Add a local Vite proxy
+
+Open:
+
+```
+artifacts/day-tripper/vite.config.ts
+```
+
+Inside the existing `server` configuration, add:
+
+```tsx
+proxy: {
+  "/api": {
+    target: "<http://localhost:5000>",
+    changeOrigin: true,
+  },
+},
+```
+
+The server section should conceptually look like:
+
+```tsx
+server: {
+  port,
+  strictPort: true,
+  host: "0.0.0.0",
+  allowedHosts: true,
+  proxy: {
+    "/api": {
+      target: "<http://localhost:5000>",
+      changeOrigin: true,
+    },
+  },
+  fs: {
+    strict: true,
+  },
+},
+```
+
+This is only for local development. In production, the hosting setup must provide equivalent routing.
+
+## 11. Start the API locally
+
+In terminal one:
+
+```bash
+export DATABASE_URL='YOUR_SUPABASE_CONNECTION_STRING'
+export GEMINI_API_KEY='YOUR_GEMINI_API_KEY'
+export CLERK_SECRET_KEY='YOUR_CLERK_SECRET_KEY'
+export CLERK_PUBLISHABLE_KEY='YOUR_CLERK_PUBLISHABLE_KEY'
+export NODE_ENV=development
+export PORT=5000
+
+pnpm --filter @workspace/api-server run dev
+```
+
+Check the API:
+
+```bash
+curl <http://localhost:5000/api/healthz>
+```
+
+You should receive a response similar to:
+
+```json
+{"status":"ok"}
+```
+
+Do not expect the API to work without `DATABASE_URL`. The database package intentionally fails when that variable is missing.
+
+## 12. Start the frontend locally
+
+In terminal two:
+
+```bash
+export PORT=5173
+export BASE_PATH=/
+export VITE_CLERK_PUBLISHABLE_KEY='YOUR_CLERK_PUBLISHABLE_KEY'
+
+pnpm --filter @workspace/day-tripper run dev
+```
+
+Open:
+
+```
+<http://localhost:5173>
+```
+
+Test the following:
+
+1. Landing page loads.
+2. Sign-up page opens.
+3. Sign-in page opens.
+4. You can create an account.
+5. You can create an activity.
+6. Refreshing the page keeps the activity.
+7. Sign out works.
+8. Signing in again shows only your activities.
+9. Gemini planning works.
+
+---
+
+# Part 5: Make the production deployment simple
+
+The easiest production deployment is to have one Node service serve:
+
+- The Express API
+- The built React frontend
+
+That means the browser and API use the same domain:
+
+```
+<https://app.yourdomain.com>
+```
+
+This avoids most Clerk cookie and CORS problems.
+
+The project currently builds the frontend separately from the API, so a small portability change is needed:
+
+1. Build the frontend.
+2. Build the API.
+3. Have Express serve the frontend’s `dist/public` directory.
+4. Let `/api/*` continue going to API routes.
+5. Let all other paths serve the React app.
+
+The production build commands would be:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm --filter @workspace/day-tripper run build
+pnpm --filter @workspace/api-server run build
+```
+
+The production start command would be:
+
+```bash
+pnpm --filter @workspace/api-server run start
+```
+
+The API host supplies `PORT`.
+
+This is preferable to deploying the frontend and API on separate domains because the current frontend already expects relative API URLs such as `/api/activities`.
+
+---
+
+# Part 6: Create the Render API service
+
+## 13. Create a Render web service
+
+In Render:
+
+1. Create a new **Web Service**.
+2. Connect your GitHub account.
+3. Select the project repository.
+4. Choose the repository branch, usually `main`.
+5. Use the repository root as the working directory.
+
+Use these settings:
+
+### Build command
+
+```bash
+corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/day-tripper run build && pnpm --filter @workspace/api-server run build
+```
+
+### Start command
+
+```bash
+pnpm --filter @workspace/api-server run start
+```
+
+### Runtime
+
+Use Node.js.
+
+If Render asks for a Node version, choose Node 24 if available. Node 22 should also be a reasonable fallback if the platform does not yet provide Node 24.
+
+## 14. Add Render environment variables
+
+Add these in the Render environment settings:
+
+```
+NODE_ENV=production
+DATABASE_URL=your-supabase-connection-string
+GEMINI_API_KEY=your-gemini-api-key
+CLERK_SECRET_KEY=your-external-clerk-secret-key
+CLERK_PUBLISHABLE_KEY=your-external-clerk-publishable-key
+SESSION_SECRET=a-long-random-value
+BASE_PATH=/
+```
+
+Do not put `VITE_CLERK_PUBLISHABLE_KEY` in the server-only environment unless the frontend is being built by the same service. Since the frontend build happens on the same service in this recommended setup, you can also add:
+
+```
+VITE_CLERK_PUBLISHABLE_KEY=your-external-clerk-publishable-key
+```
+
+For `SESSION_SECRET`, you can generate a random value locally:
+
+```bash
+openssl rand -hex 32
+```
+
+The free Node host may put the service to sleep when unused. The first request after sleeping can be slow.
+
+---
+
+# Part 7: Configure Cloudflare
+
+## 15. Add your domain to Cloudflare
+
+In Cloudflare:
+
+1. Add your domain.
+2. Update your domain registrar’s nameservers to Cloudflare’s nameservers.
+3. Wait for DNS activation.
+4. Add a DNS record pointing to your Node host.
+
+For example:
+
+```
+Type: CNAME
+Name: app
+Target: your-render-service.onrender.com
+```
+
+This would create:
+
+```
+<https://app.yourdomain.com>
+```
+
+Start with DNS-only mode while testing. Once everything works, you can enable Cloudflare proxying.
+
+## 16. Configure HTTPS
+
+Cloudflare normally provides HTTPS automatically.
+
+In Cloudflare SSL/TLS settings:
+
+```
+Encryption mode: Full
+```
+
+Use strict mode only after the origin host has a valid certificate configured.
+
+## 17. Configure Clerk with the final Cloudflare domain
+
+Once your domain is live, add this to Clerk:
+
+```
+<https://app.yourdomain.com>
+```
+
+Also configure the routes:
+
+```
+<https://app.yourdomain.com/sign-in>
+<https://app.yourdomain.com/sign-up>
+```
+
+If Clerk rejects authentication, the most common causes are:
+
+- The domain is not registered in Clerk.
+- The publishable key belongs to another Clerk instance.
+- The secret and publishable keys are from different environments.
+- The Replit proxy URL is still being used.
+
+---
+
+# Part 8: Configure Gemini
+
+## 18. Add the Gemini key only to the API host
+
+The Gemini key should be configured as:
+
+```
+GEMINI_API_KEY
+```
+
+Only the API server should receive it.
+
+The frontend should never contain:
+
+```
+GEMINI_API_KEY
+```
+
+The frontend sends a planning request to the API. The API then calls Gemini.
+
+If the AI endpoint reports that the model is unavailable, update the configured Gemini model to one enabled for your account.
+
+---
+
+# Part 9: Deploy and test
+
+## 19. Commit the portability changes
+
+After the local setup works:
+
+```bash
+git status
+git add .
+git commit -m "Prepare application for external hosting"
+git push origin main
+```
+
+Render should automatically start a new deployment.
+
+## 20. Test the health endpoint
+
+After deployment:
+
+```bash
+curl <https://app.yourdomain.com/api/healthz>
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+If this fails, check the Render logs before testing the browser.
+
+## 21. Test the application in this order
+
+Test the following sequence:
+
+### Authentication
+
+1. Open the production URL.
+2. Sign up.
+3. Verify the account if Clerk requires it.
+4. Sign out.
+5. Sign back in.
+
+### Database persistence
+
+1. Create an activity.
+2. Refresh the browser.
+3. Confirm it remains.
+4. Edit it.
+5. Delete it.
+6. Confirm the deletion.
+
+### Privacy
+
+1. Create an activity under one account.
+2. Sign out.
+3. Create or use a second account.
+4. Confirm the first account’s activity is not visible.
+
+### AI
+
+1. Open the planning studio.
+2. Submit a planning request.
+3. Confirm Gemini returns a proposal.
+4. Confirm the proposal does not modify the schedule automatically.
+5. Explicitly accept a proposal.
+6. Confirm the accepted activities are saved.
+
+### Journal
+
+1. Add a journal entry.
+2. Refresh.
+3. Confirm it remains private to the account.
+
+---
+
+# Common problems
+
+## The frontend loads, but `/api` returns 404
+
+The frontend and API are not being routed through the same service.
+
+Fix by either:
+
+- Serving the frontend and API from the same Node service, or
+- Adding a Cloudflare proxy for `/api/*`, or
+- Adding a production API base URL to the frontend
+
+The recommended setup is same-domain hosting.
+
+## Clerk sign-in does not load
+
+Check:
+
+- `VITE_CLERK_PUBLISHABLE_KEY`
+- External Clerk configuration
+- Allowed origins
+- Sign-in and sign-up URLs
+- That `VITE_CLERK_PROXY_URL` is not pointing to Replit
+
+## The API crashes immediately
+
+Check Render logs for missing variables:
+
+```
+DATABASE_URL
+GEMINI_API_KEY
+CLERK_SECRET_KEY
+CLERK_PUBLISHABLE_KEY
+PORT
+```
+
+`PORT` should normally be supplied automatically by the host.
+
+## Database connection fails
+
+Try the Supabase pooler connection instead of the direct connection.
+
+Also verify:
+
+- The database password is correct.
+- Special characters in the password are correctly URL-encoded.
+- The connection string is PostgreSQL format.
+- The Supabase project is not paused.
+
+## Gemini requests fail
+
+Check:
+
+- `GEMINI_API_KEY` is set on the API host.
+- It is not set only on the frontend.
+- The selected Gemini model is available.
+- The API host has outbound internet access.
+
+## The free service is slow
+
+Free hosting commonly:
+
+- Sleeps when inactive
+- Has limited CPU and memory
+- Has limited database storage
+- May pause inactive Supabase projects
+- Has Gemini usage limits
+
+That is acceptable for testing and early personal use, but not necessarily for a high-traffic public app.
+
+---
+
+# What I recommend you do first
+
+Follow this exact order:
+
+1. Push the project to a private GitHub repository.
+2. Create the Supabase project.
+3. Create or configure an external Clerk project.
+4. Test the database locally.
+5. Test the API locally.
+6. Test the frontend locally.
+7. Make the same-domain production adjustment.
+8. Deploy the Node service.
+9. Add Cloudflare DNS.
+10. Configure the final domain in Clerk.
+11. Test authentication, activities, journal entries, and Gemini.
+
+The only major decision is authentication: **keep external Clerk for the shortest path, or migrate to Supabase Auth for fewer providers but more development work**.
