@@ -3,6 +3,7 @@ import express, {
   type Express,
   type RequestHandler,
 } from "express";
+import path from "node:path";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
@@ -53,6 +54,28 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+if (process.env.NODE_ENV === "production") {
+  const frontendDistPath = path.resolve(
+    process.cwd(),
+    "artifacts/day-tripper/dist/public",
+  );
+  const frontendIndexPath = path.join(frontendDistPath, "index.html");
+
+  app.use(express.static(frontendDistPath));
+  app.use((req, res, next) => {
+    if (req.path === "/api" || req.path.startsWith("/api/")) {
+      next();
+      return;
+    }
+
+    res.sendFile(frontendIndexPath, (err) => {
+      if (err) {
+        next(err);
+      }
+    });
+  });
+}
 
 const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json({ error: "Route not found" });
