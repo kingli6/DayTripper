@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17
 
 ## Current milestone
 
-**Prompt 14 — Fast journaling v1 complete**
+**Prompt 15 — Offline current-day resilience complete**
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
 are complete. Prompt 7 is complete: the existing responsive activity surface
@@ -31,6 +31,13 @@ The reviewed future-development comments are organized in
 `attached_assets/Pasted-My-comment-I-want-you-to-add-the-features-we-are-intend_1786958731273.txt`.
 Features marked “Refinement required before building” must be clarified before
 implementation.
+
+Prompt 14 is complete: the private timestamped journal stream is available with
+explicit planning permission. Prompt 15 is complete: the current day can be
+reopened from a user-scoped local snapshot after a connection loss, basic
+activity changes can be held in a local queue, and queued changes sync again
+when the connection returns. AI planning, journal actions, and uncached dates
+remain connection-dependent.
 
 ## Existing completed areas
 
@@ -120,6 +127,10 @@ implementation.
 - Optional activity and topic context on journal entries
 - Private or explicitly planning-available journal privacy choice
 - Journal filters, copy action, delete confirmation, and safe loading/error states
+- User-scoped current-day offline snapshot
+- Offline create, edit, completion, note, delete, and undo queue
+- Reconnect sync with visible saving, waiting, offline, syncing, and error states
+- Clear connection-dependent boundaries for AI planning, journal actions, and uncached dates
 
 ## Missing or incomplete areas
 
@@ -133,7 +144,6 @@ implementation.
   and destructive-action undo need a dedicated quality pass.
 - Optional reflection does not exist.
 - Neutral pattern summaries do not exist.
-- Offline current-day resilience and sync status do not exist.
 - Optional state awareness does not exist.
 - PWA installability and Android preparation have not been completed.
 
@@ -152,11 +162,11 @@ implementation.
 
 ## Next milestones
 
-1. Refine and build optional state awareness as a separate, non-judgmental check-in.
-2. Build reflection and neutral pattern summaries.
+1. Build optional reflection; state awareness is intentionally deferred.
+2. Build neutral pattern summaries.
 3. Add simple drag-to-move scheduling with preview, conflict highlighting, and
    undo.
-4. Build offline resilience, infrastructure safeguards, quality review, and
-   Android/PWA preparation in that order.
+4. Build infrastructure safeguards, quality review, and Android/PWA preparation
+   in that order.
 
 No next milestone should be started automatically.

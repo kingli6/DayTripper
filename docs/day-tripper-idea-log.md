@@ -71,7 +71,7 @@ version is the simplest reliable review that preserves explicit approval.
 
 ### Stage 2 — Fast journaling and optional state awareness
 
-**Status:** Journal stream complete; optional state awareness remains a future feature.
+**Status:** Journal stream complete; optional state awareness is intentionally deferred.
 
 #### Timestamped journal stream
 
@@ -268,7 +268,7 @@ paywall. Do not monetize anxiety, guilt, or essential personal records.
 
 ## Current implementation position
 
-Prompt 14 — Fast Journaling v1 — is complete. The timestamped stream is private
-by default and only marked “Available for planning” when the user explicitly
-chooses it. Optional state awareness still requires refinement before building.
+Prompt 15 — Offline current-day resilience — is complete. The timestamped stream
+is private by default and only marked “Available for planning” when the user
+explicitly chooses it. Optional state awareness is intentionally deferred.
 No later idea in this document should be started automatically.

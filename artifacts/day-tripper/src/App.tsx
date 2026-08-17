@@ -29,18 +29,17 @@ import {
 import {
   getListActivitiesQueryKey,
   useCreateActivity,
-  useDeleteActivity,
   useGetAiStatus,
   useHealthCheck,
   useListActivities,
   useCreatePlanningProposal,
-  useUpdateActivity,
 } from '@workspace/api-client-react';
-import type { Activity, PlanningProposal } from '@workspace/api-client-react';
+import type { Activity, ActivityInput, PlanningProposal } from '@workspace/api-client-react';
 import { ChangeReviewPanel } from '@/components/change-review-panel';
 import { JournalPanel } from '@/components/journal-panel';
 import { ReplanningStudio } from '@/components/replanning-studio';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { useOfflineActivitySync, type OfflineSyncStatus } from '@/lib/offline-activity';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
@@ -325,6 +324,61 @@ function ApiStatus() {
       {health.isError && (
         <button type="button" onClick={() => void health.refetch()} data-testid="button-retry-service" className="font-semibold text-primary underline-offset-4 hover:underline">
           Retry
+        </button>
+      )}
+    </div>
+  );
+}
+
+function OfflineSyncBanner({
+  status,
+  errorMessage,
+  hasPendingChanges,
+  hasCachedDay,
+  onRetry,
+}: {
+  status: OfflineSyncStatus;
+  errorMessage: string;
+  hasPendingChanges: boolean;
+  hasCachedDay: boolean;
+  onRetry: () => void;
+}) {
+  const copy: Record<OfflineSyncStatus, string> = {
+    synced: 'Your current day is synced.',
+    saving: 'Saving your change…',
+    syncing: 'Syncing saved changes…',
+    pending: 'Changes are waiting to sync.',
+    offline: hasCachedDay
+      ? 'Offline — your recent current day is still available.'
+      : 'Offline — this day has not been saved on this device yet.',
+    error: errorMessage || 'Sync is paused. Your local changes are still here.',
+  };
+  const shouldRetry = status === 'error' || status === 'offline';
+
+  return (
+    <div
+      className={`mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-xs ${
+        status === 'error'
+          ? 'border-destructive/25 bg-destructive/[0.06] text-destructive'
+          : status === 'offline' || hasPendingChanges
+            ? 'border-accent/30 bg-accent/[0.08] text-accent-foreground'
+            : 'border-primary/20 bg-primary/[0.05] text-primary'
+      }`}
+      role="status"
+      data-testid="status-offline-sync"
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <Cloud className="size-3.5 shrink-0" strokeWidth={1.8} />
+        <span>{copy[status]}</span>
+      </span>
+      {shouldRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="rounded-full border border-current/25 px-3 py-1.5 text-[11px] font-semibold hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          data-testid="button-retry-offline-sync"
+        >
+          Try again
         </button>
       )}
     </div>
@@ -982,10 +1036,14 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   );
 }
 
-function ActivityModal({ date, activity, onClose, onSaved, onDeleted }: { date: string; activity: EditorActivity; onClose: () => void; onSaved: () => void; onDeleted: (activity: Activity) => void }) {
-  const createActivity = useCreateActivity();
-  const updateActivity = useUpdateActivity();
-  const deleteActivity = useDeleteActivity();
+function ActivityModal({ date, activity, onClose, onSave, onDelete, onDeleted }: {
+  date: string;
+  activity: EditorActivity;
+  onClose: () => void;
+  onSave: (activity: Activity | null, data: ActivityInput) => Promise<void>;
+  onDelete: (activity: Activity) => Promise<void>;
+  onDeleted: (activity: Activity) => void;
+}) {
   const dialogRef = useRef<HTMLElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState('');
@@ -1002,7 +1060,7 @@ function ActivityModal({ date, activity, onClose, onSaved, onDeleted }: { date: 
   const [confirmAction, setConfirmAction] = useState<'delete' | 'discard' | null>(null);
   const [formError, setFormError] = useState('');
   const editing = Boolean(activity);
-  const pending = createActivity.isPending || updateActivity.isPending || deleteActivity.isPending;
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     const nextDraft = draftFromActivity(activity, date);
@@ -1117,24 +1175,26 @@ function ActivityModal({ date, activity, onClose, onSaved, onDeleted }: { date: 
       note: note.trim() || null,
     };
     try {
-      if (activity) {
-        await updateActivity.mutateAsync({ id: activity.id, data: payload });
-      } else {
-        await createActivity.mutateAsync({ data: payload });
-      }
-      onSaved();
+      setPending(true);
+      await onSave(activity, payload);
+      onClose();
     } catch {
       setFormError('That did not save. Check the connection and try again.');
+    } finally {
+      setPending(false);
     }
   }
 
   async function remove() {
     if (!activity) return;
     try {
-      await deleteActivity.mutateAsync({ id: activity.id });
+      setPending(true);
+      await onDelete(activity);
       onDeleted(activity);
     } catch {
       setFormError('That did not delete. The activity is still here.');
+    } finally {
+      setPending(false);
     }
   }
 
@@ -1283,19 +1343,35 @@ function Today() {
   const [undoPending, setUndoPending] = useState(false);
   const [undoError, setUndoError] = useState('');
   const deleteTimerRef = useRef<number | null>(null);
-  const createActivity = useCreateActivity();
-  const updateActivity = useUpdateActivity();
   const queryClient = useQueryClient();
   const userQueryKey = user?.id ?? 'signed-out';
+  const activityQueryKey = useMemo(
+    () => [...getListActivitiesQueryKey({ date }), userQueryKey],
+    [date, userQueryKey],
+  );
+  const offline = useOfflineActivitySync({
+    userId: user?.id,
+    date,
+    today,
+    queryKey: activityQueryKey,
+  });
   const list = useListActivities({ date }, {
     query: {
       // Activity data is private to the active Clerk session. Keep the
       // generated API key shape but add the user to the client cache key so
       // switching accounts cannot reuse the previous user's list.
-      queryKey: [...getListActivitiesQueryKey({ date }), userQueryKey],
+      queryKey: activityQueryKey,
+      enabled: offline.isOnline,
     },
   });
-  const activities = list.data ?? [];
+  const activities = list.data ?? offline.cachedActivities ?? [];
+  const hasCachedDay = offline.cachedActivities !== null;
+  const timelineLoading = list.isLoading && !hasCachedDay;
+  const timelineUnavailable = !list.data && !hasCachedDay && (!offline.isOnline || list.isError);
+
+  useEffect(() => {
+    if (list.data) offline.saveServerSnapshot(list.data);
+  }, [list.data, offline.saveServerSnapshot]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(currentMinutes()), 60_000);
@@ -1320,7 +1396,6 @@ function Today() {
   }
 
   async function refreshAfterMutation() {
-    await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
     setEditorActivity(undefined);
   }
 
@@ -1341,7 +1416,6 @@ function Today() {
     setEditorActivity(undefined);
     setDeletedActivity(deleted);
     setUndoError('');
-    void queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
     deleteTimerRef.current = window.setTimeout(() => {
       setDeletedActivity(null);
       setUndoError('');
@@ -1355,20 +1429,17 @@ function Today() {
     setUndoPending(true);
     setUndoError('');
     try {
-      await createActivity.mutateAsync({
-        data: {
-          title: activityToRestore.title,
-          scheduledDate: activityToRestore.scheduledDate,
-          startTime: activityToRestore.startTime,
-          endTime: activityToRestore.endTime,
-          category: activityToRestore.category,
-          completed: activityToRestore.completed,
-          locked: activityToRestore.locked,
-          pinned: activityToRestore.pinned,
-          note: activityToRestore.note,
-        },
+      await offline.save(null, {
+        title: activityToRestore.title,
+        scheduledDate: activityToRestore.scheduledDate,
+        startTime: activityToRestore.startTime,
+        endTime: activityToRestore.endTime,
+        category: activityToRestore.category,
+        completed: activityToRestore.completed,
+        locked: activityToRestore.locked,
+        pinned: activityToRestore.pinned,
+        note: activityToRestore.note,
       });
-      await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
       setDeletedActivity(null);
       if (deleteTimerRef.current !== null) {
         window.clearTimeout(deleteTimerRef.current);
@@ -1383,11 +1454,22 @@ function Today() {
 
   async function toggle(activity: Activity) {
     try {
-      await updateActivity.mutateAsync({ id: activity.id, data: { completed: !activity.completed } });
-      await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
+      await offline.update(activity, { completed: !activity.completed });
     } catch {
       // The query remains untouched; the next render keeps the activity available.
     }
+  }
+
+  async function saveActivity(activity: Activity | null, data: ActivityInput) {
+    await offline.save(activity, data);
+  }
+
+  async function deleteActivity(activity: Activity) {
+    await offline.remove(activity);
+  }
+
+  function retryOfflineSync() {
+    void offline.retry();
   }
 
   return (
@@ -1449,11 +1531,20 @@ function Today() {
                    </button>
                   </div>
                 </div>
-                {list.isLoading ? <TimelineSkeleton /> : list.isError ? (
+                 {date === today && (
+                   <OfflineSyncBanner
+                     status={offline.status}
+                     errorMessage={offline.errorMessage}
+                     hasPendingChanges={offline.hasPendingChanges}
+                     hasCachedDay={hasCachedDay}
+                     onRetry={retryOfflineSync}
+                   />
+                 )}
+                 {timelineLoading ? <TimelineSkeleton /> : timelineUnavailable ? (
                   <div className="rounded-[24px] border border-destructive/20 bg-destructive/[0.05] p-6" role="alert" data-testid="status-activities-error">
                     <p className="font-semibold">The timeline took a pause.</p>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">We could not bring in this day right now. Your plans have not been changed.</p>
-                    <button type="button" onClick={() => void list.refetch()} disabled={list.isFetching} data-testid="button-retry-activities" className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 disabled:opacity-50">
+                     <p className="mt-1 text-sm leading-6 text-muted-foreground">{offline.isOnline ? 'We could not bring in this day right now. Your plans have not been changed.' : 'This date has not been loaded on this device yet. The current day can be used offline once it has been opened online.'}</p>
+                     <button type="button" onClick={retryOfflineSync} disabled={list.isFetching} data-testid="button-retry-activities" className="mt-4 inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 disabled:opacity-50">
                       <RotateCcw className={`size-3.5 ${list.isFetching ? 'animate-spin' : ''}`} strokeWidth={1.8} />
                       Try again
                     </button>
@@ -1526,7 +1617,7 @@ function Today() {
       {planningOpen && <PlanningStudio date={date} activities={activities} onClose={() => setPlanningOpen(false)} onAccepted={handleAccepted} />}
       {replanningOpen && <ReplanningStudio date={date} activities={activities} onClose={() => setReplanningOpen(false)} onApplied={handleReplanningApplied} />}
       {changeReviewOpen && <ChangeReviewPanel date={date} onClose={() => setChangeReviewOpen(false)} />}
-      {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSaved={() => void refreshAfterMutation()} onDeleted={handleDeleted} />}
+      {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSave={saveActivity} onDelete={deleteActivity} onDeleted={handleDeleted} />}
     </div>
   );
 }
