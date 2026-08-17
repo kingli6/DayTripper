@@ -7,6 +7,7 @@ import {
   Activity as ActivityIcon,
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   CalendarDays,
   Check,
   ChevronDown,
@@ -37,6 +38,7 @@ import {
 } from '@workspace/api-client-react';
 import type { Activity, PlanningProposal } from '@workspace/api-client-react';
 import { ChangeReviewPanel } from '@/components/change-review-panel';
+import { JournalPanel } from '@/components/journal-panel';
 import { ReplanningStudio } from '@/components/replanning-studio';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -1269,6 +1271,7 @@ function Today() {
   const [planningOpen, setPlanningOpen] = useState(false);
   const [replanningOpen, setReplanningOpen] = useState(false);
   const [changeReviewOpen, setChangeReviewOpen] = useState(false);
+  const [journalOpen, setJournalOpen] = useState(false);
   const [acceptedNotice, setAcceptedNotice] = useState('');
   const [deletedActivity, setDeletedActivity] = useState<Activity | null>(null);
   const [undoPending, setUndoPending] = useState(false);
@@ -1463,6 +1466,22 @@ function Today() {
                 </div>
               </aside>
             </div>
+             <div className="mt-10 border-t border-border/60 pt-8">
+               <div className="flex flex-col gap-4 rounded-[22px] border border-primary/15 bg-primary/[0.035] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                 <div className="flex items-start gap-3">
+                   <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><BookOpen className="size-4" strokeWidth={1.8} /></span>
+                   <div>
+                     <p className="font-display text-[22px] leading-tight tracking-[-0.03em]">Keep a little record</p>
+                     <p className="mt-1 text-xs leading-5 text-muted-foreground">Capture what the timeline cannot. It stays private unless you choose planning context.</p>
+                   </div>
+                 </div>
+                 <button type="button" onClick={() => setJournalOpen((open) => !open)} aria-expanded={journalOpen} data-testid="button-open-journal" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-full border border-primary/30 bg-background px-4 py-2.5 text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                   <BookOpen className="size-3.5" strokeWidth={1.8} />
+                   {journalOpen ? 'Close journal' : 'Open journal'}
+                 </button>
+               </div>
+               {journalOpen && <div className="mt-5 animate-rise"><JournalPanel date={date} activities={activities} /></div>}
+             </div>
             <footer className="mt-10 flex flex-col gap-2 border-t border-border/60 pt-5 text-[11px] text-muted-foreground/75 sm:flex-row sm:items-center sm:justify-between">
               <p data-testid="text-privacy-note">Your day stays yours. No scores, streaks, or performance signals here.</p>
               <span className="font-mono-ui text-[9px] uppercase tracking-[0.15em]">Day Tripper / Today</span>

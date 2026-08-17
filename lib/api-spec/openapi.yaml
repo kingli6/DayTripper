@@ -16,6 +16,8 @@ tags:
     description: Bounded AI planning proposal operations
   - name: activities
     description: Day Tripper activity operations
+  - name: journal
+    description: Private timestamped journal operations
 paths:
   /healthz:
     get:
@@ -239,6 +241,62 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActivityChange"
+  /journal-entries:
+    get:
+      operationId: listJournalEntries
+      tags: [journal]
+      summary: List journal entries for a day
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+      responses:
+        "200":
+          description: Private journal entries for the requested day
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JournalEntry"
+    post:
+      operationId: createJournalEntry
+      tags: [journal]
+      summary: Add a timestamped journal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JournalEntryInput"
+      responses:
+        "201":
+          description: Journal entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+        "404":
+          description: Linked activity not found
+  /journal-entries/{id}:
+    delete:
+      operationId: deleteJournalEntry
+      tags: [journal]
+      summary: Delete a journal entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Journal entry deleted
+        "404":
+          description: Journal entry not found
 components:
   schemas:
     HealthStatus:
@@ -821,4 +879,53 @@ components:
       required:
         - scheduledDate
         - note
+    JournalEntry:
+      type: object
+      properties:
+        id:
+          type: number
+        recordedDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        content:
+          type: string
+        activityId:
+          type: ["number", "null"]
+        topic:
+          type: ["string", "null"]
+        privacy:
+          type: string
+          enum: [private, planning]
+        recordedAt:
+          type: string
+      required:
+        - id
+        - recordedDate
+        - content
+        - activityId
+        - topic
+        - privacy
+        - recordedAt
+    JournalEntryInput:
+      type: object
+      properties:
+        recordedDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        content:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        activityId:
+          type: ["number", "null"]
+        topic:
+          type: ["string", "null"]
+          maxLength: 120
+        privacy:
+          type: string
+          enum: [private, planning]
+          default: private
+      required:
+        - recordedDate
+        - content
 

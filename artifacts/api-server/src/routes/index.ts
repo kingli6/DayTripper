@@ -3,6 +3,7 @@ import activitiesRouter from "./activities";
 import activityChangesRouter from "./activityChanges";
 import aiRouter from "./ai";
 import healthRouter from "./health";
+import journalEntriesRouter from "./journalEntries";
 import planningRouter from "./planning";
 
 const router: IRouter = Router();
@@ -12,5 +13,6 @@ router.use(aiRouter);
 router.use(planningRouter);
 router.use(activitiesRouter);
 router.use(activityChangesRouter);
+router.use(journalEntriesRouter);
 
 export default router;

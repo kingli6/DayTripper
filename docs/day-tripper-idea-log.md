@@ -71,9 +71,11 @@ version is the simplest reliable review that preserves explicit approval.
 
 ### Stage 2 — Fast journaling and optional state awareness
 
-**Status:** High-value future stage after controlled re-planning.
+**Status:** Journal stream complete; optional state awareness remains a future feature.
 
 #### Timestamped journal stream
+
+**Status:** Complete in Fast Journaling v1.
 
 Start with a simple, fast, timestamped text stream:
 
@@ -266,6 +268,7 @@ paywall. Do not monetize anxiety, guilt, or essential personal records.
 
 ## Current implementation position
 
-Prompt 12 — live edits and change history — is complete. The next implementation
-milestone is Prompt 13 — controlled re-planning. No later idea in this document
-should be started automatically.
+Prompt 14 — Fast Journaling v1 — is complete. The timestamped stream is private
+by default and only marked “Available for planning” when the user explicitly
+chooses it. Optional state awareness still requires refinement before building.
+No later idea in this document should be started automatically.

@@ -493,3 +493,70 @@ export const AddActivityChangeNoteResponse = zod.object({
 })
 
 
+/**
+ * @summary List journal entries for a day
+ */
+export const listJournalEntriesQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListJournalEntriesQueryParams = zod.object({
+  "date": zod.coerce.string().regex(listJournalEntriesQueryDateRegExp)
+})
+
+export const listJournalEntriesResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListJournalEntriesResponseItem = zod.object({
+  "id": zod.number(),
+  "recordedDate": zod.string().regex(listJournalEntriesResponseRecordedDateRegExp),
+  "content": zod.string(),
+  "activityId": zod.number().nullable(),
+  "topic": zod.string().nullable(),
+  "privacy": zod.enum(['private', 'planning']),
+  "recordedAt": zod.string()
+})
+export const ListJournalEntriesResponse = zod.array(ListJournalEntriesResponseItem)
+
+
+/**
+ * @summary Add a timestamped journal entry
+ */
+export const createJournalEntryBodyRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createJournalEntryBodyContentMax = 5000;
+
+export const createJournalEntryBodyTopicMax = 120;
+
+export const createJournalEntryBodyPrivacyDefault = `private`;
+
+export const CreateJournalEntryBody = zod.object({
+  "recordedDate": zod.string().regex(createJournalEntryBodyRecordedDateRegExp),
+  "content": zod.string().min(1).max(createJournalEntryBodyContentMax),
+  "activityId": zod.number().nullish(),
+  "topic": zod.string().max(createJournalEntryBodyTopicMax).nullish(),
+  "privacy": zod.enum(['private', 'planning']).default(createJournalEntryBodyPrivacyDefault)
+})
+
+export const createJournalEntryResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const CreateJournalEntryResponse = zod.object({
+  "id": zod.number(),
+  "recordedDate": zod.string().regex(createJournalEntryResponseRecordedDateRegExp),
+  "content": zod.string(),
+  "activityId": zod.number().nullable(),
+  "topic": zod.string().nullable(),
+  "privacy": zod.enum(['private', 'planning']),
+  "recordedAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a journal entry
+ */
+export const DeleteJournalEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteJournalEntryResponse = zod.void()
+
+

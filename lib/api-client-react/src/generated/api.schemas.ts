@@ -524,6 +524,53 @@ export interface ActivityChangeNoteInput {
   note: string;
 }
 
+export type JournalEntryPrivacy = typeof JournalEntryPrivacy[keyof typeof JournalEntryPrivacy];
+
+
+export const JournalEntryPrivacy = {
+  private: 'private',
+  planning: 'planning',
+} as const;
+
+export interface JournalEntry {
+  id: number;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  recordedDate: string;
+  content: string;
+  /** @nullable */
+  activityId: number | null;
+  /** @nullable */
+  topic: string | null;
+  privacy: JournalEntryPrivacy;
+  recordedAt: string;
+}
+
+export type JournalEntryInputPrivacy = typeof JournalEntryInputPrivacy[keyof typeof JournalEntryInputPrivacy];
+
+
+export const JournalEntryInputPrivacy = {
+  private: 'private',
+  planning: 'planning',
+} as const;
+
+export interface JournalEntryInput {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  recordedDate: string;
+  /**
+     * @minLength 1
+     * @maxLength 5000
+     */
+  content: string;
+  /** @nullable */
+  activityId?: number | null;
+  /**
+     * @maxLength 120
+     * @nullable
+     */
+  topic?: string | null;
+  privacy?: JournalEntryInputPrivacy;
+}
+
 export type ListActivitiesParams = {
 /**
  * @pattern ^\d{4}-\d{2}-\d{2}$
@@ -532,6 +579,13 @@ date: string;
 };
 
 export type ListActivityChangesParams = {
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+date: string;
+};
+
+export type ListJournalEntriesParams = {
 /**
  * @pattern ^\d{4}-\d{2}-\d{2}$
  */

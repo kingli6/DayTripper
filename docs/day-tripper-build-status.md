@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17
 
 ## Current milestone
 
-**Prompt 13 — Controlled re-planning complete**
+**Prompt 14 — Fast journaling v1 complete**
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
 are complete. Prompt 7 is complete: the existing responsive activity surface
@@ -116,6 +116,10 @@ implementation.
 - Unsaved-change confirmation on close
 - Focus management, keyboard escape handling, visible focus states, touch-sized controls, and reduced-motion handling
 - Delete confirmation with a short undo recovery action
+- Private timestamped journal stream
+- Optional activity and topic context on journal entries
+- Private or explicitly planning-available journal privacy choice
+- Journal filters, copy action, delete confirmation, and safe loading/error states
 
 ## Missing or incomplete areas
 
@@ -130,7 +134,6 @@ implementation.
 - Optional reflection does not exist.
 - Neutral pattern summaries do not exist.
 - Offline current-day resilience and sync status do not exist.
-- Fast journaling does not exist.
 - Optional state awareness does not exist.
 - PWA installability and Android preparation have not been completed.
 
@@ -149,7 +152,7 @@ implementation.
 
 ## Next milestones
 
-1. Refine and build fast journaling, starting with a private timestamped stream.
+1. Refine and build optional state awareness as a separate, non-judgmental check-in.
 2. Build reflection and neutral pattern summaries.
 3. Add simple drag-to-move scheduling with preview, conflict highlighting, and
    undo.

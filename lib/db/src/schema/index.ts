@@ -20,3 +20,4 @@
 export * from "./activities";
 export * from "./activityChanges";
 export * from "./appMetadata";
+export * from "./journalEntries";
