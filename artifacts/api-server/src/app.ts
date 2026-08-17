@@ -4,6 +4,7 @@ import express, {
   type RequestHandler,
 } from "express";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { clerkMiddleware } from "@clerk/express";
@@ -57,8 +58,8 @@ app.use("/api", router);
 
 if (process.env.NODE_ENV === "production") {
   const frontendDistPath = path.resolve(
-    process.cwd(),
-    "artifacts/day-tripper/dist/public",
+    path.dirname(fileURLToPath(import.meta.url)),
+    "../../day-tripper/dist/public",
   );
   const frontendIndexPath = path.join(frontendDistPath, "index.html");
 
