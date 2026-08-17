@@ -7,9 +7,46 @@ out-tsc
 *.tsbuildinfo
 .expo
 .expo-shared
+.vite/
+.turbo/
 
 # dependencies
 node_modules
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+.envrc
+*.secret
+*.secrets
+secrets/
+.secrets/
+credentials/
+private/
+**/credentials*.json
+**/*-credentials.json
+**/*service-account*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa*
+id_ed25519*
+
+# Logs and runtime files
+*.log
+logs/
+log/
+*.pid
+*.pid.lock
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+lerna-debug.log*
+debug.log*
 
 # IDEs and editors
 /.idea
@@ -32,7 +69,6 @@ node_modules
 /connect.lock
 /coverage
 /libpeerconnection.log
-npm-debug.log
 yarn-error.log
 testem.log
 /typings
