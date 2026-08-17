@@ -1,6 +1,6 @@
 # Day Tripper Build Status
 
-Last reviewed: 2026-08-15
+Last reviewed: 2026-08-17
 
 ## Current milestone
 
@@ -20,6 +20,12 @@ into the saved timeline.
 Prompt 12 is complete: manual activity edits remain authoritative, schedule
 changes are recorded privately with server timestamps, and users can open an
 optional change review with an explanation note without triggering AI.
+
+The reviewed future-development comments are organized in
+`docs/day-tripper-idea-log.md`. The source comments remain available at
+`attached_assets/Pasted-My-comment-I-want-you-to-add-the-features-we-are-intend_1786958731273.txt`.
+Features marked “Refinement required before building” must be clarified before
+implementation.
 
 ## Existing completed areas
 
@@ -127,15 +133,19 @@ optional change review with an explanation note without triggering AI.
   development activity table is empty.
 - Existing activities are private to the authenticated owner; no migration
   rule exists to assign ownership to legacy rows from another identity.
-- AI planning must remain deferred until the private activity and core
-  contract gaps are intentionally addressed.
+- Further AI expansion and controlled re-planning must remain deferred until
+  each future milestone is intentionally scoped and reviewed.
 - The product must continue to preserve manual edits and must not silently
   alter schedules.
 
 ## Next milestones
 
 1. Build controlled re-planning.
-2. Build reflection, pattern summaries, offline resilience, quality review, and
+2. Refine and build fast journaling with optional state awareness.
+3. Build reflection and neutral pattern summaries.
+4. Add simple drag-to-move scheduling with preview, conflict highlighting, and
+   undo.
+5. Build offline resilience, infrastructure safeguards, quality review, and
    Android/PWA preparation in that order.
 
 No next milestone should be started automatically.
