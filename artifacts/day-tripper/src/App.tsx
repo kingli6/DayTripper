@@ -37,6 +37,7 @@ import {
 } from '@workspace/api-client-react';
 import type { Activity, PlanningProposal } from '@workspace/api-client-react';
 import { ChangeReviewPanel } from '@/components/change-review-panel';
+import { ReplanningStudio } from '@/components/replanning-studio';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -1266,6 +1267,7 @@ function Today() {
   const [now, setNow] = useState(currentMinutes());
   const [editorActivity, setEditorActivity] = useState<EditorActivity | undefined>(undefined);
   const [planningOpen, setPlanningOpen] = useState(false);
+  const [replanningOpen, setReplanningOpen] = useState(false);
   const [changeReviewOpen, setChangeReviewOpen] = useState(false);
   const [acceptedNotice, setAcceptedNotice] = useState('');
   const [deletedActivity, setDeletedActivity] = useState<Activity | null>(null);
@@ -1309,6 +1311,12 @@ function Today() {
     await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
     setPlanningOpen(false);
     setAcceptedNotice(`${count} ${count === 1 ? 'suggested activity was' : 'suggested activities were'} added to your day.`);
+  }
+
+  async function handleReplanningApplied(count: number) {
+    await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
+    setReplanningOpen(false);
+    setAcceptedNotice(`${count} ${count === 1 ? 'approved change is' : 'approved changes are'} now part of your day.`);
   }
 
   function handleDeleted(deleted: Activity) {
@@ -1402,6 +1410,11 @@ function Today() {
                     <p className="mt-1 text-xs text-muted-foreground">{completedCount ? `${completedCount} already held` : 'Nothing needs to be finished to make this day count.'}</p>
                   </div>
                   <div className="flex items-center gap-2">
+                   <button type="button" onClick={() => setReplanningOpen(true)} data-testid="button-open-replanning" className="inline-flex items-center gap-2 rounded-full border border-accent/35 bg-accent/[0.08] px-4 py-2.5 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                     <RotateCcw className="size-3.5" strokeWidth={1.8} />
+                     <span className="hidden sm:inline">Re-plan the rest</span>
+                     <span className="sm:hidden">Re-plan</span>
+                   </button>
                    <button type="button" onClick={() => setPlanningOpen(true)} data-testid="button-open-planning" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.06] px-4 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
                      <Sparkles className="size-3.5" strokeWidth={1.8} />
                      <span className="hidden sm:inline">Shape the day</span>
@@ -1478,6 +1491,7 @@ function Today() {
         </div>
       )}
       {planningOpen && <PlanningStudio date={date} activities={activities} onClose={() => setPlanningOpen(false)} onAccepted={handleAccepted} />}
+      {replanningOpen && <ReplanningStudio date={date} activities={activities} onClose={() => setReplanningOpen(false)} onApplied={handleReplanningApplied} />}
       {changeReviewOpen && <ChangeReviewPanel date={date} onClose={() => setChangeReviewOpen(false)} />}
       {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSaved={() => void refreshAfterMutation()} onDeleted={handleDeleted} />}
     </div>

@@ -26,11 +26,15 @@ import type {
   ActivityInput,
   ActivityUpdate,
   AiStatus,
+  ApplyReplanningProposalRequest,
+  ApplyReplanningResult,
   HealthStatus,
   ListActivitiesParams,
   ListActivityChangesParams,
   PlanningProposal,
-  PlanningRequest
+  PlanningRequest,
+  ReplanningProposal,
+  ReplanningRequest
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -286,6 +290,150 @@ export const useCreatePlanningProposal = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreatePlanningProposalMutationOptions(options));
+    }
+
+export const getCreateReplanningProposalUrl = () => {
+
+
+
+
+  return `/api/planning/replan-proposals`
+}
+
+/**
+ * Creates a reviewable proposal for the remaining day without changing saved activities
+ * @summary Create a controlled remaining-day proposal
+ */
+export const createReplanningProposal = async (replanningRequest: ReplanningRequest, options?: Parameters<typeof customFetch>[1]): Promise<ReplanningProposal> => {
+
+  return customFetch<ReplanningProposal>(getCreateReplanningProposalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(replanningRequest)
+  }
+);}
+
+
+
+
+
+export const getCreateReplanningProposalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReplanningProposal>>, TError,{data: BodyType<ReplanningRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createReplanningProposal>>, TError,{data: BodyType<ReplanningRequest>}, TContext> => {
+
+const mutationKey = ['createReplanningProposal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createReplanningProposal>>, {data: BodyType<ReplanningRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createReplanningProposal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateReplanningProposalMutationResult = NonNullable<Awaited<ReturnType<typeof createReplanningProposal>>>
+    export type CreateReplanningProposalMutationBody = BodyType<ReplanningRequest>
+    export type CreateReplanningProposalMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a controlled remaining-day proposal
+ */
+export const useCreateReplanningProposal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createReplanningProposal>>, TError,{data: BodyType<ReplanningRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createReplanningProposal>>,
+        TError,
+        {data: BodyType<ReplanningRequest>},
+        TContext
+      > => {
+      return useMutation(getCreateReplanningProposalMutationOptions(options));
+    }
+
+export const getApplyReplanningProposalUrl = () => {
+
+
+
+
+  return `/api/planning/replan-proposals/apply`
+}
+
+/**
+ * Applies only explicitly selected changes when the saved schedule still matches the reviewed snapshot
+ * @summary Apply selected changes from a controlled proposal
+ */
+export const applyReplanningProposal = async (applyReplanningProposalRequest: ApplyReplanningProposalRequest, options?: Parameters<typeof customFetch>[1]): Promise<ApplyReplanningResult> => {
+
+  return customFetch<ApplyReplanningResult>(getApplyReplanningProposalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(applyReplanningProposalRequest)
+  }
+);}
+
+
+
+
+
+export const getApplyReplanningProposalMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyReplanningProposal>>, TError,{data: BodyType<ApplyReplanningProposalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyReplanningProposal>>, TError,{data: BodyType<ApplyReplanningProposalRequest>}, TContext> => {
+
+const mutationKey = ['applyReplanningProposal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyReplanningProposal>>, {data: BodyType<ApplyReplanningProposalRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  applyReplanningProposal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyReplanningProposalMutationResult = NonNullable<Awaited<ReturnType<typeof applyReplanningProposal>>>
+    export type ApplyReplanningProposalMutationBody = BodyType<ApplyReplanningProposalRequest>
+    export type ApplyReplanningProposalMutationError = ErrorType<void>
+
+    /**
+ * @summary Apply selected changes from a controlled proposal
+ */
+export const useApplyReplanningProposal = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyReplanningProposal>>, TError,{data: BodyType<ApplyReplanningProposalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyReplanningProposal>>,
+        TError,
+        {data: BodyType<ApplyReplanningProposalRequest>},
+        TContext
+      > => {
+      return useMutation(getApplyReplanningProposalMutationOptions(options));
     }
 
 export const getListActivitiesUrl = (params: ListActivitiesParams,) => {

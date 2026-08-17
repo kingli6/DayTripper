@@ -160,6 +160,215 @@ export interface PlanningProposal {
 /**
  * @nullable
  */
+export type ReplanningRequestPlanningStyle = typeof ReplanningRequestPlanningStyle[keyof typeof ReplanningRequestPlanningStyle] | null;
+
+
+export const ReplanningRequestPlanningStyle = {
+  lighter: 'lighter',
+  balanced: 'balanced',
+  fuller: 'fuller',
+} as const;
+
+export interface ReplanningRequest {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  currentDate: string;
+  /** @pattern ^\d{2}:\d{2}$ */
+  currentTime: string;
+  /** @maxLength 2000 */
+  intention?: string;
+  /** @maxItems 12 */
+  availableTime: PlanningTimeWindow[];
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  fixedCommitments?: string | null;
+  /** @nullable */
+  planningStyle?: ReplanningRequestPlanningStyle;
+}
+
+/**
+ * @nullable
+ */
+export type ReplanningActivitySnapshotCategory = typeof ReplanningActivitySnapshotCategory[keyof typeof ReplanningActivitySnapshotCategory] | null;
+
+
+export const ReplanningActivitySnapshotCategory = {
+  work: 'work',
+  recovery: 'recovery',
+  managing: 'managing',
+  social: 'social',
+  fun: 'fun',
+} as const;
+
+export interface ReplanningActivitySnapshot {
+  id: number;
+  title: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate: string;
+  startTime: string;
+  /** @nullable */
+  endTime: string | null;
+  /** @nullable */
+  category: ReplanningActivitySnapshotCategory;
+  completed: boolean;
+  locked: boolean;
+  updatedAt: string;
+}
+
+export type ReplanningChangeAction = typeof ReplanningChangeAction[keyof typeof ReplanningChangeAction];
+
+
+export const ReplanningChangeAction = {
+  keep: 'keep',
+  move: 'move',
+  shorten: 'shorten',
+  remove: 'remove',
+  add: 'add',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ReplanningChangeCategory = typeof ReplanningChangeCategory[keyof typeof ReplanningChangeCategory] | null;
+
+
+export const ReplanningChangeCategory = {
+  work: 'work',
+  recovery: 'recovery',
+  managing: 'managing',
+  social: 'social',
+  fun: 'fun',
+} as const;
+
+export interface ReplanningChange {
+  id: string;
+  /** @nullable */
+  activityId: number | null;
+  action: ReplanningChangeAction;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  currentDate: string | null;
+  /** @nullable */
+  currentStartTime: string | null;
+  /** @nullable */
+  currentEndTime: string | null;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  proposedDate: string;
+  /** @nullable */
+  proposedStartTime: string | null;
+  /** @nullable */
+  proposedEndTime: string | null;
+  /** @nullable */
+  category: ReplanningChangeCategory;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  note: string | null;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
+}
+
+export interface ReplanningProposal {
+  /** @maxItems 100 */
+  snapshotActivities: ReplanningActivitySnapshot[];
+  /** @maxItems 100 */
+  changes: ReplanningChange[];
+  /**
+     * @maxItems 20
+     * @items.minLength 1
+     * @items.maxLength 500
+     */
+  assumptions: string[];
+  /** @maxItems 20 */
+  conflicts: PlanningConflict[];
+  /** @maxItems 20 */
+  openTime: PlanningTimeBlock[];
+}
+
+export type ReplanningChangeInputAction = typeof ReplanningChangeInputAction[keyof typeof ReplanningChangeInputAction];
+
+
+export const ReplanningChangeInputAction = {
+  keep: 'keep',
+  move: 'move',
+  shorten: 'shorten',
+  remove: 'remove',
+  add: 'add',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ReplanningChangeInputCategory = typeof ReplanningChangeInputCategory[keyof typeof ReplanningChangeInputCategory] | null;
+
+
+export const ReplanningChangeInputCategory = {
+  work: 'work',
+  recovery: 'recovery',
+  managing: 'managing',
+  social: 'social',
+  fun: 'fun',
+} as const;
+
+export interface ReplanningChangeInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  id: string;
+  /** @nullable */
+  activityId: number | null;
+  action: ReplanningChangeInputAction;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  proposedDate: string;
+  /** @nullable */
+  proposedStartTime: string | null;
+  /** @nullable */
+  proposedEndTime: string | null;
+  /** @nullable */
+  category: ReplanningChangeInputCategory;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  note: string | null;
+}
+
+export interface ReplanningActivityVersion {
+  id: number;
+  /** ISO timestamp from the reviewed schedule snapshot */
+  updatedAt: string;
+}
+
+export interface ApplyReplanningProposalRequest {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  currentDate: string;
+  /** @maxItems 100 */
+  snapshot: ReplanningActivityVersion[];
+  /** @maxItems 100 */
+  changes: ReplanningChangeInput[];
+}
+
+/**
+ * @nullable
+ */
 export type ActivityCategory = typeof ActivityCategory[keyof typeof ActivityCategory] | null;
 
 
@@ -186,6 +395,12 @@ export interface Activity {
   pinned: boolean;
   /** @nullable */
   note: string | null;
+}
+
+export interface ApplyReplanningResult {
+  updatedActivities: Activity[];
+  addedActivities: Activity[];
+  removedActivityIds: number[];
 }
 
 /**

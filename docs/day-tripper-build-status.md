@@ -4,7 +4,7 @@ Last reviewed: 2026-08-17
 
 ## Current milestone
 
-**Prompt 12 — Live edits and change history complete**
+**Prompt 13 — Controlled re-planning complete**
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
 are complete. Prompt 7 is complete: the existing responsive activity surface
@@ -20,6 +20,11 @@ into the saved timeline.
 Prompt 12 is complete: manual activity edits remain authoritative, schedule
 changes are recorded privately with server timestamps, and users can open an
 optional change review with an explanation note without triggering AI.
+Prompt 13 is complete: users can ask for a remaining-day proposal, review
+human-readable keep/move/shorten/remove/add changes, edit or remove individual
+suggestions, and explicitly apply selected or all approved changes. The server
+protects locked and completed activities, rejects stale schedule snapshots, and
+records approved changes without silently rewriting the timeline.
 
 The reviewed future-development comments are organized in
 `docs/day-tripper-idea-log.md`. The source comments remain available at
@@ -105,6 +110,9 @@ implementation.
   removals, and late completion
 - Optional “Review changes” surface with an explanation note
 - Completion and ongoing-status controls in the activity detail surface
+- Controlled remaining-day re-planning with explicit approval
+- Human-readable keep, move, shorten, remove, and add proposal changes
+- Stale proposal detection before applying approved changes
 - Unsaved-change confirmation on close
 - Focus management, keyboard escape handling, visible focus states, touch-sized controls, and reduced-motion handling
 - Delete confirmation with a short undo recovery action
@@ -122,7 +130,8 @@ implementation.
 - Optional reflection does not exist.
 - Neutral pattern summaries do not exist.
 - Offline current-day resilience and sync status do not exist.
-- Controlled re-planning does not exist.
+- Fast journaling does not exist.
+- Optional state awareness does not exist.
 - PWA installability and Android preparation have not been completed.
 
 ## Known blockers and decisions
@@ -140,12 +149,11 @@ implementation.
 
 ## Next milestones
 
-1. Build controlled re-planning.
-2. Refine and build fast journaling with optional state awareness.
-3. Build reflection and neutral pattern summaries.
-4. Add simple drag-to-move scheduling with preview, conflict highlighting, and
+1. Refine and build fast journaling, starting with a private timestamped stream.
+2. Build reflection and neutral pattern summaries.
+3. Add simple drag-to-move scheduling with preview, conflict highlighting, and
    undo.
-5. Build offline resilience, infrastructure safeguards, quality review, and
+4. Build offline resilience, infrastructure safeguards, quality review, and
    Android/PWA preparation in that order.
 
 No next milestone should be started automatically.

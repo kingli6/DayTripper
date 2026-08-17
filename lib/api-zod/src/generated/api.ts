@@ -139,6 +139,179 @@ export const CreatePlanningProposalResponse = zod.object({
 
 
 /**
+ * Creates a reviewable proposal for the remaining day without changing saved activities
+ * @summary Create a controlled remaining-day proposal
+ */
+export const createReplanningProposalBodyCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createReplanningProposalBodyCurrentTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createReplanningProposalBodyIntentionMax = 2000;
+
+export const createReplanningProposalBodyAvailableTimeItemStartTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createReplanningProposalBodyAvailableTimeItemEndTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createReplanningProposalBodyAvailableTimeMax = 12;
+
+export const createReplanningProposalBodyFixedCommitmentsMax = 2000;
+
+
+
+export const CreateReplanningProposalBody = zod.object({
+  "currentDate": zod.string().regex(createReplanningProposalBodyCurrentDateRegExp),
+  "currentTime": zod.string().regex(createReplanningProposalBodyCurrentTimeRegExp),
+  "intention": zod.string().max(createReplanningProposalBodyIntentionMax).optional(),
+  "availableTime": zod.array(zod.object({
+  "startTime": zod.string().regex(createReplanningProposalBodyAvailableTimeItemStartTimeRegExp),
+  "endTime": zod.string().regex(createReplanningProposalBodyAvailableTimeItemEndTimeRegExp)
+})).max(createReplanningProposalBodyAvailableTimeMax),
+  "fixedCommitments": zod.string().max(createReplanningProposalBodyFixedCommitmentsMax).nullish(),
+  "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish()
+})
+
+export const createReplanningProposalResponseSnapshotActivitiesItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createReplanningProposalResponseSnapshotActivitiesMax = 100;
+
+export const createReplanningProposalResponseChangesItemTitleMax = 200;
+
+export const createReplanningProposalResponseChangesItemCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createReplanningProposalResponseChangesItemProposedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createReplanningProposalResponseChangesItemNoteMax = 500;
+
+export const createReplanningProposalResponseChangesItemReasonMax = 500;
+
+export const createReplanningProposalResponseChangesMax = 100;
+
+export const createReplanningProposalResponseAssumptionsItemMax = 500;
+
+export const createReplanningProposalResponseAssumptionsMax = 20;
+
+export const createReplanningProposalResponseConflictsItemDescriptionMax = 500;
+
+export const createReplanningProposalResponseConflictsItemRelatedActivityTitlesItemMax = 200;
+
+export const createReplanningProposalResponseConflictsItemRelatedActivityTitlesMax = 10;
+
+export const createReplanningProposalResponseConflictsMax = 20;
+
+export const createReplanningProposalResponseOpenTimeItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createReplanningProposalResponseOpenTimeItemStartTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createReplanningProposalResponseOpenTimeItemEndTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createReplanningProposalResponseOpenTimeItemReasonMax = 500;
+
+export const createReplanningProposalResponseOpenTimeMax = 20;
+
+
+
+export const CreateReplanningProposalResponse = zod.object({
+  "snapshotActivities": zod.array(zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "scheduledDate": zod.string().regex(createReplanningProposalResponseSnapshotActivitiesItemScheduledDateRegExp),
+  "startTime": zod.string(),
+  "endTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
+  "completed": zod.boolean(),
+  "locked": zod.boolean(),
+  "updatedAt": zod.string()
+})).max(createReplanningProposalResponseSnapshotActivitiesMax),
+  "changes": zod.array(zod.object({
+  "id": zod.string(),
+  "activityId": zod.number().nullable(),
+  "action": zod.enum(['keep', 'move', 'shorten', 'remove', 'add']),
+  "title": zod.string().min(1).max(createReplanningProposalResponseChangesItemTitleMax),
+  "currentDate": zod.string().regex(createReplanningProposalResponseChangesItemCurrentDateRegExp).nullable(),
+  "currentStartTime": zod.string().nullable(),
+  "currentEndTime": zod.string().nullable(),
+  "proposedDate": zod.string().regex(createReplanningProposalResponseChangesItemProposedDateRegExp),
+  "proposedStartTime": zod.string().nullable(),
+  "proposedEndTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
+  "note": zod.string().max(createReplanningProposalResponseChangesItemNoteMax).nullable(),
+  "reason": zod.string().min(1).max(createReplanningProposalResponseChangesItemReasonMax)
+})).max(createReplanningProposalResponseChangesMax),
+  "assumptions": zod.array(zod.string().min(1).max(createReplanningProposalResponseAssumptionsItemMax)).max(createReplanningProposalResponseAssumptionsMax),
+  "conflicts": zod.array(zod.object({
+  "description": zod.string().min(1).max(createReplanningProposalResponseConflictsItemDescriptionMax),
+  "relatedActivityTitles": zod.array(zod.string().min(1).max(createReplanningProposalResponseConflictsItemRelatedActivityTitlesItemMax)).max(createReplanningProposalResponseConflictsItemRelatedActivityTitlesMax)
+})).max(createReplanningProposalResponseConflictsMax),
+  "openTime": zod.array(zod.object({
+  "scheduledDate": zod.string().regex(createReplanningProposalResponseOpenTimeItemScheduledDateRegExp),
+  "startTime": zod.string().regex(createReplanningProposalResponseOpenTimeItemStartTimeRegExp),
+  "endTime": zod.string().regex(createReplanningProposalResponseOpenTimeItemEndTimeRegExp),
+  "reason": zod.string().min(1).max(createReplanningProposalResponseOpenTimeItemReasonMax)
+})).max(createReplanningProposalResponseOpenTimeMax)
+})
+
+
+/**
+ * Applies only explicitly selected changes when the saved schedule still matches the reviewed snapshot
+ * @summary Apply selected changes from a controlled proposal
+ */
+export const applyReplanningProposalBodyCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const applyReplanningProposalBodySnapshotMax = 100;
+
+export const applyReplanningProposalBodyChangesItemIdMax = 100;
+
+export const applyReplanningProposalBodyChangesItemTitleMax = 200;
+
+export const applyReplanningProposalBodyChangesItemProposedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const applyReplanningProposalBodyChangesItemNoteMax = 500;
+
+export const applyReplanningProposalBodyChangesMax = 100;
+
+
+
+export const ApplyReplanningProposalBody = zod.object({
+  "currentDate": zod.string().regex(applyReplanningProposalBodyCurrentDateRegExp),
+  "snapshot": zod.array(zod.object({
+  "id": zod.number(),
+  "updatedAt": zod.string().describe('ISO timestamp from the reviewed schedule snapshot')
+})).max(applyReplanningProposalBodySnapshotMax),
+  "changes": zod.array(zod.object({
+  "id": zod.string().min(1).max(applyReplanningProposalBodyChangesItemIdMax),
+  "activityId": zod.number().nullable(),
+  "action": zod.enum(['keep', 'move', 'shorten', 'remove', 'add']),
+  "title": zod.string().min(1).max(applyReplanningProposalBodyChangesItemTitleMax),
+  "proposedDate": zod.string().regex(applyReplanningProposalBodyChangesItemProposedDateRegExp),
+  "proposedStartTime": zod.string().nullable(),
+  "proposedEndTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
+  "note": zod.string().max(applyReplanningProposalBodyChangesItemNoteMax).nullable()
+})).max(applyReplanningProposalBodyChangesMax)
+})
+
+export const applyReplanningProposalResponseUpdatedActivitiesItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const applyReplanningProposalResponseAddedActivitiesItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ApplyReplanningProposalResponse = zod.object({
+  "updatedActivities": zod.array(zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "scheduledDate": zod.string().regex(applyReplanningProposalResponseUpdatedActivitiesItemScheduledDateRegExp),
+  "startTime": zod.string(),
+  "endTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
+  "completed": zod.boolean(),
+  "locked": zod.boolean(),
+  "pinned": zod.boolean(),
+  "note": zod.string().nullable()
+})),
+  "addedActivities": zod.array(zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "scheduledDate": zod.string().regex(applyReplanningProposalResponseAddedActivitiesItemScheduledDateRegExp),
+  "startTime": zod.string(),
+  "endTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
+  "completed": zod.boolean(),
+  "locked": zod.boolean(),
+  "pinned": zod.boolean(),
+  "note": zod.string().nullable()
+})),
+  "removedActivityIds": zod.array(zod.number())
+})
+
+
+/**
  * @summary List activities for a day
  */
 export const listActivitiesQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
