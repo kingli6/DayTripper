@@ -12,6 +12,15 @@ import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
+function serializeJournalEntry(
+  entry: typeof journalEntriesTable.$inferSelect,
+) {
+  return {
+    ...entry,
+    recordedAt: entry.recordedAt.toISOString(),
+  };
+}
+
 router.use(requireAuth);
 
 router.get("/journal-entries", async (req, res): Promise<void> => {
@@ -34,7 +43,7 @@ router.get("/journal-entries", async (req, res): Promise<void> => {
     )
     .orderBy(desc(journalEntriesTable.recordedAt), asc(journalEntriesTable.id));
 
-  res.json(ListJournalEntriesResponse.parse(entries));
+  res.json(ListJournalEntriesResponse.parse(entries.map(serializeJournalEntry)));
 });
 
 router.post("/journal-entries", async (req, res): Promise<void> => {
@@ -76,7 +85,9 @@ router.post("/journal-entries", async (req, res): Promise<void> => {
     })
     .returning();
 
-  res.status(201).json(CreateJournalEntryResponse.parse(entry));
+  res
+    .status(201)
+    .json(CreateJournalEntryResponse.parse(serializeJournalEntry(entry)));
 });
 
 router.delete("/journal-entries/:id", async (req, res): Promise<void> => {
