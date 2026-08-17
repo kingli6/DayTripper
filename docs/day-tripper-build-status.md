@@ -4,7 +4,18 @@ Last reviewed: 2026-08-17
 
 ## Current milestone
 
-**Prompt 15 — Offline current-day resilience complete**
+**Prompt 16 — Offline safety safeguards in progress**
+
+This milestone applies the uploaded edge-case review to the offline current-day
+flow. Scope: preserve queued changes across session expiry, use a real service
+reachability check before reconnect sync, reject stale multi-device updates
+instead of silently overwriting them, and make logout/account switching
+privacy-safe without silently discarding pending edits.
+
+Prompt 15 is complete: the current day can be reopened from a user-scoped local
+snapshot after a connection loss, basic activity changes can be held in a local
+queue, and queued changes sync again when the connection returns. AI planning,
+journal actions, and uncached dates remain connection-dependent.
 
 The Prompt 1 documentation milestone and the core Activity contract milestone
 are complete. Prompt 7 is complete: the existing responsive activity surface
@@ -33,11 +44,7 @@ Features marked “Refinement required before building” must be clarified befo
 implementation.
 
 Prompt 14 is complete: the private timestamped journal stream is available with
-explicit planning permission. Prompt 15 is complete: the current day can be
-reopened from a user-scoped local snapshot after a connection loss, basic
-activity changes can be held in a local queue, and queued changes sync again
-when the connection returns. AI planning, journal actions, and uncached dates
-remain connection-dependent.
+explicit planning permission.
 
 ## Existing completed areas
 

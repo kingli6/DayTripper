@@ -3,11 +3,13 @@ import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import {
   createActivity as createActivityRequest,
   deleteActivity as deleteActivityRequest,
+  healthCheck,
+  listActivities,
   updateActivity as updateActivityRequest,
 } from '@workspace/api-client-react';
 import type { Activity, ActivityInput, ActivityUpdate } from '@workspace/api-client-react';
 
-const STORAGE_PREFIX = 'day-tripper:offline-activities:v1';
+const STORAGE_PREFIX = 'day-tripper:offline-activities:v2';
 
 type CreateOperation = {
   kind: 'create';
@@ -24,6 +26,7 @@ type UpdateOperation = {
 type DeleteOperation = {
   kind: 'delete';
   id: number;
+  expectedUpdatedAt: string;
 };
 
 export type PendingActivityOperation = CreateOperation | UpdateOperation | DeleteOperation;
@@ -33,7 +36,15 @@ type OfflineState = {
   queue: PendingActivityOperation[];
 };
 
-export type OfflineSyncStatus = 'synced' | 'saving' | 'syncing' | 'pending' | 'offline' | 'error';
+export type OfflineSyncStatus =
+  | 'synced'
+  | 'saving'
+  | 'syncing'
+  | 'pending'
+  | 'offline'
+  | 'auth-required'
+  | 'conflict'
+  | 'error';
 
 type UseOfflineActivitySyncOptions = {
   userId: string | undefined;
@@ -62,7 +73,8 @@ function isActivity(value: unknown): value is Activity {
     typeof activity.completed === 'boolean' &&
     typeof activity.locked === 'boolean' &&
     typeof activity.pinned === 'boolean' &&
-    (typeof activity.note === 'string' || activity.note === null)
+    (typeof activity.note === 'string' || activity.note === null) &&
+    typeof activity.updatedAt === 'string'
   );
 }
 
@@ -94,7 +106,11 @@ function readState(userId: string | undefined): OfflineState {
           if (!operation || typeof operation !== 'object' || typeof operation.kind !== 'string') return false;
           if (operation.kind === 'create') return typeof operation.localId === 'number' && isActivityInput(operation.data);
           if (operation.kind === 'update') return typeof operation.id === 'number' && Boolean(operation.data);
-          return operation.kind === 'delete' && typeof operation.id === 'number';
+          return (
+            operation.kind === 'delete' &&
+            typeof operation.id === 'number' &&
+            typeof operation.expectedUpdatedAt === 'string'
+          );
         })
       : [];
     return { snapshots, queue };
@@ -112,6 +128,19 @@ function writeState(userId: string | undefined, state: OfflineState): boolean {
   } catch {
     return false;
   }
+}
+
+export function getOfflineActivityState(userId: string) {
+  const state = readState(userId);
+  return {
+    hasPendingChanges: state.queue.length > 0,
+    hasCachedSnapshot: Object.keys(state.snapshots).length > 0,
+  };
+}
+
+export function clearOfflineActivityState(userId: string) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.removeItem(storageKey(userId));
 }
 
 function setActivityInSnapshot(
@@ -160,9 +189,10 @@ function applyUpdateToState(
     const previous = activities.find((activity) => activity.id === id);
     if (!previous) continue;
 
+    const { expectedUpdatedAt: _expectedUpdatedAt, ...activityData } = data;
     const updated: Activity = {
       ...previous,
-      ...data,
+      ...activityData,
       endTime: data.endTime === undefined ? previous.endTime : data.endTime,
       category: data.category === undefined ? previous.category : data.category,
       note: data.note === undefined ? previous.note : data.note,
@@ -196,12 +226,34 @@ function optimisticActivity(localId: number, data: ActivityInput): Activity {
     locked: data.locked ?? false,
     pinned: data.pinned ?? false,
     note: data.note ?? null,
+    updatedAt: new Date().toISOString(),
   };
+}
+
+function errorStatus(error: unknown): number | null {
+  if (!error || typeof error !== 'object' || !('status' in error)) return null;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === 'number' ? status : null;
+}
+
+function isAuthError(error: unknown) {
+  return errorStatus(error) === 401;
+}
+
+function isConflictError(error: unknown) {
+  return errorStatus(error) === 409;
 }
 
 function isConnectionError(error: unknown): boolean {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
-  return !error || typeof error !== 'object' || !('status' in error);
+  const status = errorStatus(error);
+  if (status !== null) {
+    return status === 408 || status === 425 || status === 429 || status >= 500;
+  }
+  if (error && typeof error === 'object' && 'name' in error) {
+    return (error as { name?: unknown }).name === 'ResponseParseError';
+  }
+  return true;
 }
 
 let nextLocalId = -Date.now();
@@ -224,6 +276,7 @@ export function useOfflineActivitySync({
   ));
   const [errorMessage, setErrorMessage] = useState('');
   const syncingRef = useRef(false);
+  const conflictOperationRef = useRef<PendingActivityOperation | null>(null);
   const [cachedActivities, setCachedActivities] = useState<Activity[] | null>(() => {
     if (!canUseOffline) return null;
     return readState(userId).snapshots[date] ?? null;
@@ -332,7 +385,7 @@ export function useOfflineActivitySync({
     applyLocalState(applyUpdateToState({ ...stateRef.current, queue: nextQueue }, id, data));
   }, [applyLocalState]);
 
-  const queueDelete = useCallback((id: number) => {
+  const queueDelete = useCallback((id: number, expectedUpdatedAt: string) => {
     const nextQueue = stateRef.current.queue.filter((operation) => {
       if (operation.kind === 'create') return operation.localId !== id;
       return operation.id !== id;
@@ -340,7 +393,9 @@ export function useOfflineActivitySync({
     const hasCreate = stateRef.current.queue.some((operation) => operation.kind === 'create' && operation.localId === id);
     const next: OfflineState = {
       ...removeActivityFromSnapshots(stateRef.current, id),
-      queue: hasCreate ? nextQueue : [...nextQueue, { kind: 'delete', id }],
+      queue: hasCreate
+        ? nextQueue
+        : [...nextQueue, { kind: 'delete', id, expectedUpdatedAt }],
     };
     applyLocalState(next);
   }, [applyLocalState]);
@@ -375,9 +430,12 @@ export function useOfflineActivitySync({
     syncingRef.current = true;
     setStatus('syncing');
     setErrorMessage('');
+    let activeOperation: PendingActivityOperation | null = null;
 
     try {
+      await healthCheck();
       for (const operation of [...stateRef.current.queue]) {
+        activeOperation = operation;
         if (!isOnline) throw new TypeError('Connection paused');
         if (operation.kind === 'create') {
           const saved = await createActivityRequest(operation.data);
@@ -392,7 +450,9 @@ export function useOfflineActivitySync({
           commit(next, next.queue.length ? 'syncing' : 'synced');
           updateVisibleActivities(next.snapshots[date] ?? []);
         } else {
-          await deleteActivityRequest(operation.id);
+          await deleteActivityRequest(operation.id, {
+            headers: { 'If-Unmodified-Since': operation.expectedUpdatedAt },
+          });
           const next = {
             ...removeActivityFromSnapshots(stateRef.current, operation.id),
             queue: stateRef.current.queue.filter((item) => item !== operation),
@@ -403,7 +463,14 @@ export function useOfflineActivitySync({
       }
       setStatus('synced');
     } catch (error) {
-      if (isConnectionError(error)) {
+      if (isAuthError(error)) {
+        setStatus('auth-required');
+        setErrorMessage('Your session needs attention before saved changes can sync.');
+      } else if (isConflictError(error)) {
+        conflictOperationRef.current = activeOperation;
+        setStatus('conflict');
+        setErrorMessage('This activity changed elsewhere. Use the latest version before syncing continues.');
+      } else if (isConnectionError(error)) {
         setIsOnline(false);
         setStatus('offline');
         setErrorMessage('Your saved changes are waiting until the connection returns.');
@@ -422,7 +489,7 @@ export function useOfflineActivitySync({
 
   const save = useCallback(async (activity: Activity | null, data: ActivityInput) => {
     if (canUseOffline && !isOnline) {
-      if (activity) queueUpdate(activity.id, data);
+      if (activity) queueUpdate(activity.id, { ...data, expectedUpdatedAt: activity.updatedAt });
       else queueCreate(data);
       return;
     }
@@ -431,7 +498,10 @@ export function useOfflineActivitySync({
     setErrorMessage('');
     try {
       if (activity) {
-        const saved = await updateActivityRequest(activity.id, data);
+        const saved = await updateActivityRequest(activity.id, {
+          ...data,
+          expectedUpdatedAt: activity.updatedAt,
+        });
         applyServerActivity(saved);
       } else {
         const saved = await createActivityRequest(data);
@@ -439,9 +509,19 @@ export function useOfflineActivitySync({
       }
       setStatus('synced');
     } catch (error) {
+      if (canUseOffline && isAuthError(error)) {
+        setStatus('auth-required');
+        setErrorMessage('Your session needs attention before this change can sync.');
+        throw error;
+      }
+      if (canUseOffline && isConflictError(error)) {
+        setStatus('conflict');
+        setErrorMessage('This activity changed elsewhere. Reload it before saving this change.');
+        throw error;
+      }
       if (canUseOffline && isConnectionError(error)) {
         setIsOnline(false);
-        if (activity) queueUpdate(activity.id, data);
+        if (activity) queueUpdate(activity.id, { ...data, expectedUpdatedAt: activity.updatedAt });
         else queueCreate(data);
         setErrorMessage('The connection paused, so this change is waiting to sync.');
         setStatus('offline');
@@ -454,20 +534,33 @@ export function useOfflineActivitySync({
 
   const update = useCallback(async (activity: Activity, data: ActivityUpdate) => {
     if (canUseOffline && !isOnline) {
-      queueUpdate(activity.id, data);
+      queueUpdate(activity.id, { ...data, expectedUpdatedAt: activity.updatedAt });
       return;
     }
 
     setStatus('saving');
     setErrorMessage('');
     try {
-      const saved = await updateActivityRequest(activity.id, data);
+      const saved = await updateActivityRequest(activity.id, {
+        ...data,
+        expectedUpdatedAt: activity.updatedAt,
+      });
       applyServerActivity(saved);
       setStatus('synced');
     } catch (error) {
+      if (canUseOffline && isAuthError(error)) {
+        setStatus('auth-required');
+        setErrorMessage('Your session needs attention before this change can sync.');
+        throw error;
+      }
+      if (canUseOffline && isConflictError(error)) {
+        setStatus('conflict');
+        setErrorMessage('This activity changed elsewhere. Reload it before saving this change.');
+        throw error;
+      }
       if (canUseOffline && isConnectionError(error)) {
         setIsOnline(false);
-        queueUpdate(activity.id, data);
+        queueUpdate(activity.id, { ...data, expectedUpdatedAt: activity.updatedAt });
         setErrorMessage('The connection paused, so this change is waiting to sync.');
         setStatus('offline');
         return;
@@ -479,20 +572,32 @@ export function useOfflineActivitySync({
 
   const remove = useCallback(async (activity: Activity) => {
     if (canUseOffline && !isOnline) {
-      queueDelete(activity.id);
+      queueDelete(activity.id, activity.updatedAt);
       return;
     }
 
     setStatus('saving');
     setErrorMessage('');
     try {
-      await deleteActivityRequest(activity.id);
+      await deleteActivityRequest(activity.id, {
+        headers: { 'If-Unmodified-Since': activity.updatedAt },
+      });
       applyServerDelete(activity.id);
       setStatus('synced');
     } catch (error) {
+      if (canUseOffline && isAuthError(error)) {
+        setStatus('auth-required');
+        setErrorMessage('Your session needs attention before this removal can sync.');
+        throw error;
+      }
+      if (canUseOffline && isConflictError(error)) {
+        setStatus('conflict');
+        setErrorMessage('This activity changed elsewhere. Reload it before removing it.');
+        throw error;
+      }
       if (canUseOffline && isConnectionError(error)) {
         setIsOnline(false);
-        queueDelete(activity.id);
+        queueDelete(activity.id, activity.updatedAt);
         setErrorMessage('The connection paused, so this removal is waiting to sync.');
         setStatus('offline');
         return;
@@ -501,6 +606,38 @@ export function useOfflineActivitySync({
       throw error;
     }
   }, [applyServerDelete, canUseOffline, isOnline, queueDelete]);
+
+  const resolveConflict = useCallback(async () => {
+    const operation = conflictOperationRef.current;
+    if (!canUseOffline || !operation || !isOnline) return;
+
+    setStatus('syncing');
+    setErrorMessage('');
+    try {
+      const latest = await listActivities({ date });
+      const next: OfflineState = {
+        ...stateRef.current,
+        snapshots: { ...stateRef.current.snapshots, [date]: latest },
+        queue: stateRef.current.queue.filter((item) => item !== operation),
+      };
+      conflictOperationRef.current = null;
+      commit(next, next.queue.length ? 'pending' : 'synced');
+      updateVisibleActivities(latest);
+      if (next.queue.length) await syncPending();
+    } catch (error) {
+      if (isAuthError(error)) {
+        setStatus('auth-required');
+        setErrorMessage('Your session needs attention before the latest day can load.');
+      } else if (isConnectionError(error)) {
+        setIsOnline(false);
+        setStatus('offline');
+        setErrorMessage('The latest day could not load while the connection is paused.');
+      } else {
+        setStatus('error');
+        setErrorMessage('The latest day could not be loaded.');
+      }
+    }
+  }, [canUseOffline, commit, date, isOnline, syncPending, updateVisibleActivities]);
 
   const retry = useCallback(async () => {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
@@ -518,6 +655,7 @@ export function useOfflineActivitySync({
     hasPendingChanges: state.queue.length > 0,
     status,
     errorMessage,
+    resolveConflict,
     saveServerSnapshot,
     save,
     update,

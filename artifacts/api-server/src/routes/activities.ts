@@ -30,6 +30,13 @@ function currentTimeValue() {
   return `${`${now.getHours()}`.padStart(2, "0")}:${`${now.getMinutes()}`.padStart(2, "0")}`;
 }
 
+function toApiActivity(activity: typeof activitiesTable.$inferSelect) {
+  return {
+    ...activity,
+    updatedAt: activity.updatedAt.toISOString(),
+  };
+}
+
 router.get("/activities", async (req, res): Promise<void> => {
   const parsed = ListActivitiesQueryParams.safeParse(req.query);
 
@@ -60,7 +67,7 @@ router.get("/activities", async (req, res): Promise<void> => {
     .orderBy(asc(activitiesTable.startTime), asc(activitiesTable.id));
 
   res.setHeader("Cache-Control", "private, no-store");
-  res.json(ListActivitiesResponse.parse(activities));
+  res.json(ListActivitiesResponse.parse(activities.map(toApiActivity)));
 });
 
 router.post("/activities", async (req, res): Promise<void> => {
@@ -88,7 +95,7 @@ router.post("/activities", async (req, res): Promise<void> => {
     })
     .returning();
 
-  res.status(201).json(CreateActivityResponse.parse(activity));
+  res.status(201).json(CreateActivityResponse.parse(toApiActivity(activity)));
 });
 
 router.patch("/activities/:id", async (req, res): Promise<void> => {
@@ -104,6 +111,13 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
   if (!parsed.success) {
     req.log.warn({ errors: parsed.error.flatten() }, "Invalid activity update");
     res.status(400).json({ error: "Please check the activity changes." });
+    return;
+  }
+
+  const expectedUpdatedAt = parsed.data.expectedUpdatedAt;
+  const expectedUpdatedAtDate = expectedUpdatedAt ? new Date(expectedUpdatedAt) : undefined;
+  if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAtDate?.getTime())) {
+    res.status(400).json({ error: "A valid activity version is required." });
     return;
   }
 
@@ -142,7 +156,13 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
       )
       .limit(1);
 
-    if (!before) return null;
+    if (!before) return { kind: "missing" as const };
+    if (
+      expectedUpdatedAtDate &&
+      before.updatedAt.getTime() !== expectedUpdatedAtDate.getTime()
+    ) {
+      return { kind: "conflict" as const };
+    }
 
     const [updated] = await tx
       .update(activitiesTable)
@@ -155,7 +175,7 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
       )
       .returning();
 
-    if (!updated) return null;
+    if (!updated) return { kind: "missing" as const };
 
     const changes: Array<typeof activityChangesTable.$inferInsert> = [];
     const effectiveDate = updated.scheduledDate;
@@ -214,15 +234,19 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
       await tx.insert(activityChangesTable).values(changes);
     }
 
-    return updated;
+    return { kind: "updated" as const, activity: updated };
   });
 
-  if (!activity) {
+  if (activity.kind === "missing") {
     res.status(404).json({ error: "Activity not found." });
     return;
   }
+  if (activity.kind === "conflict") {
+    res.status(409).json({ error: "This activity changed elsewhere. Reload it before saving." });
+    return;
+  }
 
-  res.json(UpdateActivityResponse.parse(activity));
+  res.json(UpdateActivityResponse.parse(toApiActivity(activity.activity)));
 });
 
 router.delete("/activities/:id", async (req, res): Promise<void> => {
@@ -230,6 +254,15 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
 
   if (!params.success) {
     res.status(400).json({ error: "A valid activity is required." });
+    return;
+  }
+
+  const expectedUpdatedAt = req.header("If-Unmodified-Since");
+  const expectedUpdatedAtDate = expectedUpdatedAt
+    ? new Date(expectedUpdatedAt)
+    : undefined;
+  if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAtDate?.getTime())) {
+    res.status(400).json({ error: "A valid activity version is required." });
     return;
   }
 
@@ -245,7 +278,13 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
       )
       .limit(1);
 
-    if (!before) return null;
+    if (!before) return { kind: "missing" as const };
+    if (
+      expectedUpdatedAtDate &&
+      before.updatedAt.getTime() !== expectedUpdatedAtDate.getTime()
+    ) {
+      return { kind: "conflict" as const };
+    }
 
     const [deleted] = await tx
       .delete(activitiesTable)
@@ -257,7 +296,7 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
       )
       .returning({ id: activitiesTable.id });
 
-    if (!deleted) return null;
+    if (!deleted) return { kind: "missing" as const };
 
     await tx.insert(activityChangesTable).values({
       ownerId: res.locals.userId as string,
@@ -275,11 +314,15 @@ router.delete("/activities/:id", async (req, res): Promise<void> => {
       source: "manual",
     });
 
-    return deleted;
+    return { kind: "deleted" as const, activity: deleted };
   });
 
-  if (!activity) {
+  if (activity.kind === "missing") {
     res.status(404).json({ error: "Activity not found." });
+    return;
+  }
+  if (activity.kind === "conflict") {
+    res.status(409).json({ error: "This activity changed elsewhere. Reload it before removing." });
     return;
   }
 

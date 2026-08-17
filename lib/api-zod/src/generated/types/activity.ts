@@ -22,4 +22,5 @@ export interface Activity {
   pinned: boolean;
   /** @nullable */
   note: string | null;
+  updatedAt: string;
 }

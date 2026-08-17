@@ -395,6 +395,7 @@ export interface Activity {
   pinned: boolean;
   /** @nullable */
   note: string | null;
+  updatedAt: string;
 }
 
 export interface ApplyReplanningResult {
@@ -463,6 +464,7 @@ export interface ActivityUpdate {
   pinned?: boolean;
   /** @nullable */
   note?: string | null;
+  expectedUpdatedAt?: string;
 }
 
 export type ActivityChangeChangeType = typeof ActivityChangeChangeType[keyof typeof ActivityChangeChangeType];

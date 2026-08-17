@@ -22,4 +22,5 @@ export interface ActivityUpdate {
   pinned?: boolean;
   /** @nullable */
   note?: string | null;
+  expectedUpdatedAt?: string;
 }

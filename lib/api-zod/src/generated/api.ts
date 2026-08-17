@@ -293,7 +293,8 @@ export const ApplyReplanningProposalResponse = zod.object({
   "completed": zod.boolean(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
-  "note": zod.string().nullable()
+  "note": zod.string().nullable(),
+  "updatedAt": zod.string()
 })),
   "addedActivities": zod.array(zod.object({
   "id": zod.number(),
@@ -305,7 +306,8 @@ export const ApplyReplanningProposalResponse = zod.object({
   "completed": zod.boolean(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
-  "note": zod.string().nullable()
+  "note": zod.string().nullable(),
+  "updatedAt": zod.string()
 })),
   "removedActivityIds": zod.array(zod.number())
 })
@@ -334,7 +336,8 @@ export const ListActivitiesResponseItem = zod.object({
   "completed": zod.boolean(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
-  "note": zod.string().nullable()
+  "note": zod.string().nullable(),
+  "updatedAt": zod.string()
 })
 export const ListActivitiesResponse = zod.array(ListActivitiesResponseItem)
 
@@ -371,7 +374,8 @@ export const CreateActivityResponse = zod.object({
   "completed": zod.boolean(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
-  "note": zod.string().nullable()
+  "note": zod.string().nullable(),
+  "updatedAt": zod.string()
 })
 
 
@@ -395,7 +399,8 @@ export const UpdateActivityBody = zod.object({
   "completed": zod.boolean().optional(),
   "locked": zod.boolean().optional(),
   "pinned": zod.boolean().optional(),
-  "note": zod.string().nullish()
+  "note": zod.string().nullish(),
+  "expectedUpdatedAt": zod.string().optional()
 })
 
 export const updateActivityResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
@@ -411,7 +416,8 @@ export const UpdateActivityResponse = zod.object({
   "completed": zod.boolean(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
-  "note": zod.string().nullable()
+  "note": zod.string().nullable(),
+  "updatedAt": zod.string()
 })
 
 

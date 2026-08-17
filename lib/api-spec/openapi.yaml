@@ -186,6 +186,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Activity"
+        "401":
+          description: Authentication required
+        "409":
+          description: The activity changed after the client last loaded it
         "404":
           description: Activity not found
     delete:
@@ -201,6 +205,10 @@ paths:
       responses:
         "204":
           description: Activity deleted
+        "401":
+          description: Authentication required
+        "409":
+          description: The activity changed after the client last loaded it
         "404":
           description: Activity not found
   /activity-changes:
@@ -802,6 +810,8 @@ components:
           type: boolean
         note:
           type: ["string", "null"]
+        updatedAt:
+          type: string
       required:
         - id
         - title
@@ -813,6 +823,7 @@ components:
         - locked
         - pinned
         - note
+        - updatedAt
     ActivityInput:
       type: object
       properties:
@@ -865,6 +876,8 @@ components:
           type: boolean
         note:
           type: ["string", "null"]
+        expectedUpdatedAt:
+          type: string
     ActivityChange:
       type: object
       properties:

@@ -5,10 +5,21 @@ Last reviewed: 2026-08-17
 Source reviewed:
 
 - `attached_assets/Pasted-My-comment-I-want-you-to-add-the-features-we-are-intend_1786958731273.txt`
+- `attached_assets/Pasted-Potential-Edge-Cases-Pitfalls-to-Address-While-the-spec_1786995195935.txt`
 
 This file organizes the product comments into future development stages. It is
 a planning record, not an instruction to start all of these features. Each
 feature with a refinement flag must be clarified before implementation.
+
+## Reliability edge-case review
+
+**Status:** Prompt 16 implementation in progress.
+
+The uploaded review identified four safeguards for the current-day offline
+flow: session expiry during queued sync, unreliable browser connectivity
+signals, stale multi-device writes, and local-data handling during logout or
+account switching. These are being applied in that order of user risk, while
+preserving the rule that offline edits are never silently discarded.
 
 ## Product direction
 
