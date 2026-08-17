@@ -4,6 +4,46 @@ Last reviewed: 2026-08-17
 
 ## Current milestone
 
+**External deployment validation — core production flows verified**
+
+The app is live on Render at:
+
+`https://daytripper-hco6.onrender.com`
+
+The deployed service now builds and runs the React frontend and Express API
+from one Render web service. The core production flows verified so far are:
+
+- Clerk sign-in works.
+- Activities persist after a browser refresh.
+- Activities are private to their owning account.
+- Gemini planning returns a proposal without silently changing the timeline.
+- Explicitly accepted planning items are saved to the timeline.
+- Journal entry creation works.
+
+The Render deployment also required two portability fixes:
+
+- The Render build command uses the existing `pnpm` binary instead of trying to
+  run `corepack enable` in Render's read-only system directory.
+- The production API resolves the frontend build path from the server bundle
+  location, so the frontend is served correctly when Render starts the API
+  from the API package directory.
+
+The journal endpoint now serializes database timestamps as ISO strings before
+validating API responses. This prevents a successfully inserted entry from
+being reported as a server error.
+
+### Remaining deployment checks
+
+- Re-check that a journal entry survives refresh after the production fix.
+- Re-check that journal entries remain private between accounts.
+- Test journal deletion and the journal filters.
+- Configure a custom domain and Cloudflare only if desired.
+
+The Render free instance may sleep when inactive, so the first request after a
+period of inactivity can be slow.
+
+### Product milestone status
+
 **Prompt 16 — Offline safety safeguards in progress**
 
 This milestone applies the uploaded edge-case review to the offline current-day
