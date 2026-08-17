@@ -143,6 +143,8 @@ Planning rules:
 - Do not invent deadlines, commitments, or completed work.
 - Empty time is valid. Do not fill every available minute.
 - Proposed activities must be fixed-time blocks with valid 24-hour times and must not overlap each other.
+- Treat proposed activities, buffers, and rest periods as one shared timeline. No two blocks in any of those arrays may overlap.
+- Do not place any proposed block over an existing saved activity. Existing activities remain in place and are not automatically edited.
 - Use only the five categories listed above or null.
 - Put anything that does not fit in didNotFit instead of forcing it into the schedule.
 - Include every array, even when it is empty.
@@ -251,6 +253,10 @@ function parseJsonText(text: string): unknown {
 function validateProposalSemantics(
   proposal: PlanningProposal,
   currentDate: string,
+  existingActivities: Array<{
+    startTime: string;
+    endTime: string | null;
+  }>,
 ): string | null {
   const blocks = [
     ...proposal.proposedActivities,
@@ -274,6 +280,14 @@ function validateProposalSemantics(
         return "The planning provider returned overlapping time blocks.";
       }
     }
+  }
+
+  const fixedExistingActivities = existingActivities.filter(
+    (activity): activity is { startTime: string; endTime: string } => Boolean(activity.endTime),
+  );
+
+  if (blocks.some((block) => fixedExistingActivities.some((activity) => hasOverlap(block, activity)))) {
+    return "The planning provider returned a block that overlaps a saved activity.";
   }
 
   return null;
@@ -328,63 +342,86 @@ router.post("/planning/proposals", async (req, res): Promise<void> => {
 
   try {
     const config = getGeminiConfig();
-    const response = await fetch(`${config.baseUrl}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: buildPlanningPrompt(request, promptActivities) }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          maxOutputTokens: 8192,
-          temperature: 0.2,
-        },
-      }),
-    });
+    let correction: string | null = null;
 
-    if (!response.ok) {
-      req.log.error({ status: response.status }, "Planning provider request failed");
-      res.status(503).json({ error: "Planning is not available right now." });
-      return;
-    }
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const prompt = buildPlanningPrompt(request, promptActivities)
+        + (correction
+          ? `\n\nCorrection required: the previous draft was rejected because ${correction} Return a new complete proposal. Treat every proposed activity, buffer, and rest period as one shared non-overlapping timeline, and return JSON only.`
+          : "");
+      const response = await fetch(`${config.baseUrl}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 8192,
+            temperature: 0.2,
+          },
+        }),
+      });
 
-    const payload: unknown = await response.json();
-    const text = extractGeminiText(payload);
-    if (!text) {
-      req.log.warn("Planning provider returned no text");
-      res.status(502).json({ error: "The planning service returned an invalid proposal." });
-      return;
-    }
+      if (!response.ok) {
+        req.log.error({ status: response.status }, "Planning provider request failed");
+        res.status(503).json({ error: "Planning is not available right now." });
+        return;
+      }
 
-    let candidate: unknown;
-    try {
-      candidate = parseJsonText(text);
-    } catch {
-      req.log.warn(
-        {
-          textLength: text.length,
-          wrappedInCodeFence: /^```/i.test(text),
-        },
-        "Planning provider returned malformed JSON",
+      const payload: unknown = await response.json();
+      const text = extractGeminiText(payload);
+      if (!text) {
+        correction = "the provider returned no proposal text";
+        if (attempt === 0) continue;
+        req.log.warn("Planning provider returned no text");
+        res.status(502).json({ error: "The planning service returned an invalid proposal." });
+        return;
+      }
+
+      let candidate: unknown;
+      try {
+        candidate = parseJsonText(text);
+      } catch {
+        correction = "the provider response was not valid JSON";
+        if (attempt === 0) continue;
+        req.log.warn(
+          {
+            textLength: text.length,
+            wrappedInCodeFence: /^```/i.test(text),
+          },
+          "Planning provider returned malformed JSON",
+        );
+        res.status(502).json({ error: "The planning service returned an invalid proposal." });
+        return;
+      }
+
+      const proposal = CreatePlanningProposalResponse.safeParse(candidate);
+      if (!proposal.success) {
+        correction = "the proposal did not match the required shape";
+        if (attempt === 0) continue;
+        req.log.warn({ errors: proposal.error.flatten() }, "Planning provider returned an invalid proposal");
+        res.status(502).json({ error: "The planning service returned an invalid proposal." });
+        return;
+      }
+
+      const semanticError = validateProposalSemantics(
+        proposal.data,
+        request.currentDate,
+        activities,
       );
-      res.status(502).json({ error: "The planning service returned an invalid proposal." });
+      if (semanticError) {
+        correction = semanticError;
+        if (attempt === 0) continue;
+        req.log.warn({ reason: semanticError }, "Planning provider returned an unsafe proposal");
+        res.status(502).json({
+          error: "The planner could not make a conflict-free proposal after trying twice. Your schedule was not changed; try again with the same request.",
+        });
+        return;
+      }
+
+      res.json(proposal.data);
       return;
     }
-
-    const proposal = CreatePlanningProposalResponse.safeParse(candidate);
-    if (!proposal.success) {
-      req.log.warn({ errors: proposal.error.flatten() }, "Planning provider returned an invalid proposal");
-      res.status(502).json({ error: "The planning service returned an invalid proposal." });
-      return;
-    }
-
-    const semanticError = validateProposalSemantics(proposal.data, request.currentDate);
-    if (semanticError) {
-      req.log.warn({ reason: semanticError }, "Planning provider returned an unsafe proposal");
-      res.status(502).json({ error: "The planning service returned an invalid proposal." });
-      return;
-    }
-
-    res.json(proposal.data);
   } catch (error) {
     req.log.error({ err: error }, "Planning provider integration failed");
     res.status(503).json({ error: "Planning is not available right now." });

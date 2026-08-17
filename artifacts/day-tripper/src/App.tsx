@@ -644,8 +644,12 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
       setProposal(result);
       setReviewItems(proposalReviewItems(result));
       setReviewError('');
-    } catch {
-      setFormError('The planner could not prepare a proposal. Check the connection and try again.');
+    } catch (error) {
+      const responseData = (error as { data?: unknown }).data;
+      const serverMessage = responseData && typeof responseData === 'object' && typeof (responseData as { error?: unknown }).error === 'string'
+        ? (responseData as { error: string }).error
+        : null;
+      setFormError(serverMessage ?? 'The planner could not prepare a proposal. Check the connection and try again.');
     }
   }
 
