@@ -25,6 +25,9 @@ import type {
   ActivityChangeNoteInput,
   ActivityInput,
   ActivityUpdate,
+  AdminOverview,
+  AdminResetRequest,
+  AdminResetResult,
   AiStatus,
   ApplyReplanningProposalRequest,
   ApplyReplanningResult,
@@ -1118,5 +1121,155 @@ export const useDeleteJournalEntry = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getDeleteJournalEntryMutationOptions(options));
+    }
+
+export const getGetAdminOverviewUrl = () => {
+
+
+
+
+  return `/api/admin/overview`
+}
+
+/**
+ * Returns aggregate account, table, and database storage metrics without user-authored content
+ * @summary Get protected database diagnostics
+ */
+export const getAdminOverview = async ( options?: Parameters<typeof customFetch>[1]): Promise<AdminOverview> => {
+
+  return customFetch<AdminOverview>(getGetAdminOverviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminOverviewQueryKey = () => {
+    return [
+    `/api/admin/overview`
+    ] as const;
+    }
+
+
+export const getGetAdminOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getAdminOverview>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminOverviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminOverview>>> = ({ signal }) => getAdminOverview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminOverview>>>
+export type GetAdminOverviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get protected database diagnostics
+ */
+
+export function useGetAdminOverview<TData = Awaited<ReturnType<typeof getAdminOverview>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getResetAdminDataUrl = () => {
+
+
+
+
+  return `/api/admin/reset`
+}
+
+/**
+ * Clears either the signed-in admin's planner data or all planner data after an explicit confirmation phrase
+ * @summary Reset planner data from the protected admin surface
+ */
+export const resetAdminData = async (adminResetRequest: AdminResetRequest, options?: Parameters<typeof customFetch>[1]): Promise<AdminResetResult> => {
+
+  return customFetch<AdminResetResult>(getResetAdminDataUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminResetRequest)
+  }
+);}
+
+
+
+
+
+export const getResetAdminDataMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetAdminData>>, TError,{data: BodyType<AdminResetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetAdminData>>, TError,{data: BodyType<AdminResetRequest>}, TContext> => {
+
+const mutationKey = ['resetAdminData'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetAdminData>>, {data: BodyType<AdminResetRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  resetAdminData(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResetAdminDataMutationResult = NonNullable<Awaited<ReturnType<typeof resetAdminData>>>
+    export type ResetAdminDataMutationBody = BodyType<AdminResetRequest>
+    export type ResetAdminDataMutationError = ErrorType<void>
+
+    /**
+ * @summary Reset planner data from the protected admin surface
+ */
+export const useResetAdminData = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetAdminData>>, TError,{data: BodyType<AdminResetRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof resetAdminData>>,
+        TError,
+        {data: BodyType<AdminResetRequest>},
+        TContext
+      > => {
+      return useMutation(getResetAdminDataMutationOptions(options));
     }
 

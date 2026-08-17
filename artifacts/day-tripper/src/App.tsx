@@ -44,7 +44,8 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
-import { Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
+import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
+import AdminPage from '@/pages/admin';
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -338,6 +339,10 @@ function AccountControl() {
   return (
     <div className="flex items-center gap-3">
       <span className="hidden max-w-[220px] truncate text-xs text-muted-foreground sm:block">{label}</span>
+      <Link href="/admin" data-testid="link-account-operations" className="hidden items-center gap-1.5 rounded-full border border-primary/25 bg-primary/[0.05] px-3 py-2 text-[11px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 md:inline-flex">
+        <ShieldCheck className="size-3.5" strokeWidth={1.8} />
+        Operations
+      </Link>
       <button
         type="button"
         onClick={() => void signOut({ redirectUrl: basePath || '/' })}
@@ -1523,6 +1528,7 @@ function Router() {
       <Switch>
         <Route path="/" component={HomeRedirect} />
         <Route path="/today" component={UserPortal} />
+        <Route path="/admin" component={AdminPage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
         <Route component={NotFound} />

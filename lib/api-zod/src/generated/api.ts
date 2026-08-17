@@ -560,3 +560,57 @@ export const DeleteJournalEntryParams = zod.object({
 export const DeleteJournalEntryResponse = zod.void()
 
 
+/**
+ * Returns aggregate account, table, and database storage metrics without user-authored content
+ * @summary Get protected database diagnostics
+ */
+export const GetAdminOverviewResponse = zod.object({
+  "access": zod.object({
+  "environment": zod.string(),
+  "capacitySource": zod.string()
+}),
+  "accounts": zod.number(),
+  "totalRows": zod.number(),
+  "database": zod.object({
+  "usedBytes": zod.number(),
+  "usedLabel": zod.string(),
+  "capacityBytes": zod.number().nullable(),
+  "capacityLabel": zod.string().nullable(),
+  "remainingBytes": zod.number().nullable(),
+  "remainingLabel": zod.string().nullable(),
+  "percentUsed": zod.number().nullable()
+}),
+  "tables": zod.array(zod.object({
+  "tableName": zod.string(),
+  "rowCount": zod.number(),
+  "sizeBytes": zod.number(),
+  "sizeLabel": zod.string()
+})),
+  "accountActivity": zod.array(zod.object({
+  "accountId": zod.string(),
+  "activityCount": zod.number(),
+  "journalEntryCount": zod.number(),
+  "changeCount": zod.number(),
+  "firstActivityAt": zod.string().nullable(),
+  "lastActivityAt": zod.string().nullable()
+})),
+  "recentActivityAt": zod.string().nullable()
+})
+
+
+/**
+ * Clears either the signed-in admin's planner data or all planner data after an explicit confirmation phrase
+ * @summary Reset planner data from the protected admin surface
+ */
+export const ResetAdminDataBody = zod.object({
+  "scope": zod.enum(['my_account', 'all_planner_data']),
+  "confirmation": zod.string()
+})
+
+export const ResetAdminDataResponse = zod.object({
+  "scope": zod.enum(['my_account', 'all_planner_data']),
+  "deletedRows": zod.number(),
+  "message": zod.string()
+})
+
+

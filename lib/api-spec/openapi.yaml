@@ -18,6 +18,8 @@ tags:
     description: Day Tripper activity operations
   - name: journal
     description: Private timestamped journal operations
+  - name: admin
+    description: Protected development and operations diagnostics
 paths:
   /healthz:
     get:
@@ -297,6 +299,44 @@ paths:
           description: Journal entry deleted
         "404":
           description: Journal entry not found
+  /admin/overview:
+    get:
+      operationId: getAdminOverview
+      tags: [admin]
+      summary: Get protected database diagnostics
+      description: Returns aggregate account, table, and database storage metrics without user-authored content
+      responses:
+        "200":
+          description: Database diagnostics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminOverview"
+        "403":
+          description: Admin access is not configured for this account
+  /admin/reset:
+    post:
+      operationId: resetAdminData
+      tags: [admin]
+      summary: Reset planner data from the protected admin surface
+      description: Clears either the signed-in admin's planner data or all planner data after an explicit confirmation phrase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminResetRequest"
+      responses:
+        "200":
+          description: Reset completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminResetResult"
+        "400":
+          description: Invalid reset confirmation
+        "403":
+          description: Admin access is not configured for this account
 components:
   schemas:
     HealthStatus:
@@ -928,4 +968,127 @@ components:
       required:
         - recordedDate
         - content
+    AdminTableMetric:
+      type: object
+      properties:
+        tableName:
+          type: string
+        rowCount:
+          type: number
+        sizeBytes:
+          type: number
+        sizeLabel:
+          type: string
+      required:
+        - tableName
+        - rowCount
+        - sizeBytes
+        - sizeLabel
+    AdminAccountMetric:
+      type: object
+      properties:
+        accountId:
+          type: string
+        activityCount:
+          type: number
+        journalEntryCount:
+          type: number
+        changeCount:
+          type: number
+        firstActivityAt:
+          type: ["string", "null"]
+        lastActivityAt:
+          type: ["string", "null"]
+      required:
+        - accountId
+        - activityCount
+        - journalEntryCount
+        - changeCount
+        - firstActivityAt
+        - lastActivityAt
+    AdminOverview:
+      type: object
+      properties:
+        access:
+          type: object
+          properties:
+            environment:
+              type: string
+            capacitySource:
+              type: string
+          required:
+            - environment
+            - capacitySource
+        accounts:
+          type: number
+        totalRows:
+          type: number
+        database:
+          type: object
+          properties:
+            usedBytes:
+              type: number
+            usedLabel:
+              type: string
+            capacityBytes:
+              type: ["number", "null"]
+            capacityLabel:
+              type: ["string", "null"]
+            remainingBytes:
+              type: ["number", "null"]
+            remainingLabel:
+              type: ["string", "null"]
+            percentUsed:
+              type: ["number", "null"]
+          required:
+            - usedBytes
+            - usedLabel
+            - capacityBytes
+            - capacityLabel
+            - remainingBytes
+            - remainingLabel
+            - percentUsed
+        tables:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminTableMetric"
+        accountActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminAccountMetric"
+        recentActivityAt:
+          type: ["string", "null"]
+      required:
+        - access
+        - accounts
+        - totalRows
+        - database
+        - tables
+        - accountActivity
+        - recentActivityAt
+    AdminResetRequest:
+      type: object
+      properties:
+        scope:
+          type: string
+          enum: [my_account, all_planner_data]
+        confirmation:
+          type: string
+      required:
+        - scope
+        - confirmation
+    AdminResetResult:
+      type: object
+      properties:
+        scope:
+          type: string
+          enum: [my_account, all_planner_data]
+        deletedRows:
+          type: number
+        message:
+          type: string
+      required:
+        - scope
+        - deletedRows
+        - message
 

@@ -571,6 +571,82 @@ export interface JournalEntryInput {
   privacy?: JournalEntryInputPrivacy;
 }
 
+export interface AdminTableMetric {
+  tableName: string;
+  rowCount: number;
+  sizeBytes: number;
+  sizeLabel: string;
+}
+
+export interface AdminAccountMetric {
+  accountId: string;
+  activityCount: number;
+  journalEntryCount: number;
+  changeCount: number;
+  /** @nullable */
+  firstActivityAt: string | null;
+  /** @nullable */
+  lastActivityAt: string | null;
+}
+
+export type AdminOverviewAccess = {
+  environment: string;
+  capacitySource: string;
+};
+
+export type AdminOverviewDatabase = {
+  usedBytes: number;
+  usedLabel: string;
+  /** @nullable */
+  capacityBytes: number | null;
+  /** @nullable */
+  capacityLabel: string | null;
+  /** @nullable */
+  remainingBytes: number | null;
+  /** @nullable */
+  remainingLabel: string | null;
+  /** @nullable */
+  percentUsed: number | null;
+};
+
+export interface AdminOverview {
+  access: AdminOverviewAccess;
+  accounts: number;
+  totalRows: number;
+  database: AdminOverviewDatabase;
+  tables: AdminTableMetric[];
+  accountActivity: AdminAccountMetric[];
+  /** @nullable */
+  recentActivityAt: string | null;
+}
+
+export type AdminResetRequestScope = typeof AdminResetRequestScope[keyof typeof AdminResetRequestScope];
+
+
+export const AdminResetRequestScope = {
+  my_account: 'my_account',
+  all_planner_data: 'all_planner_data',
+} as const;
+
+export interface AdminResetRequest {
+  scope: AdminResetRequestScope;
+  confirmation: string;
+}
+
+export type AdminResetResultScope = typeof AdminResetResultScope[keyof typeof AdminResetResultScope];
+
+
+export const AdminResetResultScope = {
+  my_account: 'my_account',
+  all_planner_data: 'all_planner_data',
+} as const;
+
+export interface AdminResetResult {
+  scope: AdminResetResultScope;
+  deletedRows: number;
+  message: string;
+}
+
 export type ListActivitiesParams = {
 /**
  * @pattern ^\d{4}-\d{2}-\d{2}$

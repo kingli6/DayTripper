@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import activitiesRouter from "./activities";
 import activityChangesRouter from "./activityChanges";
+import adminRouter from "./admin";
 import aiRouter from "./ai";
 import healthRouter from "./health";
 import journalEntriesRouter from "./journalEntries";
@@ -14,5 +15,6 @@ router.use(planningRouter);
 router.use(activitiesRouter);
 router.use(activityChangesRouter);
 router.use(journalEntriesRouter);
+router.use(adminRouter);
 
 export default router;
