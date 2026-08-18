@@ -29,8 +29,9 @@ the next safe action, not the whole product history.
 **Active work:** Retention MVP, previously called the Decay Clock refinement
 gate.
 
-**Status:** Implementation is present in the current revision; authenticated
-runtime verification is the next boundary.
+**Status:** Source and local runtime verification are complete; authenticated
+runtime verification is the next boundary because the available preview session
+is signed out.
 
 **Approved product boundary:**
 
@@ -63,12 +64,14 @@ runtime verification is the next boundary.
 - Retention practices page, practice form, observation flow, and chart.
 - Visual distinction between recorded results and estimates.
 - Higher-is-better product language in the retention UI.
+- Exact API codegen, full workspace typecheck, and API build pass.
+- Development database contains both retention tables.
+- Fresh API and web workflows start cleanly; health returns 200.
+- Signed-out retention access returns 401 without private data.
+- Signed-out landing page renders successfully without application errors.
 
 ## Not yet verified for this checkpoint
 
-- Full workspace typecheck and workflow-matched build after the retention
-  revision.
-- Development database schema availability in the currently running database.
 - Authenticated create, edit, delete, and observation flows with real data.
 - Chart behavior after a new personal high and after changing retention speed.
 - Production Supabase schema and deployed retention behavior.
@@ -92,18 +95,15 @@ test the feature.
 
 ## Next safe action
 
-Run the targeted checks and restart the relevant workflows, then exercise one
-authenticated practice end to end:
+The local verification boundary is complete. The next safe action is to exercise
+one authenticated practice end to end:
 
-1. Confirm generated types and API/server/frontend typechecks.
-2. Confirm the development retention tables are available without replacing
-   the runtime-managed local database URL.
-3. Verify create, edit, delete, record observation, and refresh persistence.
-4. Verify that recorded values and estimated retention are clearly distinct.
-5. Verify that a higher observation becomes the new current reference.
-6. Verify that Slow → Fast changes the projection without changing recorded
+1. Verify create, edit, delete, record observation, and refresh persistence.
+2. Verify that recorded values and estimated retention are clearly distinct.
+3. Verify that a higher observation becomes the new current reference.
+4. Verify that Slow → Fast changes the projection without changing recorded
    observations.
-7. Record the result here before starting any new feature work.
+5. Record the authenticated result here before starting any new feature work.
 
 ## Do not start yet
 
