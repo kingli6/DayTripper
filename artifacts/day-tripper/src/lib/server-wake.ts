@@ -26,6 +26,10 @@ function isLikelyWakeFailure(status?: number) {
   return status === undefined;
 }
 
+function isHealthCheckEvent(event: { url: string }) {
+  return event.url.replace(/\/+$/, '').endsWith('/api/healthz');
+}
+
 export function useServerWakeState() {
   const [state, setState] = useState<ServerWakeState>(() => (
     lastSuccessfulRequestAt === null ? 'checking' : 'ready'
@@ -35,6 +39,11 @@ export function useServerWakeState() {
 
   useEffect(() => {
     const unsubscribe = subscribeApiLifecycle((event) => {
+      // The wake indicator describes the availability of the service itself.
+      // Do not let a private feature request (for example a database 500)
+      // make the global server status flicker between ready and error.
+      if (!isHealthCheckEvent(event)) return;
+
       if (event.type === 'success') {
         lastSuccessfulRequestAt = event.at;
         setLastSuccessAt(event.at);

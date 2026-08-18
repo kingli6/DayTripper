@@ -1631,7 +1631,7 @@ function Today() {
     const wakeResult = await serverWake.wake();
     if (!wakeResult.ok) return;
     await offline.retry();
-    await list.refetch();
+    if (!offline.hasPendingChanges) await list.refetch();
   }
 
   function retryOfflineSync() {

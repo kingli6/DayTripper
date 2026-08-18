@@ -445,7 +445,9 @@ export function useOfflineActivitySync({
 
   const syncPending = useCallback(async () => {
     if (!canUseOffline || !isOnline || syncingRef.current || !stateRef.current.queue.length) {
-      if (canUseOffline && isOnline && !stateRef.current.queue.length && status !== 'synced') setStatus('synced');
+      if (canUseOffline && isOnline && !stateRef.current.queue.length) {
+        setStatus((current) => current === 'synced' ? current : 'synced');
+      }
       return;
     }
 
@@ -503,7 +505,7 @@ export function useOfflineActivitySync({
     } finally {
       syncingRef.current = false;
     }
-  }, [canUseOffline, commit, date, isOnline, status, updateVisibleActivities]);
+  }, [canUseOffline, commit, date, isOnline, updateVisibleActivities]);
 
   useEffect(() => {
     if (isOnline && canUseOffline) void syncPending();
