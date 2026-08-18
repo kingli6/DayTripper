@@ -22,5 +22,11 @@ export interface JournalEntryInput {
      * @nullable
      */
   topic?: string | null;
+  /**
+     * @maxItems 5
+     * @items.minLength 1
+     * @items.maxLength 40
+     */
+  tags?: string[];
   privacy?: JournalEntryInputPrivacy;
 }

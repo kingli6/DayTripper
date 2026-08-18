@@ -9,4 +9,10 @@ import type { JournalEntryUpdatePrivacy } from './journalEntryUpdatePrivacy';
 
 export interface JournalEntryUpdate {
   privacy: JournalEntryUpdatePrivacy;
+  /**
+     * @maxItems 5
+     * @items.minLength 1
+     * @items.maxLength 40
+     */
+  tags?: string[];
 }

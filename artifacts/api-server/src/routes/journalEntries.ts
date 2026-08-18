@@ -1,10 +1,12 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, lte } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { activitiesTable, db, journalEntriesTable } from "@workspace/db";
 import {
   CreateJournalEntryBody,
   CreateJournalEntryResponse,
   DeleteJournalEntryParams,
+  ListPlanningJournalCandidatesQueryParams,
+  ListPlanningJournalCandidatesResponse,
   ListJournalEntriesQueryParams,
   ListJournalEntriesResponse,
   UpdateJournalEntryBody,
@@ -20,11 +22,42 @@ function serializeJournalEntry(
 ) {
   return {
     ...entry,
+    tags: entry.tags ?? [],
     recordedAt: entry.recordedAt.toISOString(),
   };
 }
 
+function normalizeTags(tags: string[] | undefined): string[] {
+  return [...new Set((tags ?? [])
+    .map((tag) => tag.trim().replace(/\s+/g, " "))
+    .filter(Boolean))]
+    .slice(0, 5);
+}
+
 router.use(requireAuth);
+
+router.get("/journal-entries/planning-candidates", async (req, res): Promise<void> => {
+  const parsed = ListPlanningJournalCandidatesQueryParams.safeParse(req.query);
+
+  if (!parsed.success) {
+    req.log.warn({ errors: parsed.error.flatten() }, "Invalid planning candidate date");
+    res.status(400).json({ error: "A valid calendar date is required." });
+    return;
+  }
+
+  const entries = await db
+    .select()
+    .from(journalEntriesTable)
+    .where(and(
+      eq(journalEntriesTable.ownerId, res.locals.userId as string),
+      eq(journalEntriesTable.privacy, "planning"),
+      lte(journalEntriesTable.recordedDate, parsed.data.currentDate),
+    ))
+    .orderBy(desc(journalEntriesTable.recordedAt), asc(journalEntriesTable.id))
+    .limit(60);
+
+  res.json(ListPlanningJournalCandidatesResponse.parse(entries.map(serializeJournalEntry)));
+});
 
 router.get("/journal-entries", async (req, res): Promise<void> => {
   const parsed = ListJournalEntriesQueryParams.safeParse(req.query);
@@ -84,6 +117,7 @@ router.post("/journal-entries", async (req, res): Promise<void> => {
       content: parsed.data.content,
       activityId: parsed.data.activityId ?? null,
       topic: parsed.data.topic ?? null,
+      tags: normalizeTags(parsed.data.tags),
       privacy: parsed.data.privacy ?? "planning",
     })
     .returning();
@@ -111,7 +145,10 @@ router.patch("/journal-entries/:id", async (req, res): Promise<void> => {
 
   const [entry] = await db
     .update(journalEntriesTable)
-    .set({ privacy: parsed.data.privacy })
+    .set({
+      privacy: parsed.data.privacy,
+      ...(parsed.data.tags ? { tags: normalizeTags(parsed.data.tags) } : {}),
+    })
     .where(
       and(
         eq(journalEntriesTable.id, params.data.id),

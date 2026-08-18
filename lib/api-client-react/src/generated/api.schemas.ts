@@ -40,7 +40,7 @@ export interface PlanningRequest {
      * @minLength 1
      * @maxLength 2000
      */
-  intention: string;
+  intention?: string;
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   currentDate: string;
   /** @pattern ^\d{2}:\d{2}$ */
@@ -60,6 +60,10 @@ export interface PlanningRequest {
      * @nullable
      */
   historicalContext?: string | null;
+  /** @maxItems 20 */
+  includeJournalEntryIds?: number[];
+  /** @maxItems 20 */
+  considerJournalEntryIds?: number[];
 }
 
 /**
@@ -543,6 +547,12 @@ export interface JournalEntry {
   activityId: number | null;
   /** @nullable */
   topic: string | null;
+  /**
+     * @maxItems 5
+     * @items.minLength 1
+     * @items.maxLength 40
+     */
+  tags: string[];
   privacy: JournalEntryPrivacy;
   recordedAt: string;
 }
@@ -570,6 +580,12 @@ export interface JournalEntryInput {
      * @nullable
      */
   topic?: string | null;
+  /**
+     * @maxItems 5
+     * @items.minLength 1
+     * @items.maxLength 40
+     */
+  tags?: string[];
   privacy?: JournalEntryInputPrivacy;
 }
 
@@ -583,6 +599,12 @@ export const JournalEntryUpdatePrivacy = {
 
 export interface JournalEntryUpdate {
   privacy: JournalEntryUpdatePrivacy;
+  /**
+     * @maxItems 5
+     * @items.minLength 1
+     * @items.maxLength 40
+     */
+  tags?: string[];
 }
 
 export interface AdminTableMetric {
@@ -680,5 +702,12 @@ export type ListJournalEntriesParams = {
  * @pattern ^\d{4}-\d{2}-\d{2}$
  */
 date: string;
+};
+
+export type ListPlanningJournalCandidatesParams = {
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+currentDate: string;
 };
 

@@ -37,6 +37,7 @@ export * from './journalEntryUpdatePrivacy';
 export * from './listActivitiesParams';
 export * from './listActivityChangesParams';
 export * from './listJournalEntriesParams';
+export * from './listPlanningJournalCandidatesParams';
 export * from './planningConflict';
 export * from './planningNotFittedItem';
 export * from './planningProposal';

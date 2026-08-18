@@ -46,10 +46,14 @@ export const createPlanningProposalBodyFixedCommitmentsMax = 2000;
 export const createPlanningProposalBodyUseHistoricalContextDefault = false;
 export const createPlanningProposalBodyHistoricalContextMax = 4000;
 
+export const createPlanningProposalBodyIncludeJournalEntryIdsMax = 20;
+
+export const createPlanningProposalBodyConsiderJournalEntryIdsMax = 20;
+
 
 
 export const CreatePlanningProposalBody = zod.object({
-  "intention": zod.string().min(1).max(createPlanningProposalBodyIntentionMax),
+  "intention": zod.string().min(1).max(createPlanningProposalBodyIntentionMax).optional(),
   "currentDate": zod.string().regex(createPlanningProposalBodyCurrentDateRegExp),
   "currentTime": zod.string().regex(createPlanningProposalBodyCurrentTimeRegExp),
   "availableTime": zod.array(zod.object({
@@ -59,7 +63,9 @@ export const CreatePlanningProposalBody = zod.object({
   "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish(),
   "fixedCommitments": zod.string().max(createPlanningProposalBodyFixedCommitmentsMax).nullish(),
   "useHistoricalContext": zod.boolean().default(createPlanningProposalBodyUseHistoricalContextDefault),
-  "historicalContext": zod.string().max(createPlanningProposalBodyHistoricalContextMax).nullish()
+  "historicalContext": zod.string().max(createPlanningProposalBodyHistoricalContextMax).nullish(),
+  "includeJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyIncludeJournalEntryIdsMax).optional(),
+  "considerJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyConsiderJournalEntryIdsMax).optional()
 })
 
 export const createPlanningProposalResponseProposedActivitiesItemTitleMax = 200;
@@ -510,6 +516,10 @@ export const ListJournalEntriesQueryParams = zod.object({
 })
 
 export const listJournalEntriesResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listJournalEntriesResponseTagsItemMax = 40;
+
+export const listJournalEntriesResponseTagsMax = 5;
+
 
 
 export const ListJournalEntriesResponseItem = zod.object({
@@ -518,6 +528,7 @@ export const ListJournalEntriesResponseItem = zod.object({
   "content": zod.string(),
   "activityId": zod.number().nullable(),
   "topic": zod.string().nullable(),
+  "tags": zod.array(zod.string().min(1).max(listJournalEntriesResponseTagsItemMax)).max(listJournalEntriesResponseTagsMax),
   "privacy": zod.enum(['private', 'planning']),
   "recordedAt": zod.string()
 })
@@ -532,6 +543,10 @@ export const createJournalEntryBodyContentMax = 5000;
 
 export const createJournalEntryBodyTopicMax = 120;
 
+export const createJournalEntryBodyTagsItemMax = 40;
+
+export const createJournalEntryBodyTagsMax = 5;
+
 export const createJournalEntryBodyPrivacyDefault = `planning`;
 
 export const CreateJournalEntryBody = zod.object({
@@ -539,10 +554,15 @@ export const CreateJournalEntryBody = zod.object({
   "content": zod.string().min(1).max(createJournalEntryBodyContentMax),
   "activityId": zod.number().nullish(),
   "topic": zod.string().max(createJournalEntryBodyTopicMax).nullish(),
+  "tags": zod.array(zod.string().min(1).max(createJournalEntryBodyTagsItemMax)).max(createJournalEntryBodyTagsMax).optional(),
   "privacy": zod.enum(['private', 'planning']).default(createJournalEntryBodyPrivacyDefault)
 })
 
 export const createJournalEntryResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createJournalEntryResponseTagsItemMax = 40;
+
+export const createJournalEntryResponseTagsMax = 5;
+
 
 
 export const CreateJournalEntryResponse = zod.object({
@@ -551,6 +571,7 @@ export const CreateJournalEntryResponse = zod.object({
   "content": zod.string(),
   "activityId": zod.number().nullable(),
   "topic": zod.string().nullable(),
+  "tags": zod.array(zod.string().min(1).max(createJournalEntryResponseTagsItemMax)).max(createJournalEntryResponseTagsMax),
   "privacy": zod.enum(['private', 'planning']),
   "recordedAt": zod.string()
 })
@@ -563,11 +584,22 @@ export const UpdateJournalEntryParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updateJournalEntryBodyTagsItemMax = 40;
+
+export const updateJournalEntryBodyTagsMax = 5;
+
+
+
 export const UpdateJournalEntryBody = zod.object({
-  "privacy": zod.enum(['private', 'planning'])
+  "privacy": zod.enum(['private', 'planning']),
+  "tags": zod.array(zod.string().min(1).max(updateJournalEntryBodyTagsItemMax)).max(updateJournalEntryBodyTagsMax).optional()
 })
 
 export const updateJournalEntryResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateJournalEntryResponseTagsItemMax = 40;
+
+export const updateJournalEntryResponseTagsMax = 5;
+
 
 
 export const UpdateJournalEntryResponse = zod.object({
@@ -576,6 +608,7 @@ export const UpdateJournalEntryResponse = zod.object({
   "content": zod.string(),
   "activityId": zod.number().nullable(),
   "topic": zod.string().nullable(),
+  "tags": zod.array(zod.string().min(1).max(updateJournalEntryResponseTagsItemMax)).max(updateJournalEntryResponseTagsMax),
   "privacy": zod.enum(['private', 'planning']),
   "recordedAt": zod.string()
 })
@@ -589,6 +622,37 @@ export const DeleteJournalEntryParams = zod.object({
 })
 
 export const DeleteJournalEntryResponse = zod.void()
+
+
+/**
+ * Returns a bounded set of explicitly planning-available journal entries for the planning selection stage
+ * @summary List journal entries available for planning
+ */
+export const listPlanningJournalCandidatesQueryCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListPlanningJournalCandidatesQueryParams = zod.object({
+  "currentDate": zod.coerce.string().regex(listPlanningJournalCandidatesQueryCurrentDateRegExp)
+})
+
+export const listPlanningJournalCandidatesResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listPlanningJournalCandidatesResponseTagsItemMax = 40;
+
+export const listPlanningJournalCandidatesResponseTagsMax = 5;
+
+
+
+export const ListPlanningJournalCandidatesResponseItem = zod.object({
+  "id": zod.number(),
+  "recordedDate": zod.string().regex(listPlanningJournalCandidatesResponseRecordedDateRegExp),
+  "content": zod.string(),
+  "activityId": zod.number().nullable(),
+  "topic": zod.string().nullable(),
+  "tags": zod.array(zod.string().min(1).max(listPlanningJournalCandidatesResponseTagsItemMax)).max(listPlanningJournalCandidatesResponseTagsMax),
+  "privacy": zod.enum(['private', 'planning']),
+  "recordedAt": zod.string()
+})
+export const ListPlanningJournalCandidatesResponse = zod.array(ListPlanningJournalCandidatesResponseItem)
 
 
 /**

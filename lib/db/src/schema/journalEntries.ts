@@ -9,6 +9,7 @@ export const journalEntriesTable = pgTable("journal_entries", {
   content: text("content").notNull(),
   activityId: integer("activity_id"),
   topic: text("topic"),
+  tags: text("tags").array().notNull().default([]),
   privacy: text("privacy").notNull().default("private"),
   recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
 });

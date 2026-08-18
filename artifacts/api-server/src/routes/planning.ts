@@ -1,6 +1,6 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { activityChangesTable, db, activitiesTable } from "@workspace/db";
+import { activityChangesTable, db, activitiesTable, journalEntriesTable } from "@workspace/db";
 import {
   ApplyReplanningProposalBody,
   ApplyReplanningProposalResponse,
@@ -24,7 +24,7 @@ const TIME_PATTERN = /^\d{2}:\d{2}$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 type PlanningRequest = {
-  intention: string;
+  intention?: string;
   currentDate: string;
   currentTime: string;
   availableTime: Array<{ startTime: string; endTime: string }>;
@@ -32,6 +32,17 @@ type PlanningRequest = {
   fixedCommitments?: string | null;
   useHistoricalContext?: boolean;
   historicalContext?: string | null;
+  includeJournalEntryIds?: number[];
+  considerJournalEntryIds?: number[];
+};
+
+type PlanningJournalEntry = {
+  id: number;
+  recordedDate: string;
+  content: string;
+  topic: string | null;
+  tags: string[];
+  recordedAt: Date;
 };
 
 type ReplanningActivity = {
@@ -290,6 +301,18 @@ function validatePlanningRequest(request: PlanningRequest): string | null {
     return "The planning date or current time is invalid.";
   }
 
+  const includeIds = request.includeJournalEntryIds ?? [];
+  const considerIds = request.considerJournalEntryIds ?? [];
+  if (new Set(includeIds).size !== includeIds.length || new Set(considerIds).size !== considerIds.length) {
+    return "Choose each journal note only once.";
+  }
+  if (includeIds.some((id) => considerIds.includes(id))) {
+    return "A journal note cannot be both included and considered.";
+  }
+  if (!request.intention?.trim() && includeIds.length === 0 && considerIds.length === 0) {
+    return "Add a short intention or choose at least one journal note to shape the plan.";
+  }
+
   if (request.useHistoricalContext && !request.historicalContext?.trim()) {
     return "Historical context must be provided when it is enabled.";
   }
@@ -318,7 +341,7 @@ function buildPlanningPrompt(request: PlanningRequest, activities: Array<{
   completed: boolean;
   locked: boolean;
   note: string | null;
-}>) {
+}>, journalNotes: { include: PlanningJournalEntry[]; consider: PlanningJournalEntry[] }) {
   const approvedHistoricalContext = request.useHistoricalContext
     ? request.historicalContext ?? null
     : null;
@@ -372,6 +395,10 @@ Planning rules:
 - This is a suggestion only. Never claim to have changed the saved schedule.
 - Locked activities are protected. Do not move, delete, complete, or rename them.
 - Do not invent deadlines, commitments, or completed work.
+- Journal notes marked "include" are required context for this version of the plan, but they are not automatically activities. If an included note cannot fit, explain the conflict in didNotFit rather than silently dropping it.
+- Journal notes marked "consider" are optional context and may be left out when they do not fit.
+- Journal notes marked "leave out" are not provided and must not be inferred.
+- Use tags as attention cues, not as commands. Schedule means eligible for planning; Urgent and Important influence attention; Someday should remain optional.
 - Empty time is valid. Do not fill every available minute.
 - Proposed activities must be fixed-time blocks with valid 24-hour times and must not overlap each other.
 - Treat proposed activities, buffers, and rest periods as one shared timeline. No two blocks in any of those arrays may overlap.
@@ -390,6 +417,24 @@ ${JSON.stringify({
   planningStyle: request.planningStyle ?? "balanced",
   fixedCommitments: request.fixedCommitments ?? null,
   existingActivities: activities,
+  journalNotes: {
+    include: journalNotes.include.map((entry) => ({
+      id: entry.id,
+      recordedDate: entry.recordedDate,
+      content: entry.content,
+      topic: entry.topic,
+      tags: entry.tags,
+      recordedAt: entry.recordedAt.toISOString(),
+    })),
+    consider: journalNotes.consider.map((entry) => ({
+      id: entry.id,
+      recordedDate: entry.recordedDate,
+      content: entry.content,
+      topic: entry.topic,
+      tags: entry.tags,
+      recordedAt: entry.recordedAt.toISOString(),
+    })),
+  },
   approvedHistoricalContext,
 }, null, 2)}`;
 }
@@ -927,12 +972,44 @@ router.post("/planning/proposals", async (req, res): Promise<void> => {
     note: request.useHistoricalContext ? activity.note : null,
   }));
 
+  const includeJournalEntryIds = request.includeJournalEntryIds ?? [];
+  const considerJournalEntryIds = request.considerJournalEntryIds ?? [];
+  const journalEntryIds = [...new Set([...includeJournalEntryIds, ...considerJournalEntryIds])];
+  const journalEntries = journalEntryIds.length
+    ? await db
+      .select({
+        id: journalEntriesTable.id,
+        recordedDate: journalEntriesTable.recordedDate,
+        content: journalEntriesTable.content,
+        topic: journalEntriesTable.topic,
+        tags: journalEntriesTable.tags,
+        recordedAt: journalEntriesTable.recordedAt,
+      })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.ownerId, res.locals.userId as string),
+        eq(journalEntriesTable.privacy, "planning"),
+        inArray(journalEntriesTable.id, journalEntryIds),
+      ))
+    : [];
+  const journalEntriesById = new Map(journalEntries.map((entry) => [entry.id, entry]));
+
+  if (journalEntryIds.some((id) => !journalEntriesById.has(id))) {
+    res.status(400).json({ error: "One of the selected journal notes is no longer available for planning." });
+    return;
+  }
+
+  const journalNotes = {
+    include: includeJournalEntryIds.map((id) => journalEntriesById.get(id) as PlanningJournalEntry),
+    consider: considerJournalEntryIds.map((id) => journalEntriesById.get(id) as PlanningJournalEntry),
+  };
+
   try {
     const config = getGeminiConfig();
     let correction: string | null = null;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const prompt = buildPlanningPrompt(request, promptActivities)
+      const prompt = buildPlanningPrompt(request, promptActivities, journalNotes)
         + (correction
           ? `\n\nCorrection required: the previous draft was rejected because ${correction} Return a new complete proposal. Treat every proposed activity, buffer, and rest period as one shared non-overlapping timeline, and return JSON only.`
           : "");

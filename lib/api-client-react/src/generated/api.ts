@@ -38,6 +38,7 @@ import type {
   ListActivitiesParams,
   ListActivityChangesParams,
   ListJournalEntriesParams,
+  ListPlanningJournalCandidatesParams,
   PlanningProposal,
   PlanningRequest,
   ReplanningProposal,
@@ -1195,6 +1196,91 @@ export const useDeleteJournalEntry = <TError = ErrorType<void>,
       > => {
       return useMutation(getDeleteJournalEntryMutationOptions(options));
     }
+
+export const getListPlanningJournalCandidatesUrl = (params: ListPlanningJournalCandidatesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/journal-entries/planning-candidates?${stringifiedParams}` : `/api/journal-entries/planning-candidates`
+}
+
+/**
+ * Returns a bounded set of explicitly planning-available journal entries for the planning selection stage
+ * @summary List journal entries available for planning
+ */
+export const listPlanningJournalCandidates = async (params: ListPlanningJournalCandidatesParams, options?: Parameters<typeof customFetch>[1]): Promise<JournalEntry[]> => {
+
+  return customFetch<JournalEntry[]>(getListPlanningJournalCandidatesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPlanningJournalCandidatesQueryKey = (params?: ListPlanningJournalCandidatesParams,) => {
+    return [
+    `/api/journal-entries/planning-candidates`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPlanningJournalCandidatesQueryOptions = <TData = Awaited<ReturnType<typeof listPlanningJournalCandidates>>, TError = ErrorType<unknown>>(params: ListPlanningJournalCandidatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningJournalCandidates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPlanningJournalCandidatesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPlanningJournalCandidates>>> = ({ signal }) => listPlanningJournalCandidates(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPlanningJournalCandidates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPlanningJournalCandidatesQueryResult = NonNullable<Awaited<ReturnType<typeof listPlanningJournalCandidates>>>
+export type ListPlanningJournalCandidatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List journal entries available for planning
+ */
+
+export function useListPlanningJournalCandidates<TData = Awaited<ReturnType<typeof listPlanningJournalCandidates>>, TError = ErrorType<unknown>>(
+ params: ListPlanningJournalCandidatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPlanningJournalCandidates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPlanningJournalCandidatesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetAdminOverviewUrl = () => {
 

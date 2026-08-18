@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { useUser } from '@clerk/react';
-import { BookOpen, Check, Clipboard, Clock3, LockKeyhole, RotateCcw, Trash2, X } from 'lucide-react';
+import { BookOpen, Check, Clipboard, Clock3, Hash, LockKeyhole, RotateCcw, Trash2, X } from 'lucide-react';
 import {
   getListJournalEntriesQueryKey,
   useCreateJournalEntry,
@@ -117,6 +117,7 @@ function JournalEntryCard({
       <p className="mt-4 whitespace-pre-wrap text-[15px] leading-7 text-foreground" data-testid={`text-journal-content-${entry.id}`}>{entry.content}</p>
       <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/55 pt-3">
         {entry.topic && <span className="rounded-full bg-secondary px-2.5 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-secondary-foreground" data-testid={`text-journal-topic-${entry.id}`}>{entry.topic}</span>}
+        {entry.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/[0.055] px-2.5 py-1 text-[10px] text-primary" data-testid={`text-journal-tag-${entry.id}-${tag}`}><Hash className="size-2.5" strokeWidth={2} />{tag}</span>)}
         {activityTitle && <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/[0.08] px-2.5 py-1 text-[10px] text-primary" data-testid={`text-journal-activity-${entry.id}`}><BookOpen className="size-3" strokeWidth={1.8} />{activityTitle}</span>}
         <span className="ml-auto text-[10px] text-muted-foreground/70" data-testid={`text-journal-date-${entry.id}`}>{journalDateTime(entry.recordedAt)}</span>
       </div>
@@ -142,6 +143,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
   const deleteJournalEntry = useDeleteJournalEntry();
   const [content, setContent] = useState('');
   const [topic, setTopic] = useState('');
+  const [tags, setTags] = useState('');
   const [activityId, setActivityId] = useState('');
   const [privacy, setPrivacy] = useState<JournalPrivacy>('planning');
   const [filter, setFilter] = useState<JournalFilter>('all');
@@ -195,12 +197,14 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
           content: trimmedContent,
           activityId: activityId ? Number(activityId) : null,
           topic: topic.trim() || null,
+            tags: Array.from(new Set(tags.split(',').map((tag) => tag.trim().toLowerCase()).filter(Boolean))).slice(0, 5),
           privacy,
         },
       });
       await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({ date }) });
       setContent('');
       setTopic('');
+      setTags('');
       setActivityId('');
       rememberPrivacy(privacy);
     } catch {
@@ -290,6 +294,11 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
               <option value="planning">Available for planning</option>
             </select>
           </div>
+        </div>
+        <div className="mt-3">
+          <label htmlFor="journal-tags" className="flex items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground"><Hash className="size-3" strokeWidth={2} /> Tags <span className="normal-case tracking-normal">(optional, up to 5)</span></label>
+          <input id="journal-tags" value={tags} onChange={(event) => setTags(event.target.value)} maxLength={220} placeholder="energy, people, outside" data-testid="input-journal-tags" className="mt-1.5 min-h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
+          <p className="mt-1 text-[10px] text-muted-foreground/70">Separate tags with commas. They help narrow the planning handoff later.</p>
         </div>
         <div className="mt-4 flex flex-col gap-3 border-t border-border/55 pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="flex items-center gap-1.5 text-[11px] leading-5 text-muted-foreground"><Clock3 className="size-3.5 text-primary" strokeWidth={1.8} /> Saved with the current time</p>

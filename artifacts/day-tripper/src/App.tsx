@@ -37,6 +37,7 @@ import {
 import type { Activity, ActivityInput, PlanningProposal } from '@workspace/api-client-react';
 import { ChangeReviewPanel } from '@/components/change-review-panel';
 import { JournalPanel } from '@/components/journal-panel';
+import { JournalPlanningSelector } from '@/components/journal-planning-selector';
 import { ReplanningStudio } from '@/components/replanning-studio';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { useOfflineActivitySync, type OfflineSyncStatus } from '@/lib/offline-activity';
@@ -718,6 +719,7 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   const createActivity = useCreateActivity();
   const queryClient = useQueryClient();
   const intentionRef = useRef<HTMLTextAreaElement>(null);
+  const [planningStage, setPlanningStage] = useState<'journal' | 'details'>('journal');
   const [intention, setIntention] = useState('');
   const [currentTime, setCurrentTime] = useState(currentTimeValue());
   const [availableStart, setAvailableStart] = useState('09:00');
@@ -731,20 +733,19 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   const [formError, setFormError] = useState('');
   const [reviewError, setReviewError] = useState('');
   const [accepting, setAccepting] = useState(false);
+  const [includeJournalEntryIds, setIncludeJournalEntryIds] = useState<number[]>([]);
+  const [considerJournalEntryIds, setConsiderJournalEntryIds] = useState<number[]>([]);
   const lockedActivities = activities.filter((activity) => activity.locked);
   const pending = createPlanningProposal.isPending;
 
   useEffect(() => {
+    if (planningStage !== 'details') return;
     const frame = window.requestAnimationFrame(() => intentionRef.current?.focus());
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [planningStage]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!intention.trim()) {
-      setFormError('Tell the planner what you would like the day to hold.');
-      return;
-    }
     if (!/^\d{2}:\d{2}$/.test(currentTime) || !/^\d{2}:\d{2}$/.test(availableStart) || !/^\d{2}:\d{2}$/.test(availableEnd)) {
       setFormError('Choose valid times for the planning context.');
       return;
@@ -759,7 +760,7 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
     try {
       const result = await createPlanningProposal.mutateAsync({
         data: {
-          intention: intention.trim(),
+          ...(intention.trim() ? { intention: intention.trim() } : {}),
           currentDate: date,
           currentTime,
           availableTime: [{ startTime: availableStart, endTime: availableEnd }],
@@ -767,6 +768,8 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
           fixedCommitments: fixedCommitments.trim() || null,
           useHistoricalContext,
           historicalContext: useHistoricalContext ? historicalContext.trim() || null : null,
+          includeJournalEntryIds: includeJournalEntryIds.length ? includeJournalEntryIds : undefined,
+          considerJournalEntryIds: considerJournalEntryIds.length ? considerJournalEntryIds : undefined,
         },
       });
       setProposal(result);
@@ -786,6 +789,7 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
     setReviewItems([]);
     setReviewError('');
     setFormError('');
+    setPlanningStage('details');
     window.requestAnimationFrame(() => intentionRef.current?.focus());
   }
 
@@ -881,8 +885,8 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="flex items-center gap-2 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary"><Sparkles className="size-3.5" strokeWidth={1.8} /> AI Studio</p>
-            <h2 id="planning-studio-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">Shape a possible day.</h2>
-            <p id="planning-studio-description" className="mt-2 max-w-[550px] text-sm leading-6 text-muted-foreground">Describe what matters. Day Tripper will return a proposal to review, without changing the schedule you already saved.</p>
+            <h2 id="planning-studio-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">{proposal ? 'Look over the version.' : planningStage === 'journal' ? 'Choose what matters now.' : 'Shape a possible day.'}</h2>
+            <p id="planning-studio-description" className="mt-2 max-w-[550px] text-sm leading-6 text-muted-foreground">{proposal ? 'This is a proposal, not a silent rewrite. Adjust what you want, then explicitly add only the suggestions that feel right.' : planningStage === 'journal' ? 'A quiet handoff from the journal to planning. Private notes never enter this room, and nothing is turned into an activity.' : 'Add an optional intention, set the open time, and ask for one workable version. Your saved timeline stays untouched.'}</p>
           </div>
           <button type="button" onClick={onClose} disabled={pending || accepting} aria-label="Close AI Studio" data-testid="button-close-planning-studio" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
             <X className="size-4" strokeWidth={1.8} />
@@ -1036,11 +1040,41 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
               <p className="text-right text-[11px] leading-5 text-muted-foreground">Only the suggestions you accept become saved activities. Existing activities remain untouched.</p>
             </div>
           </div>
+        ) : planningStage === 'journal' ? (
+          <JournalPlanningSelector
+            date={date}
+            onClose={onClose}
+            onContinue={(includeIds, considerIds) => {
+              setIncludeJournalEntryIds(includeIds);
+              setConsiderJournalEntryIds(considerIds);
+              setFormError('');
+              setPlanningStage('details');
+            }}
+          />
+        ) : pending ? (
+          <div className="mt-7 space-y-3" aria-label="Preparing a planning proposal" data-testid="status-planning-loading">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="rounded-[19px] border border-border/60 bg-card/55 p-4">
+                <div className="h-3 w-28 animate-pulse rounded-full bg-muted" />
+                <div className="mt-4 h-4 w-10/12 animate-pulse rounded-full bg-muted" />
+                <div className="mt-2 h-3 w-2/3 animate-pulse rounded-full bg-muted/70" />
+              </div>
+            ))}
+            <p className="pt-2 text-center text-xs text-muted-foreground">Holding your choices gently while the proposal takes shape.</p>
+          </div>
         ) : (
           <form onSubmit={(event) => void submit(event)} className="mt-7 space-y-5">
+            <div className="flex items-start gap-3 rounded-[18px] border border-primary/20 bg-primary/[0.055] p-4" data-testid="status-planning-journal-context">
+              <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={1.8} />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-foreground">Journal context is chosen</p>
+                <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{includeJournalEntryIds.length} included · {considerJournalEntryIds.length} to consider · everything else left out.</p>
+              </div>
+              <button type="button" onClick={() => setPlanningStage('journal')} data-testid="button-change-planning-journal-selection" className="shrink-0 text-[11px] font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Change</button>
+            </div>
             <div>
-              <label htmlFor="planning-intention" className="text-xs font-semibold text-foreground">What would you like the day to hold?</label>
-              <textarea ref={intentionRef} id="planning-intention" required value={intention} onChange={(event) => setIntention(event.target.value)} placeholder="I have work, groceries, dinner, and I would like some time to recover." rows={4} data-testid="input-planning-intention" className="mt-2 w-full resize-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
+              <label htmlFor="planning-intention" className="text-xs font-semibold text-foreground">What would help today? <span className="font-normal text-muted-foreground">(optional)</span></label>
+              <textarea ref={intentionRef} id="planning-intention" value={intention} onChange={(event) => setIntention(event.target.value)} placeholder="Finish the report, eat something proper, and leave a little room before dinner." rows={4} data-testid="input-planning-intention" className="mt-2 w-full resize-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
