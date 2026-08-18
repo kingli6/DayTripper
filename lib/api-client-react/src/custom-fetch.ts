@@ -8,6 +8,14 @@ export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
+export type ApiLifecycleEvent = {
+  type: "success" | "error";
+  method: string;
+  url: string;
+  status?: number;
+  at: number;
+};
+
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
@@ -17,6 +25,20 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+const apiLifecycleListeners = new Set<(event: ApiLifecycleEvent) => void>();
+
+export function subscribeApiLifecycle(
+  listener: (event: ApiLifecycleEvent) => void,
+): () => void {
+  apiLifecycleListeners.add(listener);
+  return () => apiLifecycleListeners.delete(listener);
+}
+
+function publishApiLifecycle(event: ApiLifecycleEvent) {
+  for (const listener of apiLifecycleListeners) {
+    listener(event);
+  }
+}
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -359,22 +381,53 @@ export async function customFetch<T = unknown>(
   }
 
   const requestInfo = { method, url: resolveUrl(input) };
+  let lifecyclePublished = false;
+  const publishError = (status?: number) => {
+    if (lifecyclePublished) return;
+    lifecyclePublished = true;
+    publishApiLifecycle({
+      type: "error",
+      method,
+      url: requestInfo.url,
+      status,
+      at: Date.now(),
+    });
+  };
 
-  // React Query owns client-side freshness for these API calls. Disable the
-  // browser/edge HTTP cache so a conditional request cannot surface a 304 to
-  // the JSON parser as `null` (and so one Clerk session cannot reuse another
-  // session's private response).
-  const response = await fetch(input, {
-    ...init,
-    method,
-    headers,
-    cache: init.cache ?? "no-store",
-  });
+  try {
+    // React Query owns client-side freshness for these API calls. Disable the
+    // browser/edge HTTP cache so a conditional request cannot surface a 304 to
+    // the JSON parser as `null` (and so one Clerk session cannot reuse another
+    // session's private response).
+    const response = await fetch(input, {
+      ...init,
+      method,
+      headers,
+      cache: init.cache ?? "no-store",
+    });
 
-  if (!response.ok) {
-    const errorData = await parseErrorBody(response, method);
-    throw new ApiError(response, errorData, requestInfo);
+    if (!response.ok) {
+      publishError(response.status);
+      const errorData = await parseErrorBody(response, method);
+      throw new ApiError(response, errorData, requestInfo);
+    }
+
+    const result = (await parseSuccessBody(response, responseType, requestInfo)) as T;
+    lifecyclePublished = true;
+    publishApiLifecycle({
+      type: "success",
+      method,
+      url: requestInfo.url,
+      status: response.status,
+      at: Date.now(),
+    });
+    return result;
+  } catch (error) {
+    publishError(
+      error && typeof error === "object" && "status" in error && typeof error.status === "number"
+        ? error.status
+        : undefined,
+    );
+    throw error;
   }
-
-  return (await parseSuccessBody(response, responseType, requestInfo)) as T;
 }

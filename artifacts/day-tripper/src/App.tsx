@@ -14,6 +14,7 @@ import {
   Circle,
   Clock3,
   Cloud,
+  EyeOff,
   LoaderCircle,
   LockKeyhole,
   Menu,
@@ -30,7 +31,6 @@ import {
   getListActivitiesQueryKey,
   useCreateActivity,
   useGetAiStatus,
-  useHealthCheck,
   useListActivities,
   useCreatePlanningProposal,
 } from '@workspace/api-client-react';
@@ -40,6 +40,7 @@ import { JournalPanel } from '@/components/journal-panel';
 import { ReplanningStudio } from '@/components/replanning-studio';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { useOfflineActivitySync, type OfflineSyncStatus } from '@/lib/offline-activity';
+import { useServerWakeState, type ServerWakeState } from '@/lib/server-wake';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
@@ -292,7 +293,67 @@ function Sidebar({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => void;
   );
 }
 
-function MobileHeader({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => void; onOpenPlanning: () => void; onQuickJournal: () => void }) {
+function ServerWakeStatus({
+  state,
+  onWake,
+  compact = false,
+}: {
+  state: ServerWakeState;
+  onWake: () => void;
+  compact?: boolean;
+}) {
+  const copy: Record<ServerWakeState, string> = {
+    checking: 'Checking the day space',
+    ready: 'Day space ready',
+    sleeping: 'Day Tripper may be resting',
+    waking: 'Waking Day Tripper…',
+    offline: 'Connection paused',
+    error: 'The day space needs another try',
+  };
+  const canWake = state === 'sleeping' || state === 'error';
+  const tone = state === 'sleeping' || state === 'error'
+    ? 'border-accent/35 bg-accent/[0.08] text-accent-foreground'
+    : state === 'offline'
+      ? 'border-destructive/20 bg-destructive/[0.06] text-destructive'
+      : 'border-border/70 bg-card/60 text-muted-foreground';
+
+  return (
+    <div
+      className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[10px] ${tone}`}
+      title="The server may rest after about 15 minutes without activity. Wake Day Tripper before you begin."
+      data-testid="status-server-wake"
+    >
+      <EyeOff className={`size-3.5 shrink-0 ${state === 'waking' ? 'animate-breathe' : ''}`} strokeWidth={1.8} />
+      {!compact && <span className="hidden sm:inline">{copy[state]}</span>}
+      {compact && <span className="sr-only">{copy[state]}</span>}
+      {canWake && (
+        <button
+          type="button"
+          onClick={onWake}
+          className="font-semibold underline decoration-current/35 underline-offset-4 hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          data-testid="button-wake-server"
+        >
+          {state === 'error' ? 'Try wake again' : 'Wake up'}
+        </button>
+      )}
+      {state === 'waking' && <LoaderCircle className="size-3 animate-spin" strokeWidth={1.8} />}
+    </div>
+  );
+}
+
+function MobileHeader({
+  onAdd,
+  onOpenPlanning,
+  onQuickJournal,
+  serverState,
+  onWake,
+}: {
+  onAdd: () => void;
+  onOpenPlanning: () => void;
+  onQuickJournal: () => void;
+  serverState: ServerWakeState;
+  onWake: () => void;
+}) {
   return (
     <header className="flex items-center justify-between border-b border-border/70 bg-sidebar px-5 py-4 text-sidebar-foreground lg:hidden">
       <div className="flex items-center gap-3">
@@ -300,6 +361,7 @@ function MobileHeader({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => 
         <p className="font-display text-[21px] tracking-[-0.03em]">Day Tripper</p>
       </div>
       <div className="flex items-center gap-2">
+        <ServerWakeStatus state={serverState} onWake={onWake} compact />
         <button type="button" onClick={onOpenPlanning} aria-label="Shape the day with a suggestion" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </button>
@@ -314,25 +376,15 @@ function MobileHeader({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => 
   );
 }
 
-function ApiStatus() {
-  const health = useHealthCheck();
+function ApiStatus({ state, onWake }: { state: ServerWakeState; onWake: () => void }) {
   const ai = useGetAiStatus();
-  const healthy = Boolean(health.data && !health.isError);
   const aiCopy = ai.isLoading ? 'checking services' : ai.data?.configured ? 'planning services ready' : 'planning services quiet';
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/60 pt-4 text-[11px] text-muted-foreground" data-testid="status-service">
-      <span className="inline-flex items-center gap-2">
-        <span className={`size-2 rounded-full ${health.isLoading ? 'animate-breathe bg-muted-foreground/40' : healthy ? 'bg-primary' : 'bg-destructive'}`} />
-        {health.isLoading ? 'connecting' : healthy ? 'day space connected' : 'connection paused'}
-      </span>
+      <ServerWakeStatus state={state} onWake={onWake} />
       <span className="text-border">/</span>
       <span>{aiCopy}</span>
-      {health.isError && (
-        <button type="button" onClick={() => void health.refetch()} data-testid="button-retry-service" className="font-semibold text-primary underline-offset-4 hover:underline">
-          Retry
-        </button>
-      )}
     </div>
   );
 }
@@ -343,12 +395,16 @@ function OfflineSyncBanner({
   hasPendingChanges,
   hasCachedDay,
   onRetry,
+  onWakeAndContinue,
+  serverState,
 }: {
   status: OfflineSyncStatus;
   errorMessage: string;
   hasPendingChanges: boolean;
   hasCachedDay: boolean;
   onRetry: () => void;
+  onWakeAndContinue: () => void;
+  serverState: ServerWakeState;
 }) {
   const copy: Record<OfflineSyncStatus, string> = {
     synced: 'Your current day is synced.',
@@ -363,6 +419,7 @@ function OfflineSyncBanner({
     error: errorMessage || 'Sync is paused. Your local changes are still here.',
   };
   const shouldRetry = status === 'error' || status === 'offline';
+  const shouldWake = shouldRetry && (serverState === 'sleeping' || serverState === 'error');
 
   return (
     <div
@@ -383,11 +440,11 @@ function OfflineSyncBanner({
       {shouldRetry && (
         <button
           type="button"
-          onClick={onRetry}
+          onClick={shouldWake ? onWakeAndContinue : onRetry}
           className="rounded-full border border-current/25 px-3 py-1.5 text-[11px] font-semibold hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-testid="button-retry-offline-sync"
         >
-          Try again
+          {shouldWake ? 'Wake & continue' : 'Try again'}
         </button>
       )}
     </div>
@@ -1364,6 +1421,7 @@ function Today() {
     today,
     queryKey: activityQueryKey,
   });
+  const serverWake = useServerWakeState();
   const list = useListActivities({ date }, {
     query: {
       // Activity data is private to the active Clerk session. Keep the
@@ -1485,8 +1543,20 @@ function Today() {
     await offline.remove(activity);
   }
 
+  async function wakeAndContinue() {
+    const wakeResult = await serverWake.wake();
+    if (!wakeResult.ok) return;
+    await offline.retry();
+    await list.refetch();
+  }
+
   function retryOfflineSync() {
+    if (serverWake.state === 'sleeping' || serverWake.state === 'error') {
+      void wakeAndContinue();
+      return;
+    }
     void offline.retry();
+    void list.refetch();
   }
 
   return (
@@ -1496,14 +1566,21 @@ function Today() {
       <div className="relative flex min-h-[100dvh]">
         <Sidebar onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} onQuickJournal={openQuickJournal} />
         <div className="min-w-0 flex-1">
-          <MobileHeader onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} onQuickJournal={openQuickJournal} />
+          <MobileHeader
+            onAdd={openCreate}
+            onOpenPlanning={() => setPlanningOpen(true)}
+            onQuickJournal={openQuickJournal}
+            serverState={serverWake.state}
+            onWake={() => void wakeAndContinue()}
+          />
           <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
             <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
               <div className="flex items-center gap-2">
                 <Circle className="size-2.5 fill-accent text-accent" strokeWidth={0} />
                 <span className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A private day planner</span>
-              </div>
+                </div>
                <div className="flex items-center gap-3">
+                  <ServerWakeStatus state={serverWake.state} onWake={() => void wakeAndContinue()} />
                  <span className="hidden text-xs text-muted-foreground/75 md:block">Take the day as it comes</span>
                  <AccountControl />
                </div>
@@ -1555,6 +1632,8 @@ function Today() {
                      hasPendingChanges={offline.hasPendingChanges}
                      hasCachedDay={hasCachedDay}
                      onRetry={retryOfflineSync}
+                      onWakeAndContinue={() => void wakeAndContinue()}
+                      serverState={serverWake.state}
                    />
                  )}
                  {timelineLoading ? <TimelineSkeleton /> : timelineUnavailable ? (
@@ -1584,7 +1663,7 @@ function Today() {
                     <span className="font-mono-ui text-[10px] uppercase tracking-[0.15em]">Held lightly</span>
                   </div>
                   <p className="mt-4 font-display text-[21px] leading-[1.15] tracking-[-0.025em]">Plans are a place to return to, not a test to pass.</p>
-                  <ApiStatus />
+                  <ApiStatus state={serverWake.state} onWake={() => void wakeAndContinue()} />
                 </div>
               </aside>
             </div>
