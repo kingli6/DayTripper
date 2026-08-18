@@ -40,8 +40,12 @@ id_ed25519*
 
 # Logs and runtime files
 *.log
+*.log.*
 logs/
 log/
+*.out
+*.err
+*.trace
 *.pid
 *.pid.lock
 npm-debug.log*

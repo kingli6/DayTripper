@@ -1,6 +1,6 @@
 # Day Tripper Build Status
 
-Last reviewed: 2026-08-17
+Last reviewed: 2026-08-18
 
 ## Current milestone
 
@@ -19,6 +19,9 @@ from one Render web service. The core production flows verified so far are:
 - Gemini planning returns a proposal without silently changing the timeline.
 - Explicitly accepted planning items are saved to the timeline.
 - Journal entry creation works.
+- Journal entries survive refresh.
+- Journal entries remain private between accounts.
+- Journal entries can be deleted successfully.
 
 The Render deployment also required two portability fixes:
 
@@ -34,9 +37,7 @@ being reported as a server error.
 
 ### Remaining deployment checks
 
-- Re-check that a journal entry survives refresh after the production fix.
-- Re-check that journal entries remain private between accounts.
-- Test journal deletion and the journal filters.
+- Test the journal filters.
 - Configure a custom domain and Cloudflare only if desired.
 
 The Render free instance may sleep when inactive, so the first request after a
