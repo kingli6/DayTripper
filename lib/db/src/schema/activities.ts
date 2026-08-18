@@ -1,5 +1,5 @@
 import { createInsertSchema } from "drizzle-zod";
-import { boolean, date, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, date, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
 
 export const activitiesTable = pgTable("activities", {
@@ -14,6 +14,8 @@ export const activitiesTable = pgTable("activities", {
   locked: boolean("locked").notNull().default(false),
   pinned: boolean("pinned").notNull().default(false),
   note: text("note"),
+  startReminderMinutes: integer("start_reminder_minutes"),
+  endReminderEnabled: boolean("end_reminder_enabled").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
