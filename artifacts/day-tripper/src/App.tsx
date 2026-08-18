@@ -46,6 +46,7 @@ import { useServerWakeState, type ServerWakeState } from '@/lib/server-wake';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import RetentionPage from '@/pages/retention';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import AdminPage from '@/pages/admin';
 
@@ -287,6 +288,10 @@ function Sidebar({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => void;
             <span>Today</span>
             <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
           </div>
+          <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-retention">
+            <Circle className="size-3.5 text-sidebar-primary" strokeWidth={1.8} />
+            <span>Practices</span>
+          </Link>
         </div>
         <div className="mt-14 px-3">
           <div className="mb-4 flex size-8 items-center justify-center rounded-full border border-sidebar-primary/35 bg-sidebar-primary/10 text-sidebar-primary">
@@ -390,6 +395,9 @@ function MobileHeader({
       </div>
       <div className="flex items-center gap-2">
         <ServerWakeStatus state={serverState} onWake={onWake} compact />
+        <Link href="/retention" aria-label="Open retention practices" title="Practices" data-testid="link-mobile-retention" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
+          <Circle className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+        </Link>
         <button type="button" onClick={onOpenPlanning} aria-label="Shape the day with a suggestion" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </button>
@@ -1800,6 +1808,7 @@ function Router() {
       <Switch>
         <Route path="/" component={HomeRedirect} />
         <Route path="/today" component={UserPortal} />
+        <Route path="/retention/:id?" component={RetentionPage} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />

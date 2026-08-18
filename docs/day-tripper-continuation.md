@@ -83,6 +83,12 @@ Browser connectivity events still support genuine offline queuing, but a
 successful server response is treated as stronger evidence that the app is
 reachable.
 
+The retention page was initially present in source but not connected to the
+main app router or Today navigation. It is now registered at `/retention/:id?`
+and linked from the desktop sidebar and mobile header. Signed-out visitors
+correctly return to the public landing page; authenticated users can open and
+test the feature.
+
 ## Next safe action
 
 Run the targeted checks and restart the relevant workflows, then exercise one
