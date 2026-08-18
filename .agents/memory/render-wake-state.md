@@ -7,4 +7,4 @@ Treat a sleeping server as a client-visible lifecycle state, not as a generic ne
 
 **Why:** A continuous health poll would keep a Render free-tier service awake and defeat the behavior the UI is meant to explain. The server also cannot report that it is asleep while it is unreachable.
 
-**How to apply:** Track successful API contact in the shared client, avoid background polling, show a user-triggered wake control, and keep any failed/queued action available for an explicit “Wake & continue” retry.
+**How to apply:** Track successful API contact in the shared client, avoid background polling, use at most one bounded retry for transient requests, show a user-triggered wake control, and keep any failed/queued action available for an explicit “Wake & continue” retry.

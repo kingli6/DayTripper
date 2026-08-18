@@ -49,7 +49,33 @@ import NotFound from '@/pages/not-found';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import AdminPage from '@/pages/admin';
 
-const queryClient = new QueryClient();
+function errorStatus(error: unknown): number | null {
+  if (!error || typeof error !== 'object' || !('status' in error)) return null;
+  const status = (error as { status?: unknown }).status;
+  return typeof status === 'number' ? status : null;
+}
+
+function shouldRetryQuery(failureCount: number, error: unknown) {
+  if (failureCount >= 1) return false;
+  const status = errorStatus(error);
+  if (status === null) return true;
+  return status === 408 || status === 425 || status === 429 || status >= 500;
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // A single short retry can recover a transient cold start without
+      // repeatedly hammering a failing API in the background.
+      retry: shouldRetryQuery,
+      retryDelay: (attemptIndex) => Math.min(750 * (attemptIndex + 1), 1500),
+      // The app has explicit wake/retry controls and offline sync. Avoid
+      // surprise requests when the tab regains focus or connectivity.
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    },
+  },
+});
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
 const clerkPubKey = publishableKeyFromHost(
   window.location.hostname,
