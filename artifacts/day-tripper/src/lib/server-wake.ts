@@ -19,7 +19,11 @@ function canReachNetwork() {
 }
 
 function isLikelyWakeFailure(status?: number) {
-  return status === undefined || status === 408 || status === 425 || status === 429 || status >= 500;
+  // An undefined status means the request never received an HTTP response and
+  // may indicate a sleeping/unreachable Render service. Any HTTP status,
+  // including 5xx, proves the service was reached and should remain an
+  // explicit server error rather than being presented as offline/sleeping.
+  return status === undefined;
 }
 
 export function useServerWakeState() {
@@ -40,6 +44,8 @@ export function useServerWakeState() {
 
       if (isLikelyWakeFailure(event.status)) {
         setState(canReachNetwork() ? 'sleeping' : 'offline');
+      } else if (event.status && event.status >= 500) {
+        setState('error');
       }
     });
 

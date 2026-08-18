@@ -249,7 +249,10 @@ function isConnectionError(error: unknown): boolean {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
   const status = errorStatus(error);
   if (status !== null) {
-    return status === 408 || status === 425 || status === 429 || status >= 500;
+    // An HTTP 5xx response proves that the request reached the API. Keep
+    // server failures visible as errors instead of turning them into an
+    // offline queue, which would hide production database/service failures.
+    return status === 408 || status === 425 || status === 429;
   }
   if (error && typeof error === 'object' && 'name' in error) {
     return (error as { name?: unknown }).name === 'ResponseParseError';

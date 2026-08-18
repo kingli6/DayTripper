@@ -1,6 +1,6 @@
 # Day Tripper Continuation Checkpoint
 
-Last reviewed: 2026-08-18
+Last reviewed: 2026-08-19
 
 This is the canonical handoff file for continuing Day Tripper across sessions or
 when the available conversation context is nearly exhausted. It is intentionally
@@ -34,11 +34,12 @@ context. Do not wait for a reminder.
 
 ## Current checkpoint
 
-**Active work:** Retention MVP.
+**Active work:** Retention MVP production verification.
 
-**Status:** Source and local runtime verification are complete; authenticated
-runtime verification is the next boundary because the available preview session
-is signed out.
+**Status:** Source and local runtime verification are complete. The deployed
+authenticated retention flow is blocked by an HTTP 500 from Render after the
+request reaches the private API; the external Supabase schema and Render logs
+are not accessible from this Replit workspace.
 
 **Approved product boundary:**
 
@@ -76,18 +77,29 @@ is signed out.
 - Fresh API and web workflows start cleanly; health returns 200.
 - Signed-out retention access returns 401 without private data.
 - Signed-out landing page renders successfully without application errors.
+- Live Render health returns 200 and signed-out retention access returns 401.
+- HTTP 5xx responses are no longer classified as browser offline state or
+  queued offline writes; they remain visible server errors.
+- The web workflow restarted cleanly after the client fix; browser preview has
+  no new application errors; full workspace typecheck and build pass.
 
 ## Not yet verified for this checkpoint
 
 - Authenticated create, edit, delete, and observation flows with real data.
 - Chart behavior after a new personal high and after changing retention speed.
-- Production Supabase schema and deployed retention behavior.
+- Production Supabase retention tables/columns and deployed authenticated
+  retention behavior. The user-reported authenticated create/list requests
+  currently return HTTP 500.
 - Whether the retention calculation should be extracted from the chart into the
   dedicated model module requested in the approved architecture.
 
 ## Next safe action
 
-The local verification boundary is complete. The next safe action is to exercise
+Inspect the Render service logs and compare the external Supabase schema with
+`lib/db/drizzle/0008_optimal_wallop.sql` and `lib/db/src/schema/retention.ts`.
+Apply the additive retention schema through the external production database
+process if it is missing, without changing the local Replit `DATABASE_URL`,
+adding startup migrations, or replacing the external database. Then exercise
 one authenticated practice end to end:
 
 1. Verify create, edit, delete, record observation, and refresh persistence.
