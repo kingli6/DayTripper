@@ -4,27 +4,37 @@ Day Tripper is a private, forgiving day planner that helps people see what matte
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm --filter @workspace/day-tripper run dev` — run the responsive web shell
+- `pnpm --filter @workspace/api-server run dev` — run the Express API server (port 8080 locally, routed through `/api`)
+- `pnpm --filter @workspace/day-tripper run dev` — run the React/Vite web shell (port 25445 locally, served at `/`)
+- `pnpm --filter @workspace/mockup-sandbox run dev` — run the component preview server (port 8081 locally, served at `/__mockup`)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run generate` — generate Drizzle migration files from the schema
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required server-managed env: `DATABASE_URL` — Postgres connection string
-- Required server-only secret: `GEMINI_API_KEY` — Gemini access; never sent to clients
-- Required server-only secret: `SESSION_SECRET` — session signing material
+- Required server configuration: `DATABASE_URL`, `CLERK_SECRET_KEY`, `GEMINI_API_KEY`, and `SESSION_SECRET`
+- Required browser build variable: `VITE_CLERK_PUBLISHABLE_KEY`
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - API: Express 5
-- DB: PostgreSQL + Drizzle ORM
+- DB: PostgreSQL hosted by Supabase for the live Render deployment; Drizzle ORM owns the schema
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
 - Build: esbuild (CJS bundle)
 - Frontend: React + Vite + Tailwind CSS, served as a PWA-ready web shell
+- Authentication: external Clerk; Supabase is the database provider, not the authentication provider
 - AI: direct server-side Gemini configuration using `GEMINI_API_KEY`
+- Production hosting: Render runs the production Node service and connects it to Supabase
+
+## Stack reminder
+
+- Local development runs through the Replit-managed pnpm workflows; production runs on Render.
+- Replit's local `DATABASE_URL` is for development. Render's `DATABASE_URL` points to the external Supabase PostgreSQL database.
+- Clerk owns sign-in and user identity. The API enforces private-record ownership server-side.
+- Gemini is called only by the API; the browser never receives `GEMINI_API_KEY`.
+- Replit workflows and the Render deployment are separate environments. A schema change must be applied to the database used by the host running the new API before release.
 
 ## Where things live
 
@@ -55,6 +65,7 @@ The first section establishes the Day Tripper shell and the service foundation. 
 - Run API codegen after changing `lib/api-spec/openapi.yaml`.
 - Run database schema generation or push after changing `lib/db/src/schema/`.
 - Keep `GEMINI_API_KEY` server-side only.
+- Do not replace Replit's runtime-managed `DATABASE_URL` with the production Supabase URL.
 
 ## Pointers
 
