@@ -90,6 +90,7 @@ Thumbs.db
 # These files are useful inside Replit while building, but do not belong in GitHub.
 /attached_assets/
 
-# Local project progress notes
+# Local project progress notes. Keep the canonical continuation checkpoint
+# tracked; it is the cross-session handoff.
 /docs/day-tripper-build-status.md
 /docs/day-tripper-idea-log.md

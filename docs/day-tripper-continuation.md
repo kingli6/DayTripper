@@ -34,8 +34,7 @@ context. Do not wait for a reminder.
 
 ## Current checkpoint
 
-**Active work:** Retention MVP, previously called the Decay Clock refinement
-gate.
+**Active work:** Retention MVP.
 
 **Status:** Source and local runtime verification are complete; authenticated
 runtime verification is the next boundary because the available preview session
@@ -86,21 +85,6 @@ is signed out.
 - Whether the retention calculation should be extracted from the chart into the
   dedicated model module requested in the approved architecture.
 
-## Recent reliability fix
-
-The offline activity banner now recovers when any real API request succeeds.
-This matters because `navigator.onLine` can report a stale offline state inside
-the preview iframe even while authenticated journal requests are succeeding.
-Browser connectivity events still support genuine offline queuing, but a
-successful server response is treated as stronger evidence that the app is
-reachable.
-
-The retention page was initially present in source but not connected to the
-main app router or Today navigation. It is now registered at `/retention/:id?`
-and linked from the desktop sidebar and mobile header. Signed-out visitors
-correctly return to the public landing page; authenticated users can open and
-test the feature.
-
 ## Next safe action
 
 The local verification boundary is complete. The next safe action is to exercise
@@ -118,11 +102,3 @@ one authenticated practice end to end:
 Do not begin lower-is-better measures, state awareness, reflection, operations
 metrics, notifications, automatic calibration, or broader AI expansion until
 this MVP has been verified and the next product decision is explicit.
-
-## Older handoff reconciliation
-
-The attached continuation excerpt described the end of the contract/database
-and route chunks as if the UI work were still pending. The current revision
-contains the routes and retention UI, so that excerpt is historical and must
-not be used as the next instruction. The next instruction is verification,
-not reimplementation.
