@@ -86,6 +86,10 @@ Thumbs.db
 .cache/
 .local/
 
+# Pasted context assets
+# These files are useful inside Replit while building, but do not belong in GitHub.
+/attached_assets/
+
 # Local project progress notes
 /docs/day-tripper-build-status.md
 /docs/day-tripper-idea-log.md
