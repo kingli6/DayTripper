@@ -59,6 +59,7 @@ The first section establishes the Day Tripper shell and the service foundation. 
 - Build one section at a time and stop for approval after each section.
 - AI proposes changes; it must never silently alter a user's schedule.
 - Do not use streaks, productivity scores, shame-based notifications, or ideal lifestyle targets.
+- Keep `docs/day-tripper-idea-log.md` updated after each approved product decision, implementation milestone, and verification result so progress and unfinished work remain visible.
 
 ## Gotchas
 
