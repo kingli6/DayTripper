@@ -403,6 +403,11 @@ export async function customFetch<T = unknown>(
       ...init,
       method,
       headers,
+      // Keep Clerk's session cookie attached to protected API calls. The
+      // browser's default is only `same-origin`, which is easy to lose when
+      // the app/API are served through different preview or deployment
+      // origins.
+      credentials: init.credentials ?? "include",
       cache: init.cache ?? "no-store",
     });
 
