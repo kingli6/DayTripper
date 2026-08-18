@@ -82,6 +82,7 @@ export function PlanningDiscussion({
   const [error, setError] = useState('');
   const replyRef = useRef<HTMLTextAreaElement>(null);
   const startedRef = useRef(false);
+  const lastRequestMessagesRef = useRef<PlanningDiscussionMessage[]>([]);
 
   const context = {
     currentDate,
@@ -97,7 +98,9 @@ export function PlanningDiscussion({
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    createReply.mutate({ data: { ...context, messages: [] } }, {
+    const requestMessages: PlanningDiscussionMessage[] = [];
+    lastRequestMessagesRef.current = requestMessages;
+    createReply.mutate({ data: { ...context, messages: requestMessages } }, {
       onSuccess: (result) => {
         setMessages([{ role: 'assistant', content: result.message }]);
         setError('');
@@ -116,6 +119,7 @@ export function PlanningDiscussion({
     const nextMessages: PlanningDiscussionMessage[] = [...messages, { role: 'user', content }];
     setReply('');
     setError('');
+    lastRequestMessagesRef.current = nextMessages;
     createReply.mutate({ data: { ...context, messages: nextMessages } }, {
       onSuccess: (result) => {
         setMessages([...nextMessages, { role: 'assistant', content: result.message }]);
@@ -130,8 +134,9 @@ export function PlanningDiscussion({
 
   function retryOpening() {
     setError('');
-    createReply.mutate({ data: { ...context, messages } }, {
-      onSuccess: (result) => setMessages((current) => [...current, { role: 'assistant', content: result.message }]),
+    const requestMessages = lastRequestMessagesRef.current;
+    createReply.mutate({ data: { ...context, messages: requestMessages } }, {
+      onSuccess: (result) => setMessages([...requestMessages, { role: 'assistant', content: result.message }]),
       onError: (requestError) => setError(errorMessage(requestError)),
     });
   }
