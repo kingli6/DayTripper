@@ -72,6 +72,29 @@ paths:
           description: The planning provider returned an invalid proposal
         "503":
           description: Planning service is unavailable
+  /planning/discussion:
+    post:
+      operationId: createPlanningDiscussionReply
+      tags: [planning]
+      summary: Continue a private planning conversation
+      description: Returns one bounded AI reply using only explicitly selected journal context without changing saved activities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlanningDiscussionRequest"
+      responses:
+        "200":
+          description: Planning conversation reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlanningDiscussionResponse"
+        "400":
+          description: Invalid planning conversation
+        "503":
+          description: Planning service is unavailable
   /planning/replan-proposals:
     post:
       operationId: createReplanningProposal
@@ -459,10 +482,84 @@ components:
           maxItems: 20
           items:
             type: number
+        discussionMessages:
+          type: array
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/PlanningDiscussionMessage"
       required:
         - currentDate
         - currentTime
         - availableTime
+    PlanningDiscussionMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1200
+      required:
+        - role
+        - content
+    PlanningDiscussionRequest:
+      type: object
+      properties:
+        currentDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        intention:
+          type: ["string", "null"]
+          maxLength: 2000
+        currentTime:
+          type: string
+          pattern: '^\d{2}:\d{2}$'
+        availableTime:
+          type: array
+          maxItems: 12
+          items:
+            $ref: "#/components/schemas/PlanningTimeWindow"
+        planningStyle:
+          type: ["string", "null"]
+          enum: [lighter, balanced, fuller, null]
+        fixedCommitments:
+          type: ["string", "null"]
+          maxLength: 2000
+        includeJournalEntryIds:
+          type: array
+          maxItems: 20
+          items:
+            type: number
+        considerJournalEntryIds:
+          type: array
+          maxItems: 20
+          items:
+            type: number
+        messages:
+          type: array
+          maxItems: 8
+          items:
+            $ref: "#/components/schemas/PlanningDiscussionMessage"
+      required:
+        - currentDate
+        - currentTime
+        - availableTime
+        - messages
+    PlanningDiscussionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 1600
+        suggestedNextStep:
+          type: string
+          enum: [reply, proposal]
+      required:
+        - message
+        - suggestedNextStep
     PlanningTimeWindow:
       type: object
       properties:

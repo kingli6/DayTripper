@@ -34,10 +34,11 @@ import {
   useListActivities,
   useCreatePlanningProposal,
 } from '@workspace/api-client-react';
-import type { Activity, ActivityInput, PlanningProposal } from '@workspace/api-client-react';
+import type { Activity, ActivityInput, PlanningDiscussionMessage, PlanningProposal, PlanningRequest } from '@workspace/api-client-react';
 import { ChangeReviewPanel } from '@/components/change-review-panel';
 import { JournalPanel } from '@/components/journal-panel';
 import { JournalPlanningSelector } from '@/components/journal-planning-selector';
+import { PlanningDiscussion } from '@/components/planning-discussion';
 import { ReplanningStudio } from '@/components/replanning-studio';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { useOfflineActivitySync, type OfflineSyncStatus } from '@/lib/offline-activity';
@@ -719,7 +720,7 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   const createActivity = useCreateActivity();
   const queryClient = useQueryClient();
   const intentionRef = useRef<HTMLTextAreaElement>(null);
-  const [planningStage, setPlanningStage] = useState<'journal' | 'details'>('journal');
+  const [planningStage, setPlanningStage] = useState<'journal' | 'details' | 'discussion'>('journal');
   const [intention, setIntention] = useState('');
   const [currentTime, setCurrentTime] = useState(currentTimeValue());
   const [availableStart, setAvailableStart] = useState('09:00');
@@ -733,6 +734,7 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   const [accepting, setAccepting] = useState(false);
   const [includeJournalEntryIds, setIncludeJournalEntryIds] = useState<number[]>([]);
   const [considerJournalEntryIds, setConsiderJournalEntryIds] = useState<number[]>([]);
+  const [discussionMessages, setDiscussionMessages] = useState<PlanningDiscussionMessage[]>([]);
   const lockedActivities = activities.filter((activity) => activity.locked);
   const pending = createPlanningProposal.isPending;
 
@@ -742,19 +744,23 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
     return () => window.cancelAnimationFrame(frame);
   }, [planningStage]);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function validatePlanningDetails() {
     if (!/^\d{2}:\d{2}$/.test(currentTime) || !/^\d{2}:\d{2}$/.test(availableStart) || !/^\d{2}:\d{2}$/.test(availableEnd)) {
       setFormError('Choose valid times for the planning context.');
-      return;
+      return false;
     }
     if (minutesFromTime(availableEnd) <= minutesFromTime(availableStart)) {
       setFormError('The open-time window needs to end after it starts.');
-      return;
+      return false;
     }
+    return true;
+  }
 
+  async function startProposal(messages: PlanningDiscussionMessage[]) {
     setFormError('');
     setProposal(null);
+    setDiscussionMessages(messages);
+    setPlanningStage('details');
     try {
       const result = await createPlanningProposal.mutateAsync({
         data: {
@@ -766,7 +772,8 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
           fixedCommitments: fixedCommitments.trim() || null,
           includeJournalEntryIds: includeJournalEntryIds.length ? includeJournalEntryIds : undefined,
           considerJournalEntryIds: considerJournalEntryIds.length ? considerJournalEntryIds : undefined,
-        },
+          discussionMessages: messages,
+        } as unknown as PlanningRequest,
       });
       setProposal(result);
       setReviewItems(proposalReviewItems(result));
@@ -780,12 +787,21 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
     }
   }
 
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!validatePlanningDetails()) return;
+    setFormError('');
+    setDiscussionMessages([]);
+    setPlanningStage('discussion');
+  }
+
   function returnToIntention() {
     setProposal(null);
     setReviewItems([]);
     setReviewError('');
     setFormError('');
     setPlanningStage('details');
+    setDiscussionMessages([]);
     window.requestAnimationFrame(() => intentionRef.current?.focus());
   }
 
@@ -881,8 +897,8 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="flex items-center gap-2 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary"><Sparkles className="size-3.5" strokeWidth={1.8} /> AI Studio</p>
-            <h2 id="planning-studio-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">{proposal ? 'Look over the version.' : planningStage === 'journal' ? 'Choose what matters now.' : 'Shape a possible day.'}</h2>
-            <p id="planning-studio-description" className="mt-2 max-w-[550px] text-sm leading-6 text-muted-foreground">{proposal ? 'This is a proposal, not a silent rewrite. Adjust what you want, then explicitly add only the suggestions that feel right.' : planningStage === 'journal' ? 'A quiet handoff from the journal to planning. Private notes never enter this room, and nothing is turned into an activity.' : 'Add an optional intention, set the open time, and ask for one workable version. Your saved timeline stays untouched.'}</p>
+            <h2 id="planning-studio-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">{proposal ? 'Look over the version.' : planningStage === 'journal' ? 'Choose what matters now.' : planningStage === 'discussion' ? 'Stay with the important part.' : 'Shape a possible day.'}</h2>
+            <p id="planning-studio-description" className="mt-2 max-w-[550px] text-sm leading-6 text-muted-foreground">{proposal ? 'This is a proposal, not a silent rewrite. Adjust what you want, then explicitly add only the suggestions that feel right.' : planningStage === 'journal' ? 'A quiet handoff from the journal to planning. Private notes never enter this room, and nothing is turned into an activity.' : planningStage === 'discussion' ? 'A short, user-controlled conversation before a proposal. You decide when it has done enough.' : 'Add an optional intention, set the open time, and ask for one workable version. Your saved timeline stays untouched.'}</p>
           </div>
           <button type="button" onClick={onClose} disabled={pending || accepting} aria-label="Close AI Studio" data-testid="button-close-planning-studio" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
             <X className="size-4" strokeWidth={1.8} />
@@ -1046,6 +1062,19 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
               setFormError('');
               setPlanningStage('details');
             }}
+          />
+        ) : planningStage === 'discussion' ? (
+          <PlanningDiscussion
+            currentDate={date}
+            intention={intention.trim() || null}
+            currentTime={currentTime}
+            availableTime={[{ startTime: availableStart, endTime: availableEnd }]}
+            planningStyle={planningStyle}
+            fixedCommitments={fixedCommitments.trim() || null}
+            includeJournalEntryIds={includeJournalEntryIds.length ? includeJournalEntryIds : undefined}
+            considerJournalEntryIds={considerJournalEntryIds.length ? considerJournalEntryIds : undefined}
+            onBack={() => setPlanningStage('details')}
+            onStartProposal={(messages) => void startProposal(messages)}
           />
         ) : pending ? (
           <div className="mt-7 space-y-3" aria-label="Preparing a planning proposal" data-testid="status-planning-loading">

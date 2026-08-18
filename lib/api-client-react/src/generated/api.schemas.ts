@@ -35,6 +35,23 @@ export interface PlanningTimeWindow {
   endTime: string;
 }
 
+export type PlanningDiscussionMessageRole = typeof PlanningDiscussionMessageRole[keyof typeof PlanningDiscussionMessageRole];
+
+
+export const PlanningDiscussionMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface PlanningDiscussionMessage {
+  role: PlanningDiscussionMessageRole;
+  /**
+     * @minLength 1
+     * @maxLength 1200
+     */
+  content: string;
+}
+
 export interface PlanningRequest {
   /**
      * @minLength 1
@@ -58,6 +75,64 @@ export interface PlanningRequest {
   includeJournalEntryIds?: number[];
   /** @maxItems 20 */
   considerJournalEntryIds?: number[];
+  /** @maxItems 8 */
+  discussionMessages?: PlanningDiscussionMessage[];
+}
+
+/**
+ * @nullable
+ */
+export type PlanningDiscussionRequestPlanningStyle = typeof PlanningDiscussionRequestPlanningStyle[keyof typeof PlanningDiscussionRequestPlanningStyle] | null;
+
+
+export const PlanningDiscussionRequestPlanningStyle = {
+  lighter: 'lighter',
+  balanced: 'balanced',
+  fuller: 'fuller',
+} as const;
+
+export interface PlanningDiscussionRequest {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  currentDate: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  intention?: string | null;
+  /** @pattern ^\d{2}:\d{2}$ */
+  currentTime: string;
+  /** @maxItems 12 */
+  availableTime: PlanningTimeWindow[];
+  /** @nullable */
+  planningStyle?: PlanningDiscussionRequestPlanningStyle;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  fixedCommitments?: string | null;
+  /** @maxItems 20 */
+  includeJournalEntryIds?: number[];
+  /** @maxItems 20 */
+  considerJournalEntryIds?: number[];
+  /** @maxItems 8 */
+  messages: PlanningDiscussionMessage[];
+}
+
+export type PlanningDiscussionResponseSuggestedNextStep = typeof PlanningDiscussionResponseSuggestedNextStep[keyof typeof PlanningDiscussionResponseSuggestedNextStep];
+
+
+export const PlanningDiscussionResponseSuggestedNextStep = {
+  reply: 'reply',
+  proposal: 'proposal',
+} as const;
+
+export interface PlanningDiscussionResponse {
+  /**
+     * @minLength 1
+     * @maxLength 1600
+     */
+  message: string;
+  suggestedNextStep: PlanningDiscussionResponseSuggestedNextStep;
 }
 
 /**

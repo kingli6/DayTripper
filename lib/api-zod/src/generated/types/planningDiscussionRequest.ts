@@ -6,23 +6,23 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { PlanningDiscussionMessage } from './planningDiscussionMessage';
-import type { PlanningRequestPlanningStyle } from './planningRequestPlanningStyle';
+import type { PlanningDiscussionRequestPlanningStyle } from './planningDiscussionRequestPlanningStyle';
 import type { PlanningTimeWindow } from './planningTimeWindow';
 
-export interface PlanningRequest {
-  /**
-     * @minLength 1
-     * @maxLength 2000
-     */
-  intention?: string;
+export interface PlanningDiscussionRequest {
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   currentDate: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  intention?: string | null;
   /** @pattern ^\d{2}:\d{2}$ */
   currentTime: string;
   /** @maxItems 12 */
   availableTime: PlanningTimeWindow[];
   /** @nullable */
-  planningStyle?: PlanningRequestPlanningStyle;
+  planningStyle?: PlanningDiscussionRequestPlanningStyle;
   /**
      * @maxLength 2000
      * @nullable
@@ -33,5 +33,5 @@ export interface PlanningRequest {
   /** @maxItems 20 */
   considerJournalEntryIds?: number[];
   /** @maxItems 8 */
-  discussionMessages?: PlanningDiscussionMessage[];
+  messages: PlanningDiscussionMessage[];
 }

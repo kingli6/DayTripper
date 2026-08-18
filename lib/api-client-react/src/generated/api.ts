@@ -39,6 +39,8 @@ import type {
   ListActivityChangesParams,
   ListJournalEntriesParams,
   ListPlanningJournalCandidatesParams,
+  PlanningDiscussionRequest,
+  PlanningDiscussionResponse,
   PlanningProposal,
   PlanningRequest,
   ReplanningProposal,
@@ -298,6 +300,78 @@ export const useCreatePlanningProposal = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreatePlanningProposalMutationOptions(options));
+    }
+
+export const getCreatePlanningDiscussionReplyUrl = () => {
+
+
+
+
+  return `/api/planning/discussion`
+}
+
+/**
+ * Returns one bounded AI reply using only explicitly selected journal context without changing saved activities
+ * @summary Continue a private planning conversation
+ */
+export const createPlanningDiscussionReply = async (planningDiscussionRequest: PlanningDiscussionRequest, options?: Parameters<typeof customFetch>[1]): Promise<PlanningDiscussionResponse> => {
+
+  return customFetch<PlanningDiscussionResponse>(getCreatePlanningDiscussionReplyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(planningDiscussionRequest)
+  }
+);}
+
+
+
+
+
+export const getCreatePlanningDiscussionReplyMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningDiscussionReply>>, TError,{data: BodyType<PlanningDiscussionRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPlanningDiscussionReply>>, TError,{data: BodyType<PlanningDiscussionRequest>}, TContext> => {
+
+const mutationKey = ['createPlanningDiscussionReply'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPlanningDiscussionReply>>, {data: BodyType<PlanningDiscussionRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPlanningDiscussionReply(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePlanningDiscussionReplyMutationResult = NonNullable<Awaited<ReturnType<typeof createPlanningDiscussionReply>>>
+    export type CreatePlanningDiscussionReplyMutationBody = BodyType<PlanningDiscussionRequest>
+    export type CreatePlanningDiscussionReplyMutationError = ErrorType<void>
+
+    /**
+ * @summary Continue a private planning conversation
+ */
+export const useCreatePlanningDiscussionReply = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPlanningDiscussionReply>>, TError,{data: BodyType<PlanningDiscussionRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPlanningDiscussionReply>>,
+        TError,
+        {data: BodyType<PlanningDiscussionRequest>},
+        TContext
+      > => {
+      return useMutation(getCreatePlanningDiscussionReplyMutationOptions(options));
     }
 
 export const getCreateReplanningProposalUrl = () => {

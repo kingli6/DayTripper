@@ -6,11 +6,14 @@ import {
   ApplyReplanningProposalResponse,
   CreatePlanningProposalBody,
   CreatePlanningProposalResponse,
+  CreatePlanningDiscussionReplyBody,
+  CreatePlanningDiscussionReplyResponse,
   CreateReplanningProposalBody,
   CreateReplanningProposalResponse,
 } from "@workspace/api-zod";
 import type {
   ApplyReplanningProposalRequest,
+  PlanningDiscussionRequest as ApiPlanningDiscussionRequest,
   PlanningProposal,
   ReplanningProposal,
   ReplanningRequest,
@@ -32,7 +35,10 @@ type PlanningRequest = {
   fixedCommitments?: string | null;
   includeJournalEntryIds?: number[];
   considerJournalEntryIds?: number[];
+  discussionMessages?: Array<{ role: "user" | "assistant"; content: string }>;
 };
+
+type PlanningDiscussionRequest = ApiPlanningDiscussionRequest;
 
 type PlanningJournalEntry = {
   id: number;
@@ -326,6 +332,123 @@ function validatePlanningRequest(request: PlanningRequest): string | null {
   return null;
 }
 
+function validateDiscussionRequest(request: PlanningDiscussionRequest): string | null {
+  if (!isValidDate(request.currentDate) || !isValidTime(request.currentTime)) {
+    return "The planning date or current time is invalid.";
+  }
+
+  if (request.availableTime.some((window) => !hasValidRange(window.startTime, window.endTime))) {
+    return "Available time windows must have valid start and end times.";
+  }
+
+  for (let index = 0; index < request.availableTime.length; index += 1) {
+    for (let next = index + 1; next < request.availableTime.length; next += 1) {
+      if (hasOverlap(request.availableTime[index], request.availableTime[next])) {
+        return "Available time windows must not overlap.";
+      }
+    }
+  }
+
+  const includeIds = request.includeJournalEntryIds ?? [];
+  const considerIds = request.considerJournalEntryIds ?? [];
+  if (new Set(includeIds).size !== includeIds.length || new Set(considerIds).size !== considerIds.length) {
+    return "Choose each journal note only once.";
+  }
+  if (includeIds.some((id) => considerIds.includes(id))) {
+    return "A journal note cannot be both included and considered.";
+  }
+  if (!request.intention?.trim() && includeIds.length === 0 && considerIds.length === 0 && request.messages.length === 0) {
+    return "Add an intention or choose at least one journal note before starting the conversation.";
+  }
+
+  return null;
+}
+
+async function loadSelectedJournalNotes(
+  ownerId: string,
+  includeJournalEntryIds: number[] | undefined,
+  considerJournalEntryIds: number[] | undefined,
+) {
+  const includeIds = includeJournalEntryIds ?? [];
+  const considerIds = considerJournalEntryIds ?? [];
+  const journalEntryIds = [...new Set([...includeIds, ...considerIds])];
+  const journalEntries = journalEntryIds.length
+    ? await db
+      .select({
+        id: journalEntriesTable.id,
+        recordedDate: journalEntriesTable.recordedDate,
+        content: journalEntriesTable.content,
+        topic: journalEntriesTable.topic,
+        tags: journalEntriesTable.tags,
+        recordedAt: journalEntriesTable.recordedAt,
+      })
+      .from(journalEntriesTable)
+      .where(and(
+        eq(journalEntriesTable.ownerId, ownerId),
+        eq(journalEntriesTable.privacy, "planning"),
+        inArray(journalEntriesTable.id, journalEntryIds),
+      ))
+    : [];
+  const journalEntriesById = new Map(journalEntries.map((entry) => [entry.id, entry]));
+
+  return {
+    missing: journalEntryIds.some((id) => !journalEntriesById.has(id)),
+    include: includeIds.map((id) => journalEntriesById.get(id) as PlanningJournalEntry),
+    consider: considerIds.map((id) => journalEntriesById.get(id) as PlanningJournalEntry),
+  };
+}
+
+function buildPlanningDiscussionPrompt(
+  request: PlanningDiscussionRequest,
+  journalNotes: { include: PlanningJournalEntry[]; consider: PlanningJournalEntry[] },
+) {
+  return `You are Day Tripper's private planning conversation guide.
+
+Return JSON only in this exact shape:
+{
+  "message": "string",
+  "suggestedNextStep": "reply|proposal"
+}
+
+This is a short clarification conversation before a schedule proposal. Do not create a schedule, propose time blocks, claim to have changed anything, or turn journal notes into activities.
+
+Conversation rules:
+- Use only the journal notes in the provided include and consider lists. Notes marked leave out are not provided and must not be inferred.
+- Included notes are required context; consider notes are optional context.
+- Use tags as gentle attention cues, not commands.
+- Ask at most one clear, compassionate question when the user's intention or boundaries are unclear.
+- If the context is sufficient, briefly reflect what seems important and set suggestedNextStep to "proposal".
+- If the user has answered the important question, do not keep the conversation going just to be conversational.
+- Keep the response under 100 words, plain text, and non-judgmental.
+
+Context:
+${JSON.stringify({
+  currentDate: request.currentDate,
+  currentTime: request.currentTime,
+  availableTime: request.availableTime,
+  intention: request.intention ?? null,
+  planningStyle: request.planningStyle ?? "balanced",
+  fixedCommitments: request.fixedCommitments ?? null,
+  journalNotes: {
+    include: journalNotes.include.map((entry) => ({
+      id: entry.id,
+      recordedDate: entry.recordedDate,
+      content: entry.content,
+      topic: entry.topic,
+      tags: entry.tags,
+    })),
+    consider: journalNotes.consider.map((entry) => ({
+      id: entry.id,
+      recordedDate: entry.recordedDate,
+      content: entry.content,
+      topic: entry.topic,
+      tags: entry.tags,
+    })),
+  },
+  messages: request.messages,
+}, null, 2)}`;
+}
+
 function buildPlanningPrompt(request: PlanningRequest, activities: Array<{
   title: string;
   scheduledDate: string;
@@ -425,6 +548,7 @@ ${JSON.stringify({
       recordedAt: entry.recordedAt.toISOString(),
     })),
   },
+  discussionMessages: request.discussionMessages ?? [],
 }, null, 2)}`;
 }
 
@@ -559,6 +683,102 @@ function validateProposalSemantics(
 }
 
 router.use(requireAuth);
+
+router.post("/planning/discussion", async (req, res): Promise<void> => {
+  const parsed = CreatePlanningDiscussionReplyBody.safeParse(req.body);
+
+  if (!parsed.success) {
+    req.log.warn({ errors: parsed.error.flatten() }, "Invalid planning discussion request");
+    res.status(400).json({ error: "Please check the conversation details." });
+    return;
+  }
+
+  const request = parsed.data as PlanningDiscussionRequest;
+  const requestError = validateDiscussionRequest(request);
+  if (requestError) {
+    res.status(400).json({ error: requestError });
+    return;
+  }
+
+  const selectedNotes = await loadSelectedJournalNotes(
+    res.locals.userId as string,
+    request.includeJournalEntryIds,
+    request.considerJournalEntryIds,
+  );
+
+  if (selectedNotes.missing) {
+    res.status(400).json({ error: "One of the selected journal notes is no longer available for planning." });
+    return;
+  }
+
+  if (!isGeminiConfigured()) {
+    req.log.warn("Planning discussion requested while Gemini is not configured");
+    res.status(503).json({ error: "The planning conversation is not available right now." });
+    return;
+  }
+
+  const config = getGeminiConfig();
+  let correction: string | null = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const prompt = buildPlanningDiscussionPrompt(request, selectedNotes)
+      + (correction
+        ? `\n\nCorrection required: the previous response was rejected because ${correction}. Return only the requested JSON shape.`
+        : "");
+
+    try {
+      const response = await fetch(`${config.baseUrl}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 1200,
+            temperature: 0.35,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        req.log.error({ status: response.status }, "Planning discussion provider request failed");
+        res.status(503).json({ error: "The planning conversation is not available right now." });
+        return;
+      }
+
+      const payload: unknown = await response.json();
+      const text = extractGeminiText(payload);
+      if (!text) {
+        correction = "the provider returned no conversation text";
+        continue;
+      }
+
+      let candidate: unknown;
+      try {
+        candidate = parseJsonText(text);
+      } catch {
+        correction = "the provider response was not valid JSON";
+        continue;
+      }
+
+      const reply = CreatePlanningDiscussionReplyResponse.safeParse(candidate);
+      if (!reply.success) {
+        correction = "the response did not match the required shape";
+        continue;
+      }
+
+      res.json(reply.data);
+      return;
+    } catch (error) {
+      req.log.error({ err: error }, "Planning discussion request failed");
+      res.status(503).json({ error: "The planning conversation is not available right now." });
+      return;
+    }
+  }
+
+  req.log.warn({ correction }, "Planning discussion provider returned an invalid response");
+  res.status(502).json({ error: "The planning conversation returned an invalid response." });
+});
 
 router.post("/planning/replan-proposals", async (req, res): Promise<void> => {
   const parsed = CreateReplanningProposalBody.safeParse(req.body);

@@ -47,6 +47,10 @@ export const createPlanningProposalBodyIncludeJournalEntryIdsMax = 20;
 
 export const createPlanningProposalBodyConsiderJournalEntryIdsMax = 20;
 
+export const createPlanningProposalBodyDiscussionMessagesItemContentMax = 1200;
+
+export const createPlanningProposalBodyDiscussionMessagesMax = 8;
+
 
 
 export const CreatePlanningProposalBody = zod.object({
@@ -60,7 +64,11 @@ export const CreatePlanningProposalBody = zod.object({
   "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish(),
   "fixedCommitments": zod.string().max(createPlanningProposalBodyFixedCommitmentsMax).nullish(),
   "includeJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyIncludeJournalEntryIdsMax).optional(),
-  "considerJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyConsiderJournalEntryIdsMax).optional()
+  "considerJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyConsiderJournalEntryIdsMax).optional(),
+  "discussionMessages": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string().min(1).max(createPlanningProposalBodyDiscussionMessagesItemContentMax)
+})).max(createPlanningProposalBodyDiscussionMessagesMax).optional()
 })
 
 export const createPlanningProposalResponseProposedActivitiesItemTitleMax = 200;
@@ -136,6 +144,58 @@ export const CreatePlanningProposalResponse = zod.object({
   "title": zod.string().min(1).max(createPlanningProposalResponseDidNotFitItemTitleMax),
   "reason": zod.string().min(1).max(createPlanningProposalResponseDidNotFitItemReasonMax)
 })).max(createPlanningProposalResponseDidNotFitMax)
+})
+
+
+/**
+ * Returns one bounded AI reply using only explicitly selected journal context without changing saved activities
+ * @summary Continue a private planning conversation
+ */
+export const createPlanningDiscussionReplyBodyCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createPlanningDiscussionReplyBodyIntentionMax = 2000;
+
+export const createPlanningDiscussionReplyBodyCurrentTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningDiscussionReplyBodyAvailableTimeItemStartTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningDiscussionReplyBodyAvailableTimeItemEndTimeRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const createPlanningDiscussionReplyBodyAvailableTimeMax = 12;
+
+export const createPlanningDiscussionReplyBodyFixedCommitmentsMax = 2000;
+
+export const createPlanningDiscussionReplyBodyIncludeJournalEntryIdsMax = 20;
+
+export const createPlanningDiscussionReplyBodyConsiderJournalEntryIdsMax = 20;
+
+export const createPlanningDiscussionReplyBodyMessagesItemContentMax = 1200;
+
+export const createPlanningDiscussionReplyBodyMessagesMax = 8;
+
+
+
+export const CreatePlanningDiscussionReplyBody = zod.object({
+  "currentDate": zod.string().regex(createPlanningDiscussionReplyBodyCurrentDateRegExp),
+  "intention": zod.string().max(createPlanningDiscussionReplyBodyIntentionMax).nullish(),
+  "currentTime": zod.string().regex(createPlanningDiscussionReplyBodyCurrentTimeRegExp),
+  "availableTime": zod.array(zod.object({
+  "startTime": zod.string().regex(createPlanningDiscussionReplyBodyAvailableTimeItemStartTimeRegExp),
+  "endTime": zod.string().regex(createPlanningDiscussionReplyBodyAvailableTimeItemEndTimeRegExp)
+})).max(createPlanningDiscussionReplyBodyAvailableTimeMax),
+  "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish(),
+  "fixedCommitments": zod.string().max(createPlanningDiscussionReplyBodyFixedCommitmentsMax).nullish(),
+  "includeJournalEntryIds": zod.array(zod.number()).max(createPlanningDiscussionReplyBodyIncludeJournalEntryIdsMax).optional(),
+  "considerJournalEntryIds": zod.array(zod.number()).max(createPlanningDiscussionReplyBodyConsiderJournalEntryIdsMax).optional(),
+  "messages": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string().min(1).max(createPlanningDiscussionReplyBodyMessagesItemContentMax)
+})).max(createPlanningDiscussionReplyBodyMessagesMax)
+})
+
+export const createPlanningDiscussionReplyResponseMessageMax = 1600;
+
+
+
+export const CreatePlanningDiscussionReplyResponse = zod.object({
+  "message": zod.string().min(1).max(createPlanningDiscussionReplyResponseMessageMax),
+  "suggestedNextStep": zod.enum(['reply', 'proposal'])
 })
 
 
