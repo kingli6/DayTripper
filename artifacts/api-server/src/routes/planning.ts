@@ -30,8 +30,6 @@ type PlanningRequest = {
   availableTime: Array<{ startTime: string; endTime: string }>;
   planningStyle?: "lighter" | "balanced" | "fuller" | null;
   fixedCommitments?: string | null;
-  useHistoricalContext?: boolean;
-  historicalContext?: string | null;
   includeJournalEntryIds?: number[];
   considerJournalEntryIds?: number[];
 };
@@ -313,10 +311,6 @@ function validatePlanningRequest(request: PlanningRequest): string | null {
     return "Add a short intention or choose at least one journal note to shape the plan.";
   }
 
-  if (request.useHistoricalContext && !request.historicalContext?.trim()) {
-    return "Historical context must be provided when it is enabled.";
-  }
-
   if (request.availableTime.some((window) => !hasValidRange(window.startTime, window.endTime))) {
     return "Available time windows must have valid start and end times.";
   }
@@ -342,10 +336,6 @@ function buildPlanningPrompt(request: PlanningRequest, activities: Array<{
   locked: boolean;
   note: string | null;
 }>, journalNotes: { include: PlanningJournalEntry[]; consider: PlanningJournalEntry[] }) {
-  const approvedHistoricalContext = request.useHistoricalContext
-    ? request.historicalContext ?? null
-    : null;
-
   return `You are Day Tripper's bounded planning engine.
 
 Return JSON only. The response must exactly match the requested proposal shape:
@@ -435,7 +425,6 @@ ${JSON.stringify({
       recordedAt: entry.recordedAt.toISOString(),
     })),
   },
-  approvedHistoricalContext,
 }, null, 2)}`;
 }
 
@@ -969,7 +958,7 @@ router.post("/planning/proposals", async (req, res): Promise<void> => {
 
   const promptActivities = activities.map((activity) => ({
     ...activity,
-    note: request.useHistoricalContext ? activity.note : null,
+    note: null,
   }));
 
   const includeJournalEntryIds = request.includeJournalEntryIds ?? [];

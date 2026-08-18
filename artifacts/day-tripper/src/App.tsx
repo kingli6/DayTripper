@@ -726,8 +726,6 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   const [availableEnd, setAvailableEnd] = useState('17:00');
   const [planningStyle, setPlanningStyle] = useState<'lighter' | 'balanced' | 'fuller'>('balanced');
   const [fixedCommitments, setFixedCommitments] = useState('');
-  const [useHistoricalContext, setUseHistoricalContext] = useState(false);
-  const [historicalContext, setHistoricalContext] = useState('');
   const [proposal, setProposal] = useState<PlanningProposal | null>(null);
   const [reviewItems, setReviewItems] = useState<ProposalReviewItem[]>([]);
   const [formError, setFormError] = useState('');
@@ -766,8 +764,6 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
           availableTime: [{ startTime: availableStart, endTime: availableEnd }],
           planningStyle,
           fixedCommitments: fixedCommitments.trim() || null,
-          useHistoricalContext,
-          historicalContext: useHistoricalContext ? historicalContext.trim() || null : null,
           includeJournalEntryIds: includeJournalEntryIds.length ? includeJournalEntryIds : undefined,
           considerJournalEntryIds: considerJournalEntryIds.length ? considerJournalEntryIds : undefined,
         },
@@ -1112,15 +1108,6 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
                 </div>
               </div>
             </div>
-            <details className="rounded-[18px] border border-border/75 bg-card/55 p-4">
-              <summary className="cursor-pointer text-xs font-semibold text-foreground">Use previous notes for this proposal</summary>
-              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Only notes you explicitly include here will be sent as historical context.</p>
-              <label className="mt-3 flex items-center gap-2 text-xs text-foreground">
-                <input type="checkbox" checked={useHistoricalContext} onChange={(event) => setUseHistoricalContext(event.target.checked)} data-testid="checkbox-planning-history" className="size-4 accent-[hsl(var(--primary))]" />
-                Include approved context
-              </label>
-              {useHistoricalContext && <textarea value={historicalContext} onChange={(event) => setHistoricalContext(event.target.value)} placeholder="What should the planner know from a previous day?" rows={3} data-testid="input-planning-history" className="mt-3 w-full resize-none rounded-xl border border-input bg-background px-3 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />}
-            </details>
             {formError && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid="status-planning-error">{formError}</p>}
             <div className="flex flex-col-reverse gap-3 border-t border-border/65 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-[330px] text-[11px] leading-5 text-muted-foreground">Planning needs an internet connection. It creates a proposal only; your saved schedule will not change automatically.</p>

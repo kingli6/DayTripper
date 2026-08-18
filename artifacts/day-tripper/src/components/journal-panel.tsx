@@ -145,7 +145,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
   const [topic, setTopic] = useState('');
   const [tags, setTags] = useState('');
   const [activityId, setActivityId] = useState('');
-  const [privacy, setPrivacy] = useState<JournalPrivacy>('planning');
+  const [privacy, setPrivacy] = useState<JournalPrivacy>('private');
   const [filter, setFilter] = useState<JournalFilter>('all');
   const [formError, setFormError] = useState('');
   const [actionError, setActionError] = useState('');

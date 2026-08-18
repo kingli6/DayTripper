@@ -29,7 +29,7 @@ function serializeJournalEntry(
 
 function normalizeTags(tags: string[] | undefined): string[] {
   return [...new Set((tags ?? [])
-    .map((tag) => tag.trim().replace(/\s+/g, " "))
+    .map((tag) => tag.trim().replace(/\s+/g, " ").toLowerCase())
     .filter(Boolean))]
     .slice(0, 5);
 }
@@ -118,7 +118,7 @@ router.post("/journal-entries", async (req, res): Promise<void> => {
       activityId: parsed.data.activityId ?? null,
       topic: parsed.data.topic ?? null,
       tags: normalizeTags(parsed.data.tags),
-      privacy: parsed.data.privacy ?? "planning",
+      privacy: parsed.data.privacy ?? "private",
     })
     .returning();
 

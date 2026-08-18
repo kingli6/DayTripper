@@ -43,9 +43,6 @@ export const createPlanningProposalBodyAvailableTimeMax = 12;
 
 export const createPlanningProposalBodyFixedCommitmentsMax = 2000;
 
-export const createPlanningProposalBodyUseHistoricalContextDefault = false;
-export const createPlanningProposalBodyHistoricalContextMax = 4000;
-
 export const createPlanningProposalBodyIncludeJournalEntryIdsMax = 20;
 
 export const createPlanningProposalBodyConsiderJournalEntryIdsMax = 20;
@@ -62,8 +59,6 @@ export const CreatePlanningProposalBody = zod.object({
 })).max(createPlanningProposalBodyAvailableTimeMax),
   "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish(),
   "fixedCommitments": zod.string().max(createPlanningProposalBodyFixedCommitmentsMax).nullish(),
-  "useHistoricalContext": zod.boolean().default(createPlanningProposalBodyUseHistoricalContextDefault),
-  "historicalContext": zod.string().max(createPlanningProposalBodyHistoricalContextMax).nullish(),
   "includeJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyIncludeJournalEntryIdsMax).optional(),
   "considerJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyConsiderJournalEntryIdsMax).optional()
 })
@@ -547,7 +542,7 @@ export const createJournalEntryBodyTagsItemMax = 40;
 
 export const createJournalEntryBodyTagsMax = 5;
 
-export const createJournalEntryBodyPrivacyDefault = `planning`;
+export const createJournalEntryBodyPrivacyDefault = `private`;
 
 export const CreateJournalEntryBody = zod.object({
   "recordedDate": zod.string().regex(createJournalEntryBodyRecordedDateRegExp),

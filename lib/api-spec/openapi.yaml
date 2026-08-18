@@ -449,12 +449,6 @@ components:
         fixedCommitments:
           type: ["string", "null"]
           maxLength: 2000
-        useHistoricalContext:
-          type: boolean
-          default: false
-        historicalContext:
-          type: ["string", "null"]
-          maxLength: 4000
         includeJournalEntryIds:
           type: array
           maxItems: 20
@@ -1056,7 +1050,7 @@ components:
         privacy:
           type: string
           enum: [private, planning]
-          default: planning
+          default: private
       required:
         - recordedDate
         - content

@@ -27,12 +27,6 @@ export interface PlanningRequest {
      * @nullable
      */
   fixedCommitments?: string | null;
-  useHistoricalContext?: boolean;
-  /**
-     * @maxLength 4000
-     * @nullable
-     */
-  historicalContext?: string | null;
   /** @maxItems 20 */
   includeJournalEntryIds?: number[];
   /** @maxItems 20 */
