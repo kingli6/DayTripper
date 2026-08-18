@@ -24,6 +24,14 @@ the next safe action, not the whole product history.
    the relevant typecheck/build, workflow restart, logs, and user-visible flow
    have been verified.
 
+## Handoff maintenance rule
+
+This file is the canonical handoff for future Day Tripper sessions. The agent
+must update it after every meaningful product decision, implementation chunk,
+verification result, blocked boundary, or change in the next safe action. The
+user should be able to point a new session to this file without repeating prior
+context. Do not wait for a reminder.
+
 ## Current checkpoint
 
 **Active work:** Retention MVP, previously called the Decay Clock refinement

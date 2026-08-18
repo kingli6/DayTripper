@@ -60,6 +60,7 @@ The first section establishes the Day Tripper shell and the service foundation. 
 - AI proposes changes; it must never silently alter a user's schedule.
 - Do not use streaks, productivity scores, shame-based notifications, or ideal lifestyle targets.
 - Keep `docs/day-tripper-idea-log.md` updated after each approved product decision, implementation milestone, and verification result so progress and unfinished work remain visible.
+- Treat `docs/day-tripper-continuation.md` as the canonical handoff for future sessions. Update it after every meaningful decision, implementation chunk, verification result, blocked boundary, or change in the next safe action; do not wait for the user to remind the agent.
 
 ## Gotchas
 
