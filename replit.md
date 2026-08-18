@@ -71,3 +71,5 @@ The first section establishes the Day Tripper shell and the service foundation. 
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- Read `docs/day-tripper-continuation.md` first when resuming after a context or
+  session boundary. It is the canonical implementation handoff.

@@ -8,3 +8,4 @@
 - [External database deployment](external-database-deployment.md) — keep local Replit DATABASE_URL intact; set the external PostgreSQL URL as DATABASE_URL on the deployment host.
 - [Render wake state](render-wake-state.md) — infer cold starts from successful API contact and use explicit wake actions; continuous polling prevents the free tier from sleeping.
 - [Clerk API session cookies](clerk-api-session-cookies.md) — shared browser API calls should explicitly include credentials when app and API are proxied through artifact routes.
+- [Continuation checkpoints](continuation-checkpoints.md) — resume from a verified canonical handoff, not from stale pasted transcripts or milestone notes.
