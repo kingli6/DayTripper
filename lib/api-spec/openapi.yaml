@@ -292,6 +292,31 @@ paths:
         "404":
           description: Linked activity not found
   /journal-entries/{id}:
+    patch:
+      operationId: updateJournalEntry
+      tags: [journal]
+      summary: Update journal entry visibility
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JournalEntryUpdate"
+      responses:
+        "200":
+          description: Journal entry updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+        "404":
+          description: Journal entry not found
     delete:
       operationId: deleteJournalEntry
       tags: [journal]
@@ -985,10 +1010,18 @@ components:
         privacy:
           type: string
           enum: [private, planning]
-          default: private
+          default: planning
       required:
         - recordedDate
         - content
+    JournalEntryUpdate:
+      type: object
+      properties:
+        privacy:
+          type: string
+          enum: [private, planning]
+      required:
+        - privacy
     AdminTableMetric:
       type: object
       properties:

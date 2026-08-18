@@ -573,6 +573,18 @@ export interface JournalEntryInput {
   privacy?: JournalEntryInputPrivacy;
 }
 
+export type JournalEntryUpdatePrivacy = typeof JournalEntryUpdatePrivacy[keyof typeof JournalEntryUpdatePrivacy];
+
+
+export const JournalEntryUpdatePrivacy = {
+  private: 'private',
+  planning: 'planning',
+} as const;
+
+export interface JournalEntryUpdate {
+  privacy: JournalEntryUpdatePrivacy;
+}
+
 export interface AdminTableMetric {
   tableName: string;
   rowCount: number;

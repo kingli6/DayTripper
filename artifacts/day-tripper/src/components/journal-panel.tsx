@@ -1,10 +1,12 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { useUser } from '@clerk/react';
 import { BookOpen, Check, Clipboard, Clock3, LockKeyhole, RotateCcw, Trash2, X } from 'lucide-react';
 import {
   getListJournalEntriesQueryKey,
   useCreateJournalEntry,
   useDeleteJournalEntry,
   useListJournalEntries,
+  useUpdateJournalEntry,
 } from '@workspace/api-client-react';
 import type { Activity, JournalEntry } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -52,6 +54,8 @@ function JournalEntryCard({
   onAskDelete,
   onCancelDelete,
   onDelete,
+  onTogglePrivacy,
+  updatingPrivacy,
 }: {
   entry: JournalEntry;
   activityTitle?: string;
@@ -62,6 +66,8 @@ function JournalEntryCard({
   onAskDelete: () => void;
   onCancelDelete: () => void;
   onDelete: () => void;
+  onTogglePrivacy: () => void;
+  updatingPrivacy: boolean;
 }) {
   const isPlanning = entry.privacy === 'planning';
 
@@ -72,9 +78,18 @@ function JournalEntryCard({
           <Clock3 className="size-3.5 shrink-0 text-primary" strokeWidth={1.8} />
           <time dateTime={entry.recordedAt} data-testid={`text-journal-recorded-at-${entry.id}`}>{journalTime(entry.recordedAt)}</time>
           <span aria-hidden="true" className="text-border">/</span>
-          <span className={isPlanning ? 'text-accent-foreground' : 'text-muted-foreground'} data-testid={`text-journal-privacy-${entry.id}`}>
-            {isPlanning ? 'Available for planning' : 'Private'}
-          </span>
+          <button
+            type="button"
+            onClick={onTogglePrivacy}
+            disabled={updatingPrivacy}
+            aria-label={isPlanning ? 'Make journal entry private' : 'Make journal entry available for planning'}
+            title={isPlanning ? 'Make private' : 'Make available for planning'}
+            data-testid={`button-toggle-journal-privacy-${entry.id}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] uppercase tracking-[0.1em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-60 ${isPlanning ? 'bg-accent/70 text-accent-foreground hover:bg-accent' : 'bg-secondary text-muted-foreground hover:text-foreground'}`}
+          >
+            {updatingPrivacy ? <RotateCcw className="size-3 animate-spin" strokeWidth={1.8} /> : isPlanning ? <BookOpen className="size-3" strokeWidth={1.8} /> : <LockKeyhole className="size-3" strokeWidth={1.8} />}
+            <span data-testid={`text-journal-privacy-${entry.id}`}>{isPlanning ? 'Available for planning' : 'Private'}</span>
+          </button>
         </div>
         {!confirmingDelete && (
           <div className="flex shrink-0 items-center gap-1">
@@ -119,20 +134,43 @@ function JournalEntryCard({
 }
 
 export function JournalPanel({ date, activities }: { date: string; activities: Activity[] }) {
+  const { user } = useUser();
   const queryClient = useQueryClient();
   const list = useListJournalEntries({ date }, { query: { queryKey: getListJournalEntriesQueryKey({ date }) } });
   const createJournalEntry = useCreateJournalEntry();
+  const updateJournalEntry = useUpdateJournalEntry();
   const deleteJournalEntry = useDeleteJournalEntry();
   const [content, setContent] = useState('');
   const [topic, setTopic] = useState('');
   const [activityId, setActivityId] = useState('');
-  const [privacy, setPrivacy] = useState<JournalPrivacy>('private');
+  const [privacy, setPrivacy] = useState<JournalPrivacy>('planning');
   const [filter, setFilter] = useState<JournalFilter>('all');
   const [formError, setFormError] = useState('');
   const [actionError, setActionError] = useState('');
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<number | null>(null);
   const entries = list.data ?? [];
+  const privacyStorageKey = user ? `day-tripper:journal-privacy:${user.id}` : null;
+
+  useEffect(() => {
+    if (!privacyStorageKey) return;
+    try {
+      const saved = window.localStorage.getItem(privacyStorageKey);
+      if (saved === 'private' || saved === 'planning') setPrivacy(saved);
+    } catch {
+      // The default remains available when local storage is unavailable.
+    }
+  }, [privacyStorageKey]);
+
+  function rememberPrivacy(value: JournalPrivacy) {
+    setPrivacy(value);
+    if (!privacyStorageKey) return;
+    try {
+      window.localStorage.setItem(privacyStorageKey, value);
+    } catch {
+      // The selected value still applies to the current entry.
+    }
+  }
 
   const visibleEntries = useMemo(
     () => entries.filter((entry) => filter === 'all' || entry.privacy === filter).sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)),
@@ -164,7 +202,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
       setContent('');
       setTopic('');
       setActivityId('');
-      setPrivacy('private');
+      rememberPrivacy(privacy);
     } catch {
       setFormError('That entry could not be saved. Check the connection and try again.');
     }
@@ -192,6 +230,21 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
     }
   }
 
+  async function togglePrivacy(entry: JournalEntry) {
+    const nextPrivacy: JournalPrivacy = entry.privacy === 'private' ? 'planning' : 'private';
+    setActionError('');
+    try {
+      await updateJournalEntry.mutateAsync({
+        id: entry.id,
+        data: { privacy: nextPrivacy },
+      });
+      await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({ date }) });
+      rememberPrivacy(nextPrivacy);
+    } catch {
+      setActionError('That entry’s visibility could not be changed. Check the connection and try again.');
+    }
+  }
+
   return (
     <section aria-labelledby="journal-title" className="rounded-[26px] border border-primary/20 bg-primary/[0.045] p-5 sm:p-7" data-testid="section-journal">
       <div className="flex flex-col gap-5 border-b border-primary/15 pb-6 sm:flex-row sm:items-end sm:justify-between">
@@ -202,7 +255,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
         </div>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground" data-testid="status-journal-count">
           <LockKeyhole className="size-3.5 text-primary" strokeWidth={1.8} />
-          <span>{entries.length} {entries.length === 1 ? 'entry' : 'entries'} · private by default</span>
+          <span>{entries.length} {entries.length === 1 ? 'entry' : 'entries'} · visibility is adjustable</span>
         </div>
       </div>
 
@@ -232,7 +285,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
           </div>
           <div>
             <label htmlFor="journal-privacy" className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Visibility</label>
-            <select id="journal-privacy" value={privacy} onChange={(event) => setPrivacy(event.target.value as JournalPrivacy)} data-testid="select-journal-privacy" className="mt-1.5 min-h-10 w-full rounded-lg border border-input bg-background px-2.5 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+           <select id="journal-privacy" value={privacy} onChange={(event) => rememberPrivacy(event.target.value as JournalPrivacy)} data-testid="select-journal-privacy" className="mt-1.5 min-h-10 w-full rounded-lg border border-input bg-background px-2.5 py-2 text-xs outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
               <option value="private">Private</option>
               <option value="planning">Available for planning</option>
             </select>
@@ -292,6 +345,8 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
             onAskDelete={() => setConfirmingDeleteId(entry.id)}
             onCancelDelete={() => setConfirmingDeleteId(null)}
             onDelete={() => void removeEntry(entry.id)}
+            onTogglePrivacy={() => void togglePrivacy(entry)}
+            updatingPrivacy={updateJournalEntry.isPending}
           />
         ))}
       </div>

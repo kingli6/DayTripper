@@ -7,6 +7,9 @@ import {
   DeleteJournalEntryParams,
   ListJournalEntriesQueryParams,
   ListJournalEntriesResponse,
+  UpdateJournalEntryBody,
+  UpdateJournalEntryParams,
+  UpdateJournalEntryResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -81,13 +84,48 @@ router.post("/journal-entries", async (req, res): Promise<void> => {
       content: parsed.data.content,
       activityId: parsed.data.activityId ?? null,
       topic: parsed.data.topic ?? null,
-      privacy: parsed.data.privacy ?? "private",
+      privacy: parsed.data.privacy ?? "planning",
     })
     .returning();
 
   res
     .status(201)
     .json(CreateJournalEntryResponse.parse(serializeJournalEntry(entry)));
+});
+
+router.patch("/journal-entries/:id", async (req, res): Promise<void> => {
+  const params = UpdateJournalEntryParams.safeParse(req.params);
+
+  if (!params.success) {
+    res.status(400).json({ error: "A valid journal entry is required." });
+    return;
+  }
+
+  const parsed = UpdateJournalEntryBody.safeParse(req.body);
+
+  if (!parsed.success) {
+    req.log.warn({ errors: parsed.error.flatten() }, "Invalid journal entry update");
+    res.status(400).json({ error: "Choose a valid journal visibility." });
+    return;
+  }
+
+  const [entry] = await db
+    .update(journalEntriesTable)
+    .set({ privacy: parsed.data.privacy })
+    .where(
+      and(
+        eq(journalEntriesTable.id, params.data.id),
+        eq(journalEntriesTable.ownerId, res.locals.userId as string),
+      ),
+    )
+    .returning();
+
+  if (!entry) {
+    res.status(404).json({ error: "Journal entry not found." });
+    return;
+  }
+
+  res.json(UpdateJournalEntryResponse.parse(serializeJournalEntry(entry)));
 });
 
 router.delete("/journal-entries/:id", async (req, res): Promise<void> => {

@@ -240,7 +240,7 @@ function BrandMark() {
   );
 }
 
-function Sidebar({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning: () => void }) {
+function Sidebar({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => void; onOpenPlanning: () => void; onQuickJournal: () => void }) {
   return (
     <aside className="hidden w-[264px] shrink-0 flex-col justify-between bg-sidebar px-5 py-6 text-sidebar-foreground lg:flex">
       <div>
@@ -272,6 +272,10 @@ function Sidebar({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning:
           <Plus className="size-4" strokeWidth={2.2} />
           Add to the day
         </button>
+        <button type="button" onClick={onQuickJournal} data-testid="button-sidebar-quick-journal" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-primary/35 px-3 py-3 text-sm font-semibold text-sidebar-foreground transition-colors hover:border-sidebar-primary/70 hover:bg-sidebar-accent">
+          <BookOpen className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+          Quick note
+        </button>
         <button type="button" onClick={onOpenPlanning} data-testid="button-sidebar-planning" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-primary/35 px-3 py-3 text-sm font-semibold text-sidebar-foreground transition-colors hover:border-sidebar-primary/70 hover:bg-sidebar-accent">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
           Shape the day
@@ -288,7 +292,7 @@ function Sidebar({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning:
   );
 }
 
-function MobileHeader({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning: () => void }) {
+function MobileHeader({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => void; onOpenPlanning: () => void; onQuickJournal: () => void }) {
   return (
     <header className="flex items-center justify-between border-b border-border/70 bg-sidebar px-5 py-4 text-sidebar-foreground lg:hidden">
       <div className="flex items-center gap-3">
@@ -298,6 +302,9 @@ function MobileHeader({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlan
       <div className="flex items-center gap-2">
         <button type="button" onClick={onOpenPlanning} aria-label="Shape the day with a suggestion" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+        </button>
+        <button type="button" onClick={onQuickJournal} aria-label="Write a quick journal note" data-testid="button-mobile-quick-journal" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
+          <BookOpen className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </button>
         <button type="button" onClick={onAdd} aria-label="Add an activity" data-testid="button-mobile-add" className="flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
           <Plus className="size-5" strokeWidth={2} />
@@ -1371,6 +1378,14 @@ function Today() {
   const timelineLoading = list.isLoading && !hasCachedDay;
   const timelineUnavailable = !list.data && !hasCachedDay && (!offline.isOnline || list.isError);
 
+  function openQuickJournal() {
+    setJournalOpen(true);
+    window.setTimeout(() => {
+      document.querySelector<HTMLElement>('[data-testid="section-journal"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('journal-content')?.focus();
+    }, 50);
+  }
+
   useEffect(() => {
     if (list.data) offline.saveServerSnapshot(list.data);
   }, [list.data, offline.saveServerSnapshot]);
@@ -1479,9 +1494,9 @@ function Today() {
       <div className="pointer-events-none absolute -right-24 -top-28 size-[430px] rounded-full bg-accent/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-[-180px] left-[25%] size-[420px] rounded-full bg-secondary/35 blur-3xl" />
       <div className="relative flex min-h-[100dvh]">
-        <Sidebar onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} />
+        <Sidebar onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} onQuickJournal={openQuickJournal} />
         <div className="min-w-0 flex-1">
-          <MobileHeader onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} />
+          <MobileHeader onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} onQuickJournal={openQuickJournal} />
           <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
             <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
               <div className="flex items-center gap-2">
@@ -1579,7 +1594,7 @@ function Today() {
                    <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><BookOpen className="size-4" strokeWidth={1.8} /></span>
                    <div>
                      <p className="font-display text-[22px] leading-tight tracking-[-0.03em]">Keep a little record</p>
-                     <p className="mt-1 text-xs leading-5 text-muted-foreground">Capture what the timeline cannot. It stays private unless you choose planning context.</p>
+                      <p className="mt-1 text-xs leading-5 text-muted-foreground">Capture what the timeline cannot. Choose whether it stays private or informs planning.</p>
                    </div>
                  </div>
                  <button type="button" onClick={() => setJournalOpen((open) => !open)} aria-expanded={journalOpen} data-testid="button-open-journal" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-full border border-primary/30 bg-background px-4 py-2.5 text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">

@@ -32,6 +32,8 @@ export * from './journalEntry';
 export * from './journalEntryInput';
 export * from './journalEntryInputPrivacy';
 export * from './journalEntryPrivacy';
+export * from './journalEntryUpdate';
+export * from './journalEntryUpdatePrivacy';
 export * from './listActivitiesParams';
 export * from './listActivityChangesParams';
 export * from './listJournalEntriesParams';

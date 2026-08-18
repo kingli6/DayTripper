@@ -532,7 +532,7 @@ export const createJournalEntryBodyContentMax = 5000;
 
 export const createJournalEntryBodyTopicMax = 120;
 
-export const createJournalEntryBodyPrivacyDefault = `private`;
+export const createJournalEntryBodyPrivacyDefault = `planning`;
 
 export const CreateJournalEntryBody = zod.object({
   "recordedDate": zod.string().regex(createJournalEntryBodyRecordedDateRegExp),
@@ -548,6 +548,31 @@ export const createJournalEntryResponseRecordedDateRegExp = new RegExp('^\\d{4}-
 export const CreateJournalEntryResponse = zod.object({
   "id": zod.number(),
   "recordedDate": zod.string().regex(createJournalEntryResponseRecordedDateRegExp),
+  "content": zod.string(),
+  "activityId": zod.number().nullable(),
+  "topic": zod.string().nullable(),
+  "privacy": zod.enum(['private', 'planning']),
+  "recordedAt": zod.string()
+})
+
+
+/**
+ * @summary Update journal entry visibility
+ */
+export const UpdateJournalEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateJournalEntryBody = zod.object({
+  "privacy": zod.enum(['private', 'planning'])
+})
+
+export const updateJournalEntryResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const UpdateJournalEntryResponse = zod.object({
+  "id": zod.number(),
+  "recordedDate": zod.string().regex(updateJournalEntryResponseRecordedDateRegExp),
   "content": zod.string(),
   "activityId": zod.number().nullable(),
   "topic": zod.string().nullable(),
