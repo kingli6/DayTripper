@@ -74,6 +74,15 @@ runtime verification is the next boundary.
 - Whether the retention calculation should be extracted from the chart into the
   dedicated model module requested in the approved architecture.
 
+## Recent reliability fix
+
+The offline activity banner now recovers when any real API request succeeds.
+This matters because `navigator.onLine` can report a stale offline state inside
+the preview iframe even while authenticated journal requests are succeeding.
+Browser connectivity events still support genuine offline queuing, but a
+successful server response is treated as stronger evidence that the app is
+reachable.
+
 ## Next safe action
 
 Run the targeted checks and restart the relevant workflows, then exercise one

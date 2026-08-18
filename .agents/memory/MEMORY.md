@@ -9,3 +9,4 @@
 - [Render wake state](render-wake-state.md) — infer cold starts from successful API contact and use explicit wake actions; continuous polling prevents the free tier from sleeping.
 - [Clerk API session cookies](clerk-api-session-cookies.md) — shared browser API calls should explicitly include credentials when app and API are proxied through artifact routes.
 - [Continuation checkpoints](continuation-checkpoints.md) — resume from a verified canonical handoff, not from stale pasted transcripts or milestone notes.
+- [Offline status authority](offline-status-authority.md) — successful API contact should override stale navigator.onLine signals in the activity sync UI.

@@ -5,6 +5,7 @@ import {
   deleteActivity as deleteActivityRequest,
   healthCheck,
   listActivities,
+  subscribeApiLifecycle,
   updateActivity as updateActivityRequest,
 } from '@workspace/api-client-react';
 import type { Activity, ActivityInput, ActivityUpdate } from '@workspace/api-client-react';
@@ -324,6 +325,24 @@ export function useOfflineActivitySync({
       window.removeEventListener('online', handleOnline);
     };
   }, []);
+
+  useEffect(() => {
+    if (!canUseOffline) return;
+
+    // Browser connectivity can be stale or overly conservative inside a
+    // preview iframe. A successful authenticated API response is stronger
+    // evidence that the app can reach its server, so recover the activity
+    // connection state from real API contact as well.
+    return subscribeApiLifecycle((event) => {
+      if (event.type !== 'success') return;
+      setIsOnline(true);
+      setStatus((current) => (
+        current === 'offline' && stateRef.current.queue.length === 0
+          ? 'synced'
+          : current
+      ));
+    });
+  }, [canUseOffline]);
 
   const saveServerSnapshot = useCallback((activities: Activity[]) => {
     if (!canUseOffline || stateRef.current.queue.length > 0) return;
