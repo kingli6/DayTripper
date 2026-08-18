@@ -14,3 +14,14 @@ Before releasing features that add database fields, compare the external product
 **Why:** A hosted external database can retain an older table shape while the deployed API selects the new field, producing generic HTTP 500 responses in otherwise healthy routes.
 
 **How to apply:** Treat external production schema updates as a deliberate release step, apply additive changes before or with the code release, and verify the live API after the update.
+
+The client must also stop automatic offline-queue retries when an HTTP 5xx
+response proves the external API was reached. Otherwise an older or incomplete
+external schema can turn one database failure into a repeated PATCH storm.
+
+**Why:** The browser can otherwise misclassify a production schema failure as a
+transient connection problem and keep resubmitting the same mutation.
+
+**How to apply:** Keep HTTP 5xx responses in a terminal visible error state,
+and only resume queued writes after an explicit retry or a confirmed connection
+recovery.

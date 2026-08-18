@@ -34,12 +34,14 @@ context. Do not wait for a reminder.
 
 ## Current checkpoint
 
-**Active work:** Retention MVP production verification.
+**Active work:** Repairing the production release boundary and activity sync behavior.
 
-**Status:** Source and local runtime verification are complete. The deployed
-authenticated retention flow is blocked by an HTTP 500 from Render after the
-request reaches the private API; the external Supabase schema and Render logs
-are not accessible from this Replit workspace.
+**Status:** The local source and development database are healthy. A deployed
+Render request is returning HTTP 500 from the private activities API, and the
+browser is repeatedly retrying the same PATCH in the currently deployed build.
+The local client loop is fixed, but the fix still needs to be built and released
+through the GitHub → Render path. The external Supabase schema is separate from
+the Replit development database and has not been directly verified here.
 
 **Approved product boundary:**
 
@@ -82,6 +84,12 @@ are not accessible from this Replit workspace.
   queued offline writes; they remain visible server errors.
 - The web workflow restarted cleanly after the client fix; browser preview has
   no new application errors; full workspace typecheck and build pass.
+- Activity sync no longer re-enters its queue automatically when a server error
+  changes the sync status.
+- The server wake indicator now listens only to health-check responses, so a
+  feature/database error cannot make the global day-space status flicker.
+- The development database contains the retention tables and the activity
+  reminder columns from migration `0008_optimal_wallop`.
 
 ## Not yet verified for this checkpoint
 
@@ -95,19 +103,22 @@ are not accessible from this Replit workspace.
 
 ## Next safe action
 
-Inspect the Render service logs and compare the external Supabase schema with
-`lib/db/drizzle/0008_optimal_wallop.sql` and `lib/db/src/schema/retention.ts`.
-Apply the additive retention schema through the external production database
-process if it is missing, without changing the local Replit `DATABASE_URL`,
-adding startup migrations, or replacing the external database. Then exercise
-one authenticated practice end to end:
+Apply/verify the complete additive migration
+`lib/db/drizzle/0008_optimal_wallop.sql` against the Supabase database used by
+Render, including both retention tables and the two activity reminder columns.
+Do this through the Supabase/Render release process without changing the local
+Replit `DATABASE_URL`, adding startup migrations, or replacing the external
+database. Then build the current GitHub source and redeploy Render. Exercise one
+authenticated activity update and one retention flow end to end:
 
-1. Verify create, edit, delete, record observation, and refresh persistence.
-2. Verify that recorded values and estimated retention are clearly distinct.
-3. Verify that a higher observation becomes the new current reference.
-4. Verify that Slow → Fast changes the projection without changing recorded
+1. Verify activity GET/PATCH stops returning 500 and a failed PATCH no longer
+   repeats continuously.
+2. Verify create, edit, delete, record observation, and refresh persistence.
+3. Verify that recorded values and estimated retention are clearly distinct.
+4. Verify that a higher observation becomes the new current reference.
+5. Verify that Slow → Fast changes the projection without changing recorded
    observations.
-5. Record the authenticated result here before starting any new feature work.
+6. Record the authenticated result here before starting any new feature work.
 
 ## Do not start yet
 
