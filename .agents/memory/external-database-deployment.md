@@ -8,3 +8,9 @@ The app should keep using Replit's runtime-managed `DATABASE_URL` during local d
 **Why:** Replit reserves `DATABASE_URL` locally for its managed database, while the deployment host needs the same conventional variable name to start the existing Drizzle/Express app without a code rewrite. The current `pg` version can interpret Supabase `sslmode=require` as certificate verification and reject the pooler chain even when credentials are valid.
 
 **How to apply:** Use the hosting provider's encrypted environment-variable settings for the external URI. If testing Supabase from Replit is necessary, use a separate temporary secret and an explicit opt-in rather than making the running preview prefer it accidentally.
+
+Before releasing features that add database fields, compare the external production schema with the current Drizzle schema; Replit's managed publish flow does not migrate a separate Render/Supabase database.
+
+**Why:** A hosted external database can retain an older table shape while the deployed API selects the new field, producing generic HTTP 500 responses in otherwise healthy routes.
+
+**How to apply:** Treat external production schema updates as a deliberate release step, apply additive changes before or with the code release, and verify the live API after the update.
