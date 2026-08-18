@@ -35,7 +35,8 @@ runtime verification is the next boundary.
 **Approved product boundary:**
 
 - Multiple private, user-owned practices.
-- One numeric measure and custom unit per practice.
+- One numeric measure selected from a defined set of observable units per
+  practice: correct answers, repetitions, minutes, pages, words, or items.
 - Higher-is-better values only for the first version.
 - Manual observations with optional context.
 - Personal high and a new current projection when a higher observation is made.

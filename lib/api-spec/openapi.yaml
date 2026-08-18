@@ -1333,6 +1333,15 @@ components:
     RetentionSpeed:
       type: string
       enum: [slow, moderate, fast]
+    RetentionPracticeUnit:
+      type: string
+      enum:
+        - correct answers
+        - repetitions
+        - minutes
+        - pages
+        - words
+        - items
     RetentionPracticeDirection:
       type: string
       enum: [higher]
@@ -1344,7 +1353,7 @@ components:
         name:
           type: string
         unit:
-          type: string
+          $ref: "#/components/schemas/RetentionPracticeUnit"
         direction:
           $ref: "#/components/schemas/RetentionPracticeDirection"
         retentionSpeed:
@@ -1369,9 +1378,7 @@ components:
           minLength: 1
           maxLength: 120
         unit:
-          type: string
-          minLength: 1
-          maxLength: 40
+          $ref: "#/components/schemas/RetentionPracticeUnit"
         retentionSpeed:
           $ref: "#/components/schemas/RetentionSpeed"
           default: moderate
@@ -1386,9 +1393,7 @@ components:
           minLength: 1
           maxLength: 120
         unit:
-          type: string
-          minLength: 1
-          maxLength: 40
+          $ref: "#/components/schemas/RetentionPracticeUnit"
         retentionSpeed:
           $ref: "#/components/schemas/RetentionSpeed"
     RetentionObservation:

@@ -16,6 +16,15 @@ const speeds: Array<{ value: RetentionSpeed; label: string; description: string 
   { value: 'fast', label: 'Fast', description: 'A gentle refresh may help sooner.' },
 ];
 
+const units: Array<{ value: RetentionPracticeInput['unit']; label: string }> = [
+  { value: 'correct answers', label: 'Correct answers' },
+  { value: 'repetitions', label: 'Repetitions' },
+  { value: 'minutes', label: 'Minutes' },
+  { value: 'pages', label: 'Pages' },
+  { value: 'words', label: 'Words' },
+  { value: 'items', label: 'Items completed' },
+];
+
 export function RetentionPracticeForm({
   practice,
   pending,
@@ -24,21 +33,23 @@ export function RetentionPracticeForm({
   onSubmit,
 }: RetentionPracticeFormProps) {
   const [name, setName] = useState(practice?.name ?? '');
-  const [unit, setUnit] = useState(practice?.unit ?? '');
+  const [unit, setUnit] = useState<RetentionPracticeInput['unit']>(
+    (practice?.unit as RetentionPracticeInput['unit'] | undefined) ?? 'correct answers',
+  );
   const [retentionSpeed, setRetentionSpeed] = useState<RetentionSpeed>(
     practice?.retentionSpeed ?? 'moderate',
   );
 
   useEffect(() => {
     setName(practice?.name ?? '');
-    setUnit(practice?.unit ?? '');
+    setUnit((practice?.unit as RetentionPracticeInput['unit'] | undefined) ?? 'correct answers');
     setRetentionSpeed(practice?.retentionSpeed ?? 'moderate');
   }, [practice]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim() || !unit.trim()) return;
-    onSubmit({ name: name.trim(), unit: unit.trim(), retentionSpeed });
+    if (!name.trim()) return;
+    onSubmit({ name: name.trim(), unit, retentionSpeed });
   }
 
   return (
@@ -63,9 +74,11 @@ export function RetentionPracticeForm({
             <input id="practice-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={120} autoFocus placeholder="Reading in another language" data-testid="input-practice-name" className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/15" />
           </div>
           <div>
-            <label htmlFor="practice-unit" className="text-xs font-semibold text-foreground">How will you notice it?</label>
-            <input id="practice-unit" value={unit} onChange={(event) => setUnit(event.target.value)} maxLength={40} placeholder="minutes, pages, or words" data-testid="input-practice-unit" className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/15" />
-            <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Use one simple unit so each result can be understood beside the last.</p>
+            <label htmlFor="practice-unit" className="text-xs font-semibold text-foreground">What will you count?</label>
+            <select id="practice-unit" value={unit} onChange={(event) => setUnit(event.target.value as RetentionPracticeInput['unit'])} data-testid="input-practice-unit" className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+              {units.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Choose one simple, higher-is-better measure that you can observe yourself.</p>
           </div>
           <fieldset>
             <legend className="text-xs font-semibold text-foreground">How quickly does it fade without use?</legend>
@@ -82,7 +95,7 @@ export function RetentionPracticeForm({
           {error && <p className="rounded-xl border border-destructive/25 bg-destructive/[0.06] px-3 py-2.5 text-xs text-destructive" role="alert" data-testid="status-practice-form-error">{error}</p>}
           <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-5 sm:flex-row sm:justify-end">
             <button type="button" onClick={onClose} data-testid="button-cancel-practice" className="rounded-full border border-border px-5 py-2.5 text-xs font-semibold text-foreground hover:border-primary/40">Keep looking</button>
-            <button type="submit" disabled={pending || !name.trim() || !unit.trim()} data-testid="button-save-practice" className="rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-55">
+            <button type="submit" disabled={pending || !name.trim()} data-testid="button-save-practice" className="rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-55">
               {pending ? 'Saving…' : practice ? 'Save changes' : 'Keep this practice'}
             </button>
           </div>

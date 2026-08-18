@@ -70,5 +70,6 @@ export * from './retentionObservationInput';
 export * from './retentionPractice';
 export * from './retentionPracticeDirection';
 export * from './retentionPracticeInput';
+export * from './retentionPracticeUnit';
 export * from './retentionPracticeUpdate';
 export * from './retentionSpeed';

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { RetentionPracticeUnit } from './retentionPracticeUnit';
 import type { RetentionSpeed } from './retentionSpeed';
 
 export interface RetentionPracticeUpdate {
@@ -13,10 +14,6 @@ export interface RetentionPracticeUpdate {
      * @maxLength 120
      */
   name?: string;
-  /**
-     * @minLength 1
-     * @maxLength 40
-     */
-  unit?: string;
+  unit?: RetentionPracticeUnit;
   retentionSpeed?: RetentionSpeed;
 }

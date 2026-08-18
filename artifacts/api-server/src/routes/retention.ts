@@ -38,9 +38,13 @@ function serializePractice(practice: typeof retentionPracticesTable.$inferSelect
     unit: practice.unit,
     direction: "higher" as const,
     retentionSpeed: practice.retentionSpeed as "slow" | "moderate" | "fast",
-    createdAt: practice.createdAt.toISOString(),
-    updatedAt: practice.updatedAt.toISOString(),
+    createdAt: toIsoTimestamp(practice.createdAt),
+    updatedAt: toIsoTimestamp(practice.updatedAt),
   };
+}
+
+function toIsoTimestamp(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
 }
 
 function serializeObservation(
@@ -48,7 +52,7 @@ function serializeObservation(
 ) {
   return {
     ...observation,
-    createdAt: observation.createdAt.toISOString(),
+    createdAt: toIsoTimestamp(observation.createdAt),
   };
 }
 

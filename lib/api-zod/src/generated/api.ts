@@ -717,7 +717,7 @@ export const ListPlanningJournalCandidatesResponse = zod.array(ListPlanningJourn
 export const ListRetentionPracticesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "unit": zod.string(),
+  "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "direction": zod.enum(['higher']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
   "createdAt": zod.string(),
@@ -732,20 +732,18 @@ export const ListRetentionPracticesResponse = zod.array(ListRetentionPracticesRe
  */
 export const createRetentionPracticeBodyNameMax = 120;
 
-export const createRetentionPracticeBodyUnitMax = 40;
-
 export const createRetentionPracticeBodyRetentionSpeedDefault = `moderate`;
 
 export const CreateRetentionPracticeBody = zod.object({
   "name": zod.string().min(1).max(createRetentionPracticeBodyNameMax),
-  "unit": zod.string().min(1).max(createRetentionPracticeBodyUnitMax),
+  "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']).default(createRetentionPracticeBodyRetentionSpeedDefault)
 })
 
 export const CreateRetentionPracticeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "unit": zod.string(),
+  "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "direction": zod.enum(['higher']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
   "createdAt": zod.string(),
@@ -767,7 +765,7 @@ export const GetRetentionPracticeParams = zod.object({
 export const GetRetentionPracticeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "unit": zod.string(),
+  "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "direction": zod.enum(['higher']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
   "createdAt": zod.string(),
@@ -788,20 +786,18 @@ export const UpdateRetentionPracticeParams = zod.object({
 
 export const updateRetentionPracticeBodyNameMax = 120;
 
-export const updateRetentionPracticeBodyUnitMax = 40;
-
 
 
 export const UpdateRetentionPracticeBody = zod.object({
   "name": zod.string().min(1).max(updateRetentionPracticeBodyNameMax).optional(),
-  "unit": zod.string().min(1).max(updateRetentionPracticeBodyUnitMax).optional(),
+  "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']).optional(),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']).optional()
 })
 
 export const UpdateRetentionPracticeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
-  "unit": zod.string(),
+  "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "direction": zod.enum(['higher']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
   "createdAt": zod.string(),

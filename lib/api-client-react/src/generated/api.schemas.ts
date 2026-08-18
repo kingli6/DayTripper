@@ -685,6 +685,18 @@ export const RetentionSpeed = {
   fast: 'fast',
 } as const;
 
+export type RetentionPracticeUnit = typeof RetentionPracticeUnit[keyof typeof RetentionPracticeUnit];
+
+
+export const RetentionPracticeUnit = {
+  correct_answers: 'correct answers',
+  repetitions: 'repetitions',
+  minutes: 'minutes',
+  pages: 'pages',
+  words: 'words',
+  items: 'items',
+} as const;
+
 export type RetentionPracticeDirection = typeof RetentionPracticeDirection[keyof typeof RetentionPracticeDirection];
 
 
@@ -695,7 +707,7 @@ export const RetentionPracticeDirection = {
 export interface RetentionPractice {
   id: number;
   name: string;
-  unit: string;
+  unit: RetentionPracticeUnit;
   direction: RetentionPracticeDirection;
   retentionSpeed: RetentionSpeed;
   createdAt: string;
@@ -708,11 +720,7 @@ export interface RetentionPracticeInput {
      * @maxLength 120
      */
   name: string;
-  /**
-     * @minLength 1
-     * @maxLength 40
-     */
-  unit: string;
+  unit: RetentionPracticeUnit;
   retentionSpeed?: RetentionSpeed;
 }
 
@@ -722,11 +730,7 @@ export interface RetentionPracticeUpdate {
      * @maxLength 120
      */
   name?: string;
-  /**
-     * @minLength 1
-     * @maxLength 40
-     */
-  unit?: string;
+  unit?: RetentionPracticeUnit;
   retentionSpeed?: RetentionSpeed;
 }
 

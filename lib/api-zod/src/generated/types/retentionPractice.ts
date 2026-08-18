@@ -6,12 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { RetentionPracticeDirection } from './retentionPracticeDirection';
+import type { RetentionPracticeUnit } from './retentionPracticeUnit';
 import type { RetentionSpeed } from './retentionSpeed';
 
 export interface RetentionPractice {
   id: number;
   name: string;
-  unit: string;
+  unit: RetentionPracticeUnit;
   direction: RetentionPracticeDirection;
   retentionSpeed: RetentionSpeed;
   createdAt: string;
