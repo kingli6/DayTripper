@@ -676,6 +676,84 @@ export interface JournalEntryUpdate {
   tags?: string[];
 }
 
+export type RetentionSpeed = typeof RetentionSpeed[keyof typeof RetentionSpeed];
+
+
+export const RetentionSpeed = {
+  slow: 'slow',
+  moderate: 'moderate',
+  fast: 'fast',
+} as const;
+
+export type RetentionPracticeDirection = typeof RetentionPracticeDirection[keyof typeof RetentionPracticeDirection];
+
+
+export const RetentionPracticeDirection = {
+  higher: 'higher',
+} as const;
+
+export interface RetentionPractice {
+  id: number;
+  name: string;
+  unit: string;
+  direction: RetentionPracticeDirection;
+  retentionSpeed: RetentionSpeed;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RetentionPracticeInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name: string;
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  unit: string;
+  retentionSpeed?: RetentionSpeed;
+}
+
+export interface RetentionPracticeUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  name?: string;
+  /**
+     * @minLength 1
+     * @maxLength 40
+     */
+  unit?: string;
+  retentionSpeed?: RetentionSpeed;
+}
+
+export interface RetentionObservation {
+  id: number;
+  practiceId: number;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  recordedDate: string;
+  /** @minimum 0 */
+  value: number;
+  /** @nullable */
+  context: string | null;
+  createdAt: string;
+}
+
+export interface RetentionObservationInput {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  recordedDate: string;
+  /** @minimum 0 */
+  value: number;
+  /**
+     * @maxLength 500
+     * @nullable
+     */
+  context?: string | null;
+}
+
 export interface AdminTableMetric {
   tableName: string;
   rowCount: number;

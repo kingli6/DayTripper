@@ -6,6 +6,7 @@ import aiRouter from "./ai";
 import healthRouter from "./health";
 import journalEntriesRouter from "./journalEntries";
 import planningRouter from "./planning";
+import retentionRouter from "./retention";
 
 const router: IRouter = Router();
 
@@ -15,6 +16,7 @@ router.use(planningRouter);
 router.use(activitiesRouter);
 router.use(activityChangesRouter);
 router.use(journalEntriesRouter);
+router.use(retentionRouter);
 router.use(adminRouter);
 
 export default router;

@@ -44,7 +44,12 @@ import type {
   PlanningProposal,
   PlanningRequest,
   ReplanningProposal,
-  ReplanningRequest
+  ReplanningRequest,
+  RetentionObservation,
+  RetentionObservationInput,
+  RetentionPractice,
+  RetentionPracticeInput,
+  RetentionPracticeUpdate
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -1355,6 +1360,530 @@ export function useListPlanningJournalCandidates<TData = Awaited<ReturnType<type
 
 
 
+
+export const getListRetentionPracticesUrl = () => {
+
+
+
+
+  return `/api/retention/practices`
+}
+
+/**
+ * Returns practices owned by the authenticated user
+ * @summary List the user's retention practices
+ */
+export const listRetentionPractices = async ( options?: Parameters<typeof customFetch>[1]): Promise<RetentionPractice[]> => {
+
+  return customFetch<RetentionPractice[]>(getListRetentionPracticesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRetentionPracticesQueryKey = () => {
+    return [
+    `/api/retention/practices`
+    ] as const;
+    }
+
+
+export const getListRetentionPracticesQueryOptions = <TData = Awaited<ReturnType<typeof listRetentionPractices>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRetentionPractices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRetentionPracticesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRetentionPractices>>> = ({ signal }) => listRetentionPractices({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRetentionPractices>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRetentionPracticesQueryResult = NonNullable<Awaited<ReturnType<typeof listRetentionPractices>>>
+export type ListRetentionPracticesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the user's retention practices
+ */
+
+export function useListRetentionPractices<TData = Awaited<ReturnType<typeof listRetentionPractices>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRetentionPractices>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRetentionPracticesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateRetentionPracticeUrl = () => {
+
+
+
+
+  return `/api/retention/practices`
+}
+
+/**
+ * Creates a numeric higher-is-better practice for the authenticated user
+ * @summary Create a retention practice
+ */
+export const createRetentionPractice = async (retentionPracticeInput: RetentionPracticeInput, options?: Parameters<typeof customFetch>[1]): Promise<RetentionPractice> => {
+
+  return customFetch<RetentionPractice>(getCreateRetentionPracticeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(retentionPracticeInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRetentionPracticeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRetentionPractice>>, TError,{data: BodyType<RetentionPracticeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRetentionPractice>>, TError,{data: BodyType<RetentionPracticeInput>}, TContext> => {
+
+const mutationKey = ['createRetentionPractice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRetentionPractice>>, {data: BodyType<RetentionPracticeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createRetentionPractice(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRetentionPracticeMutationResult = NonNullable<Awaited<ReturnType<typeof createRetentionPractice>>>
+    export type CreateRetentionPracticeMutationBody = BodyType<RetentionPracticeInput>
+    export type CreateRetentionPracticeMutationError = ErrorType<void>
+
+    /**
+ * @summary Create a retention practice
+ */
+export const useCreateRetentionPractice = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRetentionPractice>>, TError,{data: BodyType<RetentionPracticeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRetentionPractice>>,
+        TError,
+        {data: BodyType<RetentionPracticeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRetentionPracticeMutationOptions(options));
+    }
+
+export const getGetRetentionPracticeUrl = (practiceId: number,) => {
+
+
+
+
+  return `/api/retention/practices/${practiceId}`
+}
+
+/**
+ * Returns a practice owned by the authenticated user
+ * @summary Get one retention practice
+ */
+export const getRetentionPractice = async (practiceId: number, options?: Parameters<typeof customFetch>[1]): Promise<RetentionPractice> => {
+
+  return customFetch<RetentionPractice>(getGetRetentionPracticeUrl(practiceId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRetentionPracticeQueryKey = (practiceId: number,) => {
+    return [
+    `/api/retention/practices/${practiceId}`
+    ] as const;
+    }
+
+
+export const getGetRetentionPracticeQueryOptions = <TData = Awaited<ReturnType<typeof getRetentionPractice>>, TError = ErrorType<void>>(practiceId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRetentionPractice>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRetentionPracticeQueryKey(practiceId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRetentionPractice>>> = ({ signal }) => getRetentionPractice(practiceId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: practiceId !== null && practiceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRetentionPractice>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRetentionPracticeQueryResult = NonNullable<Awaited<ReturnType<typeof getRetentionPractice>>>
+export type GetRetentionPracticeQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get one retention practice
+ */
+
+export function useGetRetentionPractice<TData = Awaited<ReturnType<typeof getRetentionPractice>>, TError = ErrorType<void>>(
+ practiceId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRetentionPractice>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRetentionPracticeQueryOptions(practiceId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateRetentionPracticeUrl = (practiceId: number,) => {
+
+
+
+
+  return `/api/retention/practices/${practiceId}`
+}
+
+/**
+ * Updates editable practice details owned by the authenticated user
+ * @summary Update a retention practice
+ */
+export const updateRetentionPractice = async (practiceId: number,
+    retentionPracticeUpdate: RetentionPracticeUpdate, options?: Parameters<typeof customFetch>[1]): Promise<RetentionPractice> => {
+
+  return customFetch<RetentionPractice>(getUpdateRetentionPracticeUrl(practiceId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(retentionPracticeUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateRetentionPracticeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRetentionPractice>>, TError,{practiceId: number;data: BodyType<RetentionPracticeUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateRetentionPractice>>, TError,{practiceId: number;data: BodyType<RetentionPracticeUpdate>}, TContext> => {
+
+const mutationKey = ['updateRetentionPractice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateRetentionPractice>>, {practiceId: number;data: BodyType<RetentionPracticeUpdate>}> = (props) => {
+          const {practiceId,data} = props ?? {};
+
+          return  updateRetentionPractice(practiceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateRetentionPracticeMutationResult = NonNullable<Awaited<ReturnType<typeof updateRetentionPractice>>>
+    export type UpdateRetentionPracticeMutationBody = BodyType<RetentionPracticeUpdate>
+    export type UpdateRetentionPracticeMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a retention practice
+ */
+export const useUpdateRetentionPractice = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateRetentionPractice>>, TError,{practiceId: number;data: BodyType<RetentionPracticeUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateRetentionPractice>>,
+        TError,
+        {practiceId: number;data: BodyType<RetentionPracticeUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateRetentionPracticeMutationOptions(options));
+    }
+
+export const getDeleteRetentionPracticeUrl = (practiceId: number,) => {
+
+
+
+
+  return `/api/retention/practices/${practiceId}`
+}
+
+/**
+ * Deletes a practice and its recorded observations owned by the authenticated user
+ * @summary Delete a retention practice
+ */
+export const deleteRetentionPractice = async (practiceId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteRetentionPracticeUrl(practiceId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteRetentionPracticeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRetentionPractice>>, TError,{practiceId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteRetentionPractice>>, TError,{practiceId: number}, TContext> => {
+
+const mutationKey = ['deleteRetentionPractice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteRetentionPractice>>, {practiceId: number}> = (props) => {
+          const {practiceId} = props ?? {};
+
+          return  deleteRetentionPractice(practiceId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteRetentionPracticeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteRetentionPractice>>>
+
+    export type DeleteRetentionPracticeMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a retention practice
+ */
+export const useDeleteRetentionPractice = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteRetentionPractice>>, TError,{practiceId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteRetentionPractice>>,
+        TError,
+        {practiceId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteRetentionPracticeMutationOptions(options));
+    }
+
+export const getListRetentionObservationsUrl = (practiceId: number,) => {
+
+
+
+
+  return `/api/retention/practices/${practiceId}/observations`
+}
+
+/**
+ * Returns observations for a practice owned by the authenticated user
+ * @summary List observations for a retention practice
+ */
+export const listRetentionObservations = async (practiceId: number, options?: Parameters<typeof customFetch>[1]): Promise<RetentionObservation[]> => {
+
+  return customFetch<RetentionObservation[]>(getListRetentionObservationsUrl(practiceId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRetentionObservationsQueryKey = (practiceId: number,) => {
+    return [
+    `/api/retention/practices/${practiceId}/observations`
+    ] as const;
+    }
+
+
+export const getListRetentionObservationsQueryOptions = <TData = Awaited<ReturnType<typeof listRetentionObservations>>, TError = ErrorType<void>>(practiceId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRetentionObservations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRetentionObservationsQueryKey(practiceId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listRetentionObservations>>> = ({ signal }) => listRetentionObservations(practiceId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: practiceId !== null && practiceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listRetentionObservations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRetentionObservationsQueryResult = NonNullable<Awaited<ReturnType<typeof listRetentionObservations>>>
+export type ListRetentionObservationsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List observations for a retention practice
+ */
+
+export function useListRetentionObservations<TData = Awaited<ReturnType<typeof listRetentionObservations>>, TError = ErrorType<void>>(
+ practiceId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listRetentionObservations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRetentionObservationsQueryOptions(practiceId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateRetentionObservationUrl = (practiceId: number,) => {
+
+
+
+
+  return `/api/retention/practices/${practiceId}/observations`
+}
+
+/**
+ * Records a numeric result for a practice owned by the authenticated user
+ * @summary Record a retention observation
+ */
+export const createRetentionObservation = async (practiceId: number,
+    retentionObservationInput: RetentionObservationInput, options?: Parameters<typeof customFetch>[1]): Promise<RetentionObservation> => {
+
+  return customFetch<RetentionObservation>(getCreateRetentionObservationUrl(practiceId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(retentionObservationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateRetentionObservationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRetentionObservation>>, TError,{practiceId: number;data: BodyType<RetentionObservationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createRetentionObservation>>, TError,{practiceId: number;data: BodyType<RetentionObservationInput>}, TContext> => {
+
+const mutationKey = ['createRetentionObservation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createRetentionObservation>>, {practiceId: number;data: BodyType<RetentionObservationInput>}> = (props) => {
+          const {practiceId,data} = props ?? {};
+
+          return  createRetentionObservation(practiceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateRetentionObservationMutationResult = NonNullable<Awaited<ReturnType<typeof createRetentionObservation>>>
+    export type CreateRetentionObservationMutationBody = BodyType<RetentionObservationInput>
+    export type CreateRetentionObservationMutationError = ErrorType<void>
+
+    /**
+ * @summary Record a retention observation
+ */
+export const useCreateRetentionObservation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createRetentionObservation>>, TError,{practiceId: number;data: BodyType<RetentionObservationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createRetentionObservation>>,
+        TError,
+        {practiceId: number;data: BodyType<RetentionObservationInput>},
+        TContext
+      > => {
+      return useMutation(getCreateRetentionObservationMutationOptions(options));
+    }
 
 export const getGetAdminOverviewUrl = () => {
 

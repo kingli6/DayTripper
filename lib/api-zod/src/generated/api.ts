@@ -711,6 +711,185 @@ export const ListPlanningJournalCandidatesResponse = zod.array(ListPlanningJourn
 
 
 /**
+ * Returns practices owned by the authenticated user
+ * @summary List the user's retention practices
+ */
+export const ListRetentionPracticesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "unit": zod.string(),
+  "direction": zod.enum(['higher']),
+  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListRetentionPracticesResponse = zod.array(ListRetentionPracticesResponseItem)
+
+
+/**
+ * Creates a numeric higher-is-better practice for the authenticated user
+ * @summary Create a retention practice
+ */
+export const createRetentionPracticeBodyNameMax = 120;
+
+export const createRetentionPracticeBodyUnitMax = 40;
+
+export const createRetentionPracticeBodyRetentionSpeedDefault = `moderate`;
+
+export const CreateRetentionPracticeBody = zod.object({
+  "name": zod.string().min(1).max(createRetentionPracticeBodyNameMax),
+  "unit": zod.string().min(1).max(createRetentionPracticeBodyUnitMax),
+  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']).default(createRetentionPracticeBodyRetentionSpeedDefault)
+})
+
+export const CreateRetentionPracticeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "unit": zod.string(),
+  "direction": zod.enum(['higher']),
+  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * Returns a practice owned by the authenticated user
+ * @summary Get one retention practice
+ */
+
+
+
+export const GetRetentionPracticeParams = zod.object({
+  "practiceId": zod.coerce.number().int().min(1)
+})
+
+export const GetRetentionPracticeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "unit": zod.string(),
+  "direction": zod.enum(['higher']),
+  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * Updates editable practice details owned by the authenticated user
+ * @summary Update a retention practice
+ */
+
+
+
+export const UpdateRetentionPracticeParams = zod.object({
+  "practiceId": zod.coerce.number().int().min(1)
+})
+
+export const updateRetentionPracticeBodyNameMax = 120;
+
+export const updateRetentionPracticeBodyUnitMax = 40;
+
+
+
+export const UpdateRetentionPracticeBody = zod.object({
+  "name": zod.string().min(1).max(updateRetentionPracticeBodyNameMax).optional(),
+  "unit": zod.string().min(1).max(updateRetentionPracticeBodyUnitMax).optional(),
+  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']).optional()
+})
+
+export const UpdateRetentionPracticeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "unit": zod.string(),
+  "direction": zod.enum(['higher']),
+  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * Deletes a practice and its recorded observations owned by the authenticated user
+ * @summary Delete a retention practice
+ */
+
+
+
+export const DeleteRetentionPracticeParams = zod.object({
+  "practiceId": zod.coerce.number().int().min(1)
+})
+
+export const DeleteRetentionPracticeResponse = zod.void()
+
+
+/**
+ * Returns observations for a practice owned by the authenticated user
+ * @summary List observations for a retention practice
+ */
+
+
+
+export const ListRetentionObservationsParams = zod.object({
+  "practiceId": zod.coerce.number().int().min(1)
+})
+
+export const listRetentionObservationsResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listRetentionObservationsResponseValueMin = 0;
+
+
+
+export const ListRetentionObservationsResponseItem = zod.object({
+  "id": zod.number(),
+  "practiceId": zod.number(),
+  "recordedDate": zod.string().regex(listRetentionObservationsResponseRecordedDateRegExp),
+  "value": zod.number().min(listRetentionObservationsResponseValueMin),
+  "context": zod.string().nullable(),
+  "createdAt": zod.string()
+})
+export const ListRetentionObservationsResponse = zod.array(ListRetentionObservationsResponseItem)
+
+
+/**
+ * Records a numeric result for a practice owned by the authenticated user
+ * @summary Record a retention observation
+ */
+
+
+
+export const CreateRetentionObservationParams = zod.object({
+  "practiceId": zod.coerce.number().int().min(1)
+})
+
+export const createRetentionObservationBodyRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createRetentionObservationBodyValueMin = 0;
+
+export const createRetentionObservationBodyContextMax = 500;
+
+
+
+export const CreateRetentionObservationBody = zod.object({
+  "recordedDate": zod.string().regex(createRetentionObservationBodyRecordedDateRegExp),
+  "value": zod.number().min(createRetentionObservationBodyValueMin),
+  "context": zod.string().max(createRetentionObservationBodyContextMax).nullish()
+})
+
+export const createRetentionObservationResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createRetentionObservationResponseValueMin = 0;
+
+
+
+export const CreateRetentionObservationResponse = zod.object({
+  "id": zod.number(),
+  "practiceId": zod.number(),
+  "recordedDate": zod.string().regex(createRetentionObservationResponseRecordedDateRegExp),
+  "value": zod.number().min(createRetentionObservationResponseValueMin),
+  "context": zod.string().nullable(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * Returns protected aggregate account, table, database, and admin-action metrics without user-authored content
  * @summary Get protected database diagnostics
  */

@@ -18,6 +18,8 @@ tags:
     description: Day Tripper activity operations
   - name: journal
     description: Private timestamped journal operations
+  - name: retention
+    description: Private practice retention tracking operations
   - name: admin
     description: Protected development and operations diagnostics
 paths:
@@ -377,6 +379,168 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/JournalEntry"
+  /retention/practices:
+    get:
+      operationId: listRetentionPractices
+      tags: [retention]
+      summary: List the user's retention practices
+      description: Returns practices owned by the authenticated user
+      responses:
+        "200":
+          description: Retention practices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RetentionPractice"
+    post:
+      operationId: createRetentionPractice
+      tags: [retention]
+      summary: Create a retention practice
+      description: Creates a numeric higher-is-better practice for the authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionPracticeInput"
+      responses:
+        "201":
+          description: Created retention practice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPractice"
+        "400":
+          description: Invalid retention practice
+  /retention/practices/{practiceId}:
+    get:
+      operationId: getRetentionPractice
+      tags: [retention]
+      summary: Get one retention practice
+      description: Returns a practice owned by the authenticated user
+      parameters:
+        - name: practiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Retention practice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPractice"
+        "400":
+          description: Invalid practice identifier
+        "404":
+          description: Retention practice not found
+    patch:
+      operationId: updateRetentionPractice
+      tags: [retention]
+      summary: Update a retention practice
+      description: Updates editable practice details owned by the authenticated user
+      parameters:
+        - name: practiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionPracticeUpdate"
+      responses:
+        "200":
+          description: Updated retention practice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionPractice"
+        "400":
+          description: Invalid retention practice update
+        "404":
+          description: Retention practice not found
+    delete:
+      operationId: deleteRetentionPractice
+      tags: [retention]
+      summary: Delete a retention practice
+      description: Deletes a practice and its recorded observations owned by the authenticated user
+      parameters:
+        - name: practiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "204":
+          description: Retention practice deleted
+        "400":
+          description: Invalid practice identifier
+        "404":
+          description: Retention practice not found
+  /retention/practices/{practiceId}/observations:
+    get:
+      operationId: listRetentionObservations
+      tags: [retention]
+      summary: List observations for a retention practice
+      description: Returns observations for a practice owned by the authenticated user
+      parameters:
+        - name: practiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Retention observations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RetentionObservation"
+        "400":
+          description: Invalid practice identifier
+        "404":
+          description: Retention practice not found
+    post:
+      operationId: createRetentionObservation
+      tags: [retention]
+      summary: Record a retention observation
+      description: Records a numeric result for a practice owned by the authenticated user
+      parameters:
+        - name: practiceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RetentionObservationInput"
+      responses:
+        "201":
+          description: Created retention observation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionObservation"
+        "400":
+          description: Invalid retention observation
+        "404":
+          description: Retention practice not found
   /admin/overview:
     get:
       operationId: getAdminOverview
@@ -1166,6 +1330,106 @@ components:
             maxLength: 40
       required:
         - privacy
+    RetentionSpeed:
+      type: string
+      enum: [slow, moderate, fast]
+    RetentionPracticeDirection:
+      type: string
+      enum: [higher]
+    RetentionPractice:
+      type: object
+      properties:
+        id:
+          type: number
+        name:
+          type: string
+        unit:
+          type: string
+        direction:
+          $ref: "#/components/schemas/RetentionPracticeDirection"
+        retentionSpeed:
+          $ref: "#/components/schemas/RetentionSpeed"
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - unit
+        - direction
+        - retentionSpeed
+        - createdAt
+        - updatedAt
+    RetentionPracticeInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 40
+        retentionSpeed:
+          $ref: "#/components/schemas/RetentionSpeed"
+          default: moderate
+      required:
+        - name
+        - unit
+    RetentionPracticeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 40
+        retentionSpeed:
+          $ref: "#/components/schemas/RetentionSpeed"
+    RetentionObservation:
+      type: object
+      properties:
+        id:
+          type: number
+        practiceId:
+          type: number
+        recordedDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        value:
+          type: number
+          minimum: 0
+        context:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - practiceId
+        - recordedDate
+        - value
+        - context
+        - createdAt
+    RetentionObservationInput:
+      type: object
+      properties:
+        recordedDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        value:
+          type: number
+          minimum: 0
+        context:
+          type: ["string", "null"]
+          maxLength: 500
+      required:
+        - recordedDate
+        - value
     AdminTableMetric:
       type: object
       properties:
