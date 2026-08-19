@@ -34,14 +34,28 @@ context. Do not wait for a reminder.
 
 ## Current checkpoint
 
-**Active work:** Repairing the production release boundary and activity sync behavior.
+**Active work:** No feature is currently in progress. The latest completed
+working area was the main Journal view and its authenticated API contract.
 
-**Status:** The local source and development database are healthy. A deployed
-Render request is returning HTTP 500 from the private activities API, and the
-browser is repeatedly retrying the same PATCH in the currently deployed build.
-The local client loop is fixed, but the fix still needs to be built and released
-through the GitHub → Render path. The external Supabase schema is separate from
-the Replit development database and has not been directly verified here.
+**Status:** The local source, generated API clients, development database, and
+external Supabase schema are aligned for the current Drizzle model. Schedule
+creation and acceptance are working. The main Journal now requests the full
+user-owned journal rather than only the selected day, and newly created notes
+are placed into the visible client cache before the normal refetch. Browser-push
+alarms have not been started because the required product behavior was not
+selected.
+
+**Where the work is located:**
+
+- Main Journal UI: `artifacts/day-tripper/src/components/journal-panel.tsx`
+- Journal API: `artifacts/api-server/src/routes/journalEntries.ts`
+- Journal contract: `lib/api-spec/openapi.yaml`
+- Generated clients: `lib/api-client-react/src/generated/` and
+  `lib/api-zod/src/generated/`
+- Database schema and migrations: `lib/db/src/schema/` and
+  `lib/db/drizzle/`
+- Schedule planning and acceptance: `artifacts/day-tripper/src/App.tsx` and
+  `artifacts/api-server/src/routes/planning.ts`
 
 **Approved product boundary:**
 
@@ -95,33 +109,35 @@ the Replit development database and has not been directly verified here.
 
 - Authenticated create, edit, delete, and observation flows with real data.
 - Chart behavior after a new personal high and after changing retention speed.
-- Production Supabase retention tables/columns and deployed authenticated
-  retention behavior. The user-reported authenticated create/list requests
-  currently return HTTP 500.
-- Whether the retention calculation should be extracted from the chart into the
-  dedicated model module requested in the approved architecture.
+- An authenticated production end-to-end Journal create/list flow through the
+  Render deployment. The local endpoint contract, Supabase schema, and client
+  refresh path are aligned, but this still needs a user-authenticated live
+  confirmation after the latest release.
+- Browser-push alarm behavior and delivery infrastructure.
 
 ## Next safe action
 
-Apply/verify the complete additive migration
-`lib/db/drizzle/0008_optimal_wallop.sql` against the Supabase database used by
-Render, including both retention tables and the two activity reminder columns.
-Do this through the Supabase/Render release process without changing the local
-Replit `DATABASE_URL`, adding startup migrations, or replacing the external
-database. Then build the current GitHub source and redeploy Render. Exercise one
-authenticated activity update and one retention flow end to end:
+When a new feature is given, first write its bounded scope and working area
+here, then inspect the current source before editing. For each implementation
+chunk:
 
-1. Verify activity GET/PATCH stops returning 500 and a failed PATCH no longer
-   repeats continuously.
-2. Verify create, edit, delete, record observation, and refresh persistence.
-3. Verify that recorded values and estimated retention are clearly distinct.
-4. Verify that a higher observation becomes the new current reference.
-5. Verify that Slow → Fast changes the projection without changing recorded
-   observations.
-6. Record the authenticated result here before starting any new feature work.
+1. Record the exact area being worked on and the intended outcome.
+2. After the chunk, record what is complete and what is not verified.
+3. Run the relevant typecheck/build, restart affected workflows, inspect fresh
+   logs, and verify the user-visible flow.
+4. Update this checkpoint before context becomes tight, including the next safe
+   action and anything explicitly not to start.
+5. If context runs out, the next session should resume from this file and verify
+   its claims against the current source rather than replaying an old transcript.
+
+For the current Journal repair, the next safe product check is one authenticated
+live create and reload through Render. Do not begin alarm delivery until the
+user explicitly chooses between browser push while the tab is closed and
+in-app-only reminders.
 
 ## Do not start yet
 
-Do not begin lower-is-better measures, state awareness, reflection, operations
-metrics, notifications, automatic calibration, or broader AI expansion until
-this MVP has been verified and the next product decision is explicit.
+Do not begin browser-push alarms, notification delivery, automatic calibration,
+or broader AI expansion until the product behavior and release boundary are
+explicit. Do not treat database reminder columns as an implemented alarm
+feature.
