@@ -14,6 +14,14 @@ type RetentionChartProps = {
   speed: RetentionSpeed;
 };
 
+type RetentionChartPoint = {
+  dateKey: string;
+  label: string;
+  actual: number | null;
+  estimate: number | null;
+  day: number;
+};
+
 const chartConfig = {
   actual: { label: 'Recorded result', color: 'hsl(var(--primary))' },
   estimate: { label: 'Estimated freshness', color: 'hsl(var(--accent))' },
@@ -42,7 +50,7 @@ export function RetentionChart({ observations, unit, speed }: RetentionChartProp
     if (!sorted.length) return [];
 
     const firstDay = new Date(`${sorted[0].recordedDate}T12:00:00`).getTime();
-    const effectiveAnchors = [];
+    const effectiveAnchors: RetentionObservation[] = [];
     let highestValue = Number.NEGATIVE_INFINITY;
     for (const observation of sorted) {
       if (observation.value > highestValue) {
@@ -51,7 +59,7 @@ export function RetentionChart({ observations, unit, speed }: RetentionChartProp
       }
     }
 
-    const actualPoints = sorted.map((observation) => {
+    const actualPoints: RetentionChartPoint[] = sorted.map((observation) => {
       const timestamp = new Date(`${observation.recordedDate}T12:00:00`).getTime();
       return {
         dateKey: observation.recordedDate,
@@ -62,7 +70,7 @@ export function RetentionChart({ observations, unit, speed }: RetentionChartProp
       };
     });
 
-    const estimatePoints = effectiveAnchors.flatMap((anchor, index) => {
+    const estimatePoints: RetentionChartPoint[] = effectiveAnchors.flatMap((anchor, index) => {
       const anchorTimestamp = new Date(`${anchor.recordedDate}T12:00:00`).getTime();
       const nextAnchor = effectiveAnchors[index + 1];
       const nextAnchorTimestamp = nextAnchor

@@ -34,8 +34,9 @@ context. Do not wait for a reminder.
 
 ## Current checkpoint
 
-**Active work:** No feature is currently in progress. The latest completed
-working area was the main Journal view and its authenticated API contract.
+**Active work:** Retention-curve implementation follow-up is complete locally.
+The latest completed working area was the retention observation snapshot and
+chart verification boundary.
 
 **Status:** The local source, generated API clients, development database, and
 external Supabase schema are aligned for the current Drizzle model. Schedule
@@ -98,6 +99,9 @@ selected.
   queued offline writes; they remain visible server errors.
 - The web workflow restarted cleanly after the client fix; browser preview has
   no new application errors; full workspace typecheck and build pass.
+- The retention follow-up fixed a strict TypeScript inference error in the
+  chart's effective-anchor collection; OpenAPI codegen, full workspace
+  typecheck, API build, API/web workflow restart, and signed-out preview pass.
 - Activity sync no longer re-enters its queue automatically when a server error
   changes the sync status.
 - The server wake indicator now listens only to health-check responses, so a
@@ -109,6 +113,8 @@ selected.
 
 - Authenticated create, edit, delete, and observation flows with real data.
 - Chart behavior after a new personal high and after changing retention speed.
+- Backdated personal-high behavior, historical snapshot immutability, and
+  chart segmentation after backdated observations.
 - An authenticated production end-to-end Journal create/list flow through the
   Render deployment. The local endpoint contract, Supabase schema, and client
   refresh path are aligned, but this still needs a user-authenticated live
@@ -130,10 +136,13 @@ chunk:
 5. If context runs out, the next session should resume from this file and verify
    its claims against the current source rather than replaying an old transcript.
 
-For the current Journal repair, the next safe product check is one authenticated
-live create and reload through Render. Do not begin alarm delivery until the
-user explicitly chooses between browser push while the tab is closed and
-in-app-only reminders.
+For the retention MVP, the next safe product check is authenticated local
+runtime verification of first observation, higher/lower/equal observations,
+speed changes, backdated highs, snapshot immutability, and chart segmentation.
+The signed-out preview cannot exercise those private flows. After that, the
+next release boundary is one authenticated live create and reload through
+Render. Do not begin alarm delivery until the user explicitly chooses between
+browser push while the tab is closed and in-app-only reminders.
 
 ## Do not start yet
 
