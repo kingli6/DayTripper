@@ -280,11 +280,11 @@ paths:
     get:
       operationId: listJournalEntries
       tags: [journal]
-       summary: List the user's journal entries
+      summary: List the user's journal entries
       parameters:
         - name: date
           in: query
-           required: false
+          required: false
           schema:
             type: string
             pattern: '^\d{4}-\d{2}-\d{2}$'

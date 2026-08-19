@@ -191,7 +191,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
     setFormError('');
     setActionError('');
     try {
-      await createJournalEntry.mutateAsync({
+      const createdEntry = await createJournalEntry.mutateAsync({
         data: {
           recordedDate: date,
           content: trimmedContent,
@@ -201,6 +201,10 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
           privacy,
         },
       });
+      queryClient.setQueryData<JournalEntry[]>(
+        getListJournalEntriesQueryKey({}),
+        (current) => current ? [createdEntry, ...current.filter((entry) => entry.id !== createdEntry.id)] : [createdEntry],
+      );
       await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({}) });
       setContent('');
       setTopic('');
