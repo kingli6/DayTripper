@@ -71,12 +71,10 @@ router.get("/journal-entries", async (req, res): Promise<void> => {
   const entries = await db
     .select()
     .from(journalEntriesTable)
-    .where(
-      and(
-        eq(journalEntriesTable.ownerId, res.locals.userId as string),
-        eq(journalEntriesTable.recordedDate, parsed.data.date),
-      ),
-    )
+    .where(and(
+      eq(journalEntriesTable.ownerId, res.locals.userId as string),
+      ...(parsed.data.date ? [eq(journalEntriesTable.recordedDate, parsed.data.date)] : []),
+    ))
     .orderBy(desc(journalEntriesTable.recordedAt), asc(journalEntriesTable.id));
 
   res.json(ListJournalEntriesResponse.parse(entries.map(serializeJournalEntry)));

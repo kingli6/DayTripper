@@ -137,7 +137,7 @@ function JournalEntryCard({
 export function JournalPanel({ date, activities }: { date: string; activities: Activity[] }) {
   const { user } = useUser();
   const queryClient = useQueryClient();
-  const list = useListJournalEntries({ date }, { query: { queryKey: getListJournalEntriesQueryKey({ date }) } });
+  const list = useListJournalEntries({}, { query: { queryKey: getListJournalEntriesQueryKey({}) } });
   const createJournalEntry = useCreateJournalEntry();
   const updateJournalEntry = useUpdateJournalEntry();
   const deleteJournalEntry = useDeleteJournalEntry();
@@ -201,7 +201,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
           privacy,
         },
       });
-      await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({ date }) });
+      await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({}) });
       setContent('');
       setTopic('');
       setTags('');
@@ -227,7 +227,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
     setActionError('');
     try {
       await deleteJournalEntry.mutateAsync({ id });
-      await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({ date }) });
+      await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({}) });
       setConfirmingDeleteId(null);
     } catch {
       setActionError('That entry could not be removed. It is still here.');
@@ -242,7 +242,7 @@ export function JournalPanel({ date, activities }: { date: string; activities: A
         id: entry.id,
         data: { privacy: nextPrivacy },
       });
-      await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({ date }) });
+      await queryClient.invalidateQueries({ queryKey: getListJournalEntriesQueryKey({}) });
       rememberPrivacy(nextPrivacy);
     } catch {
       setActionError('That entry’s visibility could not be changed. Check the connection and try again.');
