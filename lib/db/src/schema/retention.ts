@@ -32,6 +32,7 @@ export const retentionObservationsTable = pgTable("retention_observations", {
   recordedDate: date("recorded_date", { mode: "string" }).notNull(),
   value: real("value").notNull(),
   context: text("context"),
+  curveHalfLifeDays: integer("curve_half_life_days"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

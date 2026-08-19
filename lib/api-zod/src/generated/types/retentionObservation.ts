@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { RetentionObservationCurveHalfLifeDays } from './retentionObservationCurveHalfLifeDays';
 
 export interface RetentionObservation {
   id: number;
@@ -15,5 +16,7 @@ export interface RetentionObservation {
   value: number;
   /** @nullable */
   context: string | null;
+  /** @nullable */
+  curveHalfLifeDays: RetentionObservationCurveHalfLifeDays;
   createdAt: string;
 }

@@ -734,6 +734,18 @@ export interface RetentionPracticeUpdate {
   retentionSpeed?: RetentionSpeed;
 }
 
+/**
+ * @nullable
+ */
+export type RetentionObservationCurveHalfLifeDays = typeof RetentionObservationCurveHalfLifeDays[keyof typeof RetentionObservationCurveHalfLifeDays] | null;
+
+
+export const RetentionObservationCurveHalfLifeDays = {
+  NUMBER_12: 12,
+  NUMBER_24: 24,
+  NUMBER_42: 42,
+} as const;
+
 export interface RetentionObservation {
   id: number;
   practiceId: number;
@@ -743,6 +755,8 @@ export interface RetentionObservation {
   value: number;
   /** @nullable */
   context: string | null;
+  /** @nullable */
+  curveHalfLifeDays: RetentionObservationCurveHalfLifeDays;
   createdAt: string;
 }
 

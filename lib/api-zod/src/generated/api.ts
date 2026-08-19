@@ -841,6 +841,7 @@ export const ListRetentionObservationsResponseItem = zod.object({
   "recordedDate": zod.string().regex(listRetentionObservationsResponseRecordedDateRegExp),
   "value": zod.number().min(listRetentionObservationsResponseValueMin),
   "context": zod.string().nullable(),
+  "curveHalfLifeDays": zod.union([zod.literal(12),zod.literal(24),zod.literal(42),zod.literal(null)]).nullable(),
   "createdAt": zod.string()
 })
 export const ListRetentionObservationsResponse = zod.array(ListRetentionObservationsResponseItem)
@@ -881,6 +882,7 @@ export const CreateRetentionObservationResponse = zod.object({
   "recordedDate": zod.string().regex(createRetentionObservationResponseRecordedDateRegExp),
   "value": zod.number().min(createRetentionObservationResponseValueMin),
   "context": zod.string().nullable(),
+  "curveHalfLifeDays": zod.union([zod.literal(12),zod.literal(24),zod.literal(42),zod.literal(null)]).nullable(),
   "createdAt": zod.string()
 })
 

@@ -66,6 +66,7 @@ export * from './replanningProposal';
 export * from './replanningRequest';
 export * from './replanningRequestPlanningStyle';
 export * from './retentionObservation';
+export * from './retentionObservationCurveHalfLifeDays';
 export * from './retentionObservationInput';
 export * from './retentionPractice';
 export * from './retentionPracticeDirection';

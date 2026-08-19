@@ -19,7 +19,7 @@ const chartConfig = {
   estimate: { label: 'Estimated freshness', color: 'hsl(var(--accent))' },
 } satisfies ChartConfig;
 
-const speedHalfLife: Record<RetentionSpeed, number> = {
+const defaultHalfLifeDays: Record<RetentionSpeed, number> = {
   slow: 42,
   moderate: 24,
   fast: 12,
@@ -33,37 +33,66 @@ function compactDate(value: string) {
 
 export function RetentionChart({ observations, unit, speed }: RetentionChartProps) {
   const points = useMemo(() => {
-    const sorted = [...observations].sort((a, b) => a.recordedDate.localeCompare(b.recordedDate));
+    const sorted = [...observations].sort((a, b) => {
+      const dateOrder = a.recordedDate.localeCompare(b.recordedDate);
+      if (dateOrder !== 0) return dateOrder;
+      const createdOrder = a.createdAt.localeCompare(b.createdAt);
+      return createdOrder !== 0 ? createdOrder : a.id - b.id;
+    });
     if (!sorted.length) return [];
 
     const firstDay = new Date(`${sorted[0].recordedDate}T12:00:00`).getTime();
-    const latest = sorted[sorted.length - 1];
-    const latestDay = new Date(`${latest.recordedDate}T12:00:00`).getTime();
-    const futureDays = [7, 14, 21, 30];
-    const future = futureDays.map((day) => {
-      const date = new Date(latestDay + day * 86400000);
-      const dateKey = date.toISOString().slice(0, 10);
-      return {
-        dateKey,
-        label: compactDate(dateKey),
-        actual: null,
-        estimate: Number((latest.value * Math.exp(-day / speedHalfLife[speed])).toFixed(2)),
-        day: Math.round((date.getTime() - firstDay) / 86400000),
-      };
-    });
+    const effectiveAnchors = [];
+    let highestValue = Number.NEGATIVE_INFINITY;
+    for (const observation of sorted) {
+      if (observation.value > highestValue) {
+        effectiveAnchors.push(observation);
+        highestValue = observation.value;
+      }
+    }
 
-    return [
-      ...sorted.map((observation) => ({
+    const actualPoints = sorted.map((observation) => {
+      const timestamp = new Date(`${observation.recordedDate}T12:00:00`).getTime();
+      return {
         dateKey: observation.recordedDate,
         label: compactDate(observation.recordedDate),
         actual: observation.value,
         estimate: null,
-        day: Math.round(
-          (new Date(`${observation.recordedDate}T12:00:00`).getTime() - firstDay) / 86400000,
-        ),
-      })),
-      ...future,
-    ];
+        day: Math.round((timestamp - firstDay) / 86400000),
+      };
+    });
+
+    const estimatePoints = effectiveAnchors.flatMap((anchor, index) => {
+      const anchorTimestamp = new Date(`${anchor.recordedDate}T12:00:00`).getTime();
+      const nextAnchor = effectiveAnchors[index + 1];
+      const nextAnchorTimestamp = nextAnchor
+        ? new Date(`${nextAnchor.recordedDate}T12:00:00`).getTime()
+        : null;
+      const halfLifeDays =
+        anchor.curveHalfLifeDays ?? defaultHalfLifeDays[speed];
+      const futureDays = [7, 14, 21, 30];
+      const generatedDays = [0, ...futureDays].filter((day) => {
+        const timestamp = anchorTimestamp + day * 86400000;
+        return nextAnchorTimestamp === null || timestamp < nextAnchorTimestamp;
+      });
+
+      return generatedDays.map((day) => {
+        const timestamp = anchorTimestamp + day * 86400000;
+        const dateKey = new Date(timestamp).toISOString().slice(0, 10);
+        return {
+          dateKey,
+          label: compactDate(dateKey),
+          actual: null,
+          estimate: Number((anchor.value * 2 ** (-day / halfLifeDays)).toFixed(2)),
+          day: Math.round((timestamp - firstDay) / 86400000),
+        };
+      });
+    });
+
+    return [...actualPoints, ...estimatePoints].sort((a, b) => {
+      const dayOrder = a.day - b.day;
+      return dayOrder !== 0 ? dayOrder : (a.actual === null ? -1 : 1);
+    });
   }, [observations, speed]);
 
   if (!observations.length) {

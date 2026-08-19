@@ -1,0 +1,1 @@
+ALTER TABLE "retention_observations" ADD COLUMN "curve_half_life_days" integer;

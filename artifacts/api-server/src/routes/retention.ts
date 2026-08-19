@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, lte } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   db,
@@ -27,6 +27,12 @@ const router: IRouter = Router();
 
 router.use(requireAuth);
 
+const halfLifeDaysBySpeed = {
+  slow: 42,
+  moderate: 24,
+  fast: 12,
+} as const;
+
 function ownerIdFromRequest(res: { locals: { userId?: unknown } }): string | null {
   return typeof res.locals.userId === "string" ? res.locals.userId : null;
 }
@@ -52,6 +58,7 @@ function serializeObservation(
 ) {
   return {
     ...observation,
+    curveHalfLifeDays: observation.curveHalfLifeDays,
     createdAt: toIsoTimestamp(observation.createdAt),
   };
 }
@@ -313,15 +320,48 @@ router.post(
       return;
     }
 
-    const [observation] = await db
-      .insert(retentionObservationsTable)
-      .values({
-        practiceId: practice.id,
-        recordedDate: parsed.data.recordedDate,
-        value: parsed.data.value,
-        context: parsed.data.context ?? null,
-      })
-      .returning();
+    const observation = await db.transaction(async (tx) => {
+      const priorObservations = await tx
+        .select({
+          recordedDate: retentionObservationsTable.recordedDate,
+          value: retentionObservationsTable.value,
+        })
+        .from(retentionObservationsTable)
+        .where(
+          and(
+            eq(retentionObservationsTable.practiceId, practice.id),
+            lte(retentionObservationsTable.recordedDate, parsed.data.recordedDate),
+          ),
+        )
+        .orderBy(
+          asc(retentionObservationsTable.recordedDate),
+          asc(retentionObservationsTable.createdAt),
+          asc(retentionObservationsTable.id),
+        );
+
+      const previousHigh = priorObservations.reduce<number | null>(
+        (highest, prior) => (highest === null ? prior.value : Math.max(highest, prior.value)),
+        null,
+      );
+      const isNewPersonalHigh =
+        previousHigh === null || parsed.data.value > previousHigh;
+      const curveHalfLifeDays = isNewPersonalHigh
+        ? halfLifeDaysBySpeed[practice.retentionSpeed as keyof typeof halfLifeDaysBySpeed]
+        : null;
+
+      const [created] = await tx
+        .insert(retentionObservationsTable)
+        .values({
+          practiceId: practice.id,
+          recordedDate: parsed.data.recordedDate,
+          value: parsed.data.value,
+          context: parsed.data.context ?? null,
+          curveHalfLifeDays,
+        })
+        .returning();
+
+      return created;
+    });
 
     res
       .status(201)
