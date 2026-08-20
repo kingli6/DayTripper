@@ -771,6 +771,10 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   const [discussionMessages, setDiscussionMessages] = useState<PlanningDiscussionMessage[]>([]);
   const lockedActivities = activities.filter((activity) => activity.locked);
   const pending = createPlanningProposal.isPending;
+  const hasPlanningContext =
+    intention.trim().length > 0 ||
+    includeJournalEntryIds.length > 0 ||
+    considerJournalEntryIds.length > 0;
 
   useEffect(() => {
     if (planningStage !== 'details') return;
@@ -785,6 +789,10 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
     }
     if (minutesFromTime(availableEnd) <= minutesFromTime(availableStart)) {
       setFormError('The open-time window needs to end after it starts.');
+      return false;
+    }
+    if (!hasPlanningContext) {
+      setFormError('Add an intention or choose at least one journal note before starting the conversation.');
       return false;
     }
     return true;
@@ -1174,7 +1182,8 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
             {formError && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid="status-planning-error">{formError}</p>}
             <div className="flex flex-col-reverse gap-3 border-t border-border/65 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-[330px] text-[11px] leading-5 text-muted-foreground">Planning needs an internet connection. It creates a proposal only; your saved schedule will not change automatically.</p>
-              <button type="submit" disabled={pending} data-testid="button-create-planning-proposal" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-55">
+              {!hasPlanningContext && <p className="max-w-[330px] text-[11px] leading-5 text-muted-foreground">Add an intention or choose at least one journal note before starting the conversation.</p>}
+              <button type="submit" disabled={pending || !hasPlanningContext} data-testid="button-create-planning-proposal" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-55">
                 {pending ? <LoaderCircle className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" strokeWidth={1.8} />}
                 {pending ? 'Preparing a proposal…' : 'Suggest a possible plan'}
               </button>

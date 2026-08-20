@@ -94,12 +94,18 @@ export function PlanningDiscussion({
     includeJournalEntryIds,
     considerJournalEntryIds,
   };
+  const hasPlanningContext =
+    Boolean(intention?.trim()) ||
+    (includeJournalEntryIds?.length ?? 0) > 0 ||
+    (considerJournalEntryIds?.length ?? 0) > 0;
+  const planningContextMessage = 'Add an intention or choose at least one journal note before starting the conversation.';
 
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
     const requestMessages: PlanningDiscussionMessage[] = [];
     lastRequestMessagesRef.current = requestMessages;
+    if (!hasPlanningContext) return;
     createReply.mutate({ data: { ...context, messages: requestMessages } }, {
       onSuccess: (result) => {
         setMessages([{ role: 'assistant', content: result.message }]);
@@ -133,6 +139,7 @@ export function PlanningDiscussion({
   }
 
   function retryOpening() {
+    if (!hasPlanningContext) return;
     setError('');
     const requestMessages = lastRequestMessagesRef.current;
     createReply.mutate({ data: { ...context, messages: requestMessages } }, {
@@ -163,6 +170,13 @@ export function PlanningDiscussion({
           <span className="rounded-full border border-border/70 bg-background/55 px-3 py-1.5">Nothing saved yet</span>
         </div>
       </div>
+
+      {!hasPlanningContext && (
+        <div className="rounded-[18px] border border-primary/25 bg-primary/[0.06] p-4" role="alert" data-testid="status-planning-discussion-context-required">
+          <p className="text-sm font-semibold text-foreground">Choose what should guide the conversation.</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{planningContextMessage}</p>
+        </div>
+      )}
 
       {createReply.isPending && messages.length === 0 ? <DiscussionSkeleton /> : (
         <div className="space-y-4 rounded-[22px] border border-border/75 bg-card/45 p-4 sm:p-5" data-testid="transcript-planning-discussion">
@@ -226,7 +240,7 @@ export function PlanningDiscussion({
               <Check className="size-3.5" strokeWidth={2} /> Conversation set aside
             </span>
           )}
-          <button type="button" onClick={() => onStartProposal(messages)} disabled={createReply.isPending} data-testid="button-start-planning-proposal" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="button" onClick={() => onStartProposal(messages)} disabled={createReply.isPending || !hasPlanningContext} data-testid="button-start-planning-proposal" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50">
             <Sparkles className="size-3.5" strokeWidth={1.8} /> Start the proposal
           </button>
         </div>
