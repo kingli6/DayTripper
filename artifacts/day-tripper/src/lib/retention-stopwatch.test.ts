@@ -19,9 +19,11 @@ test('rounds elapsed time to one decimal minute', () => {
   assert.equal(stopwatchMinutes(1_062_000), 17.7);
 });
 
-test('requires at least one second before submission', () => {
-  assert.equal(canSubmitStopwatch(999), false);
-  assert.equal(canSubmitStopwatch(1_000), true);
+test('requires enough time to record a non-zero tenth of a minute', () => {
+  assert.equal(canSubmitStopwatch(2_999), false);
+  assert.equal(canSubmitStopwatch(3_000), true);
+  assert.equal(stopwatchMinutes(2_999), 0);
+  assert.equal(stopwatchMinutes(3_000), 0.1);
 });
 
 test('synchronously rejects duplicate submission claims', () => {

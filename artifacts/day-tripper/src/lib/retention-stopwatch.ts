@@ -1,4 +1,4 @@
-export const MINIMUM_STOPWATCH_DURATION_MS = 1_000;
+export const MINIMUM_STOPWATCH_DURATION_MS = 3_000;
 
 export function elapsedStopwatchMilliseconds(startedAt: number, now: number): number {
   return Math.max(0, now - startedAt);

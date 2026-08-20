@@ -1,6 +1,6 @@
 # Day Tripper Continuation Checkpoint
 
-Last reviewed: 2026-08-19
+Last reviewed: 2026-08-20
 
 This is the canonical handoff file for continuing Day Tripper across sessions or
 when the available conversation context is nearly exhausted. It is intentionally
@@ -34,9 +34,9 @@ context. Do not wait for a reminder.
 
 ## Current checkpoint
 
-**Active work:** Retention-curve implementation follow-up is complete locally.
-The latest completed working area was the retention observation snapshot and
-chart verification boundary.
+**Active work:** Retention-curve implementation follow-up and the minute-practice
+stopwatch verification are complete locally. The latest completed working area
+was the timestamp-based stopwatch recording path.
 
 **Status:** The local source, generated API clients, development database, and
 external Supabase schema are aligned for the current Drizzle model. Schedule
@@ -99,6 +99,13 @@ selected.
   queued offline writes; they remain visible server errors.
 - The web workflow restarted cleanly after the client fix; browser preview has
   no new application errors; full workspace typecheck and build pass.
+- The minute-practice stopwatch uses timestamp-derived elapsed time, rounds
+  recorded minutes to one decimal place, preserves a captured duration across
+  API failure for retry, rejects durations that would round to zero, and
+  prevents duplicate submission claims. Focused stopwatch tests, full
+  workspace typecheck, production web build, workflow restart, and signed-out
+  browser preview pass. No API, schema, migration, retention calculation,
+  half-life, or chart changes were introduced.
 - The retention follow-up fixed a strict TypeScript inference error in the
   chart's effective-anchor collection; OpenAPI codegen, full workspace
   typecheck, API build, API/web workflow restart, and signed-out preview pass.
@@ -120,6 +127,9 @@ selected.
   refresh path are aligned, but this still needs a user-authenticated live
   confirmation after the latest release.
 - Browser-push alarm behavior and delivery infrastructure.
+- Authenticated stopwatch interaction through the private retention page remains
+  unverified because the available browser preview is signed out. The source
+  path and focused behavior tests are verified locally.
 
 ## Next safe action
 
@@ -138,7 +148,8 @@ chunk:
 
 For the retention MVP, the next safe product check is authenticated local
 runtime verification of first observation, higher/lower/equal observations,
-speed changes, backdated highs, snapshot immutability, and chart segmentation.
+minute stopwatch start/done/retry behavior, speed changes, backdated highs,
+snapshot immutability, and chart segmentation.
 The signed-out preview cannot exercise those private flows. After that, the
 next release boundary is one authenticated live create and reload through
 Render. Do not begin alarm delivery until the user explicitly chooses between

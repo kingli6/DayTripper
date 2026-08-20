@@ -258,7 +258,7 @@ function PracticeDetail({
     const elapsedMs = elapsedStopwatchMilliseconds(stopwatchStartedAt, now);
     setStopwatchNow(now);
     if (!canSubmitStopwatch(elapsedMs)) {
-      setFormError('Keep the stopwatch running for at least 1 second before recording it.');
+      setFormError('Keep the stopwatch running for at least 3 seconds before recording it.');
       return;
     }
     setStopwatchStartedAt(null);
@@ -378,7 +378,7 @@ function PracticeDetail({
                      </>
                    )}
                  </div>
-                 {stopwatchStartedAt !== null && !canSubmitStopwatch(stopwatchElapsedMs) && <p className="mt-3 text-center text-[11px] text-muted-foreground">Keep going for at least 1 second before recording.</p>}
+                  {stopwatchStartedAt !== null && !canSubmitStopwatch(stopwatchElapsedMs) && <p className="mt-3 text-center text-[11px] text-muted-foreground">Keep going for at least 3 seconds before recording.</p>}
                </div>
              )}
             <div>
