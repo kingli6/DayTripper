@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, Redirect, useLocation, useParams } from 'wouter';
 import { useUser } from '@clerk/react';
@@ -15,9 +15,16 @@ import {
   useUpdateRetentionPractice,
 } from '@workspace/api-client-react';
 import type { RetentionObservation, RetentionPractice, RetentionPracticeInput } from '@workspace/api-client-react';
-import { ArrowLeft, BookOpen, CalendarDays, Check, ChevronRight, Circle, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarDays, Check, ChevronRight, Circle, Pencil, Play, Plus, RotateCcw, Square, Timer, Trash2 } from 'lucide-react';
 import { RetentionChart } from '@/components/retention/retention-chart';
 import { RetentionPracticeForm } from '@/components/retention/retention-practice-form';
+import {
+  canSubmitStopwatch,
+  claimStopwatchSubmission,
+  elapsedStopwatchMilliseconds,
+  formatStopwatchDuration,
+  stopwatchMinutes,
+} from '@/lib/retention-stopwatch';
 
 function localDate() {
   const value = new Date();
@@ -154,6 +161,8 @@ function PracticeDetail({
   onEdit: (practice: RetentionPractice) => void;
   onDelete: () => void;
 }) {
+  type RecordingMode = 'manual' | 'stopwatch';
+
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const practiceQuery = useGetRetentionPractice(practiceId, { query: { queryKey: getGetRetentionPracticeQueryKey(practiceId) } });
@@ -163,14 +172,111 @@ function PracticeDetail({
   const [value, setValue] = useState('');
   const [context, setContext] = useState('');
   const [formError, setFormError] = useState('');
+  const [recordingMode, setRecordingMode] = useState<RecordingMode>('manual');
+  const [stopwatchStartedAt, setStopwatchStartedAt] = useState<number | null>(null);
+  const [stopwatchNow, setStopwatchNow] = useState<number | null>(null);
+  const [stopwatchCapturedMs, setStopwatchCapturedMs] = useState<number | null>(null);
+  const stopwatchSubmissionRef = useRef(false);
   const practice = practiceQuery.data;
   const observations = useMemo(
     () => [...(observationsQuery.data ?? [])].sort((a, b) => b.recordedDate.localeCompare(a.recordedDate)),
     [observationsQuery.data],
   );
+  const isMinutesPractice = practice?.unit === 'minutes';
+  const stopwatchElapsedMs = stopwatchCapturedMs
+    ?? (stopwatchStartedAt !== null && stopwatchNow !== null
+      ? elapsedStopwatchMilliseconds(stopwatchStartedAt, stopwatchNow)
+      : 0);
+
+  useEffect(() => {
+    if (stopwatchStartedAt === null) return;
+    const updateNow = () => setStopwatchNow(Date.now());
+    updateNow();
+    const interval = window.setInterval(updateNow, 250);
+    return () => window.clearInterval(interval);
+  }, [stopwatchStartedAt]);
+
+  function clearStopwatchState() {
+    setStopwatchStartedAt(null);
+    setStopwatchNow(null);
+    setStopwatchCapturedMs(null);
+    stopwatchSubmissionRef.current = false;
+  }
+
+  function changeRecordingMode(mode: RecordingMode) {
+    if (mode === recordingMode || createObservation.isPending) return;
+    clearStopwatchState();
+    setFormError('');
+    setRecordingMode(mode);
+  }
+
+  function startStopwatch() {
+    if (!isMinutesPractice || createObservation.isPending || stopwatchStartedAt !== null) return;
+    const now = Date.now();
+    setFormError('');
+    stopwatchSubmissionRef.current = false;
+    setStopwatchCapturedMs(null);
+    setStopwatchStartedAt(now);
+    setStopwatchNow(now);
+  }
+
+  function submitStopwatchObservation(elapsedMs: number) {
+    if (
+      !isMinutesPractice
+      || !date
+      || !canSubmitStopwatch(elapsedMs)
+      || createObservation.isPending
+      || !claimStopwatchSubmission(stopwatchSubmissionRef)
+    ) {
+      return;
+    }
+
+    setFormError('');
+    createObservation.mutate({
+      practiceId,
+      data: {
+        recordedDate: date,
+        value: stopwatchMinutes(elapsedMs),
+        context: context.trim() || null,
+      },
+    }, {
+      onSuccess: () => {
+        clearStopwatchState();
+        setRecordingMode('manual');
+        void queryClient.invalidateQueries({ queryKey: getListRetentionObservationsQueryKey(practiceId) });
+      },
+      onError: (error) => {
+        stopwatchSubmissionRef.current = false;
+        setFormError(errorMessage(error));
+      },
+    });
+  }
+
+  function finishStopwatch() {
+    if (stopwatchStartedAt === null || createObservation.isPending) return;
+    const now = Date.now();
+    const elapsedMs = elapsedStopwatchMilliseconds(stopwatchStartedAt, now);
+    setStopwatchNow(now);
+    if (!canSubmitStopwatch(elapsedMs)) {
+      setFormError('Keep the stopwatch running for at least 1 second before recording it.');
+      return;
+    }
+    setStopwatchStartedAt(null);
+    setStopwatchCapturedMs(elapsedMs);
+    submitStopwatchObservation(elapsedMs);
+  }
+
+  function retryStopwatch() {
+    if (stopwatchCapturedMs === null) return;
+    submitStopwatchObservation(stopwatchCapturedMs);
+  }
 
   function record(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (recordingMode === 'stopwatch') {
+      if (stopwatchCapturedMs !== null) retryStopwatch();
+      return;
+    }
     const numericValue = Number(value);
     if (!date || !value || !Number.isFinite(numericValue) || numericValue < 0) {
       setFormError('Add a date and a number at or above zero.');
@@ -232,18 +338,59 @@ function PracticeDetail({
               <label htmlFor="observation-date" className="text-[11px] font-semibold">Date</label>
               <input id="observation-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} data-testid="input-observation-date" className="mt-1.5 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
             </div>
-            <div>
-              <label htmlFor="observation-value" className="text-[11px] font-semibold">Result <span className="font-normal text-muted-foreground">({practice.unit})</span></label>
-              <input id="observation-value" type="number" min="0" step="any" value={value} onChange={(event) => setValue(event.target.value)} placeholder="0" data-testid="input-observation-value" className="mt-1.5 h-14 w-full rounded-xl border border-input bg-background px-3 font-mono-ui text-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
-            </div>
+             {isMinutesPractice && (
+               <div className="rounded-xl border border-border/70 bg-background/45 p-1.5" role="group" aria-label="Choose how to record minutes">
+                 <div className="grid grid-cols-2 gap-1">
+                   <button type="button" onClick={() => changeRecordingMode('manual')} disabled={createObservation.isPending} aria-pressed={recordingMode === 'manual'} data-testid="button-retention-record-manual" className={`rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors ${recordingMode === 'manual' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>Enter minutes</button>
+                   <button type="button" onClick={() => changeRecordingMode('stopwatch')} disabled={createObservation.isPending} aria-pressed={recordingMode === 'stopwatch'} data-testid="button-retention-record-stopwatch" className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors ${recordingMode === 'stopwatch' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}><Timer className="size-3.5" strokeWidth={1.8} /> Stopwatch</button>
+                 </div>
+               </div>
+             )}
+             {recordingMode === 'manual' || !isMinutesPractice ? (
+               <div>
+                 <label htmlFor="observation-value" className="text-[11px] font-semibold">Result <span className="font-normal text-muted-foreground">({practice.unit})</span></label>
+                 <input id="observation-value" type="number" min="0" step="any" value={value} onChange={(event) => setValue(event.target.value)} placeholder="0" data-testid="input-observation-value" className="mt-1.5 h-14 w-full rounded-xl border border-input bg-background px-3 font-mono-ui text-xl outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+               </div>
+             ) : (
+               <div className="rounded-xl border border-primary/20 bg-primary/[0.055] p-4" data-testid="section-retention-stopwatch">
+                 <div className="flex items-center gap-3">
+                   <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary"><Timer className="size-4" strokeWidth={1.8} /></span>
+                   <div>
+                     <p className="text-xs font-semibold text-foreground">Practice for as long as you want.</p>
+                     <p className="mt-1 text-[11px] leading-5 text-muted-foreground">The elapsed time will be recorded as minutes.</p>
+                   </div>
+                 </div>
+                 <p className="mt-5 text-center font-mono-ui text-4xl tracking-[0.08em] text-primary" data-testid="text-retention-stopwatch-display">{formatStopwatchDuration(stopwatchElapsedMs)}</p>
+                 <div className="mt-4 flex flex-wrap justify-center gap-2">
+                   {stopwatchStartedAt === null && stopwatchCapturedMs === null && (
+                     <button type="button" onClick={startStopwatch} disabled={createObservation.isPending} data-testid="button-retention-stopwatch-start" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground disabled:cursor-wait disabled:opacity-55"><Play className="size-3.5 fill-current" strokeWidth={1.8} /> Start</button>
+                   )}
+                   {stopwatchStartedAt !== null && (
+                     <>
+                       <button type="button" onClick={finishStopwatch} disabled={createObservation.isPending || !canSubmitStopwatch(stopwatchElapsedMs)} data-testid="button-retention-stopwatch-done" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-55"><Square className="size-3.5 fill-current" strokeWidth={1.8} /> Done</button>
+                       <button type="button" onClick={clearStopwatchState} disabled={createObservation.isPending} data-testid="button-retention-stopwatch-reset" className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-55"><RotateCcw className="size-3.5" strokeWidth={1.8} /> Reset</button>
+                     </>
+                   )}
+                   {stopwatchCapturedMs !== null && (
+                     <>
+                       <button type="button" onClick={retryStopwatch} disabled={createObservation.isPending} data-testid="button-retention-stopwatch-retry" className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2.5 text-xs font-semibold text-primary-foreground disabled:cursor-wait disabled:opacity-55"><Check className="size-3.5" strokeWidth={2.2} /> {createObservation.isPending ? 'Recording…' : `Record ${stopwatchMinutes(stopwatchCapturedMs)} minutes`}</button>
+                       <button type="button" onClick={clearStopwatchState} disabled={createObservation.isPending} data-testid="button-retention-stopwatch-reset-captured" className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold text-muted-foreground hover:border-primary/40 hover:text-foreground disabled:opacity-55"><RotateCcw className="size-3.5" strokeWidth={1.8} /> Reset</button>
+                     </>
+                   )}
+                 </div>
+                 {stopwatchStartedAt !== null && !canSubmitStopwatch(stopwatchElapsedMs) && <p className="mt-3 text-center text-[11px] text-muted-foreground">Keep going for at least 1 second before recording.</p>}
+               </div>
+             )}
             <div>
               <label htmlFor="observation-context" className="text-[11px] font-semibold">Context <span className="font-normal text-muted-foreground">optional</span></label>
               <textarea id="observation-context" value={context} onChange={(event) => setContext(event.target.value)} maxLength={500} placeholder="Where or how it felt available" data-testid="input-observation-context" className="mt-1.5 min-h-[82px] w-full resize-y rounded-xl border border-input bg-background px-3 py-2.5 text-xs leading-5 outline-none placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/15" />
             </div>
             {formError && <p className="rounded-xl border border-destructive/25 bg-destructive/[0.06] px-3 py-2.5 text-xs text-destructive" role="alert" data-testid="status-record-result-error">{formError}</p>}
-            <button type="submit" disabled={createObservation.isPending} data-testid="button-record-result" className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-xs font-semibold text-primary-foreground hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-55">
-              {createObservation.isPending ? 'Recording…' : <><Check className="size-3.5" strokeWidth={2.2} /> Record result</>}
-            </button>
+             {recordingMode === 'manual' || !isMinutesPractice ? (
+               <button type="submit" disabled={createObservation.isPending} data-testid="button-record-result" className="flex w-full items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-xs font-semibold text-primary-foreground hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-55">
+                 {createObservation.isPending ? 'Recording…' : <><Check className="size-3.5" strokeWidth={2.2} /> Record result</>}
+               </button>
+             ) : null}
           </form>
         </section>
       </div>
