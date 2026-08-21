@@ -1,85 +1,112 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { healthCheck, subscribeApiLifecycle } from '@workspace/api-client-react';
+import {
+  classifyHealthFailure as classifyHealthFailureCore,
+  createHealthProbeController,
+  RENDER_IDLE_WINDOW_MS,
+  WAKE_TIMEOUT_MS,
+  type HealthFailureClassification,
+  type ServerWakeState,
+  type WakeResult,
+} from './server-wake-core';
 
-const RENDER_IDLE_WINDOW_MS = 15 * 60 * 1000;
-const WAKE_TIMEOUT_MS = 35 * 1000;
-const STATUS_REFRESH_MS = 30 * 1000;
+export const FOREGROUND_PROBE_WINDOW_MS = 60 * 1000;
 
-export type ServerWakeState = 'checking' | 'ready' | 'sleeping' | 'waking' | 'offline' | 'error';
-
-type WakeResult = {
-  ok: boolean;
-  state: ServerWakeState;
-};
-
-let lastSuccessfulRequestAt: number | null = null;
-
-function canReachNetwork() {
+export function canReachNetwork() {
   return typeof navigator === 'undefined' || navigator.onLine;
 }
 
-function isLikelyWakeFailure(status?: number) {
-  // An undefined status means the request never received an HTTP response and
-  // may indicate a sleeping/unreachable Render service. Any HTTP status,
-  // including 5xx, proves the service was reached and should remain an
-  // explicit server error rather than being presented as offline/sleeping.
-  return status === undefined;
+export function classifyHealthFailure(status?: number): HealthFailureClassification {
+  return classifyHealthFailureCore(status, canReachNetwork());
 }
+
+export { createHealthProbeController };
+export type { HealthFailureClassification, ServerWakeState, WakeResult };
 
 function isHealthCheckEvent(event: { url: string }) {
   return event.url.replace(/\/+$/, '').endsWith('/api/healthz');
 }
 
-export function useServerWakeState() {
-  const [state, setState] = useState<ServerWakeState>(() => (
-    lastSuccessfulRequestAt === null ? 'checking' : 'ready'
-  ));
-  const [lastSuccessAt, setLastSuccessAt] = useState<number | null>(lastSuccessfulRequestAt);
-  const wakePromiseRef = useRef<Promise<WakeResult> | null>(null);
+type ServerAvailabilityContextValue = {
+  state: ServerWakeState;
+  lastSuccessAt: number | null;
+  wake: () => Promise<WakeResult>;
+  probe: (options?: { force?: boolean }) => Promise<WakeResult>;
+};
+
+const ServerAvailabilityContext = createContext<ServerAvailabilityContextValue | null>(null);
+
+export function ServerAvailabilityProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<ServerWakeState>('checking');
+  const [lastSuccessAt, setLastSuccessAt] = useState<number | null>(null);
+  const probeControllerRef = useRef<ReturnType<typeof createHealthProbeController> | null>(null);
+
+  if (!probeControllerRef.current) {
+    probeControllerRef.current = createHealthProbeController({
+      request: async (signal) => {
+        await healthCheck({ signal });
+      },
+    });
+  }
+
+  const probe = useCallback(async ({ force = false }: { force?: boolean } = {}): Promise<WakeResult> => {
+    if (!canReachNetwork()) {
+      setState('offline');
+      return { ok: false, state: 'offline' };
+    }
+
+    setState('waking');
+    const result = await probeControllerRef.current!.probe(force);
+    if (result.ok) setLastSuccessAt(Date.now());
+    setState(result.state);
+    return result;
+  }, []);
+
+  const wake = useCallback(() => probe({ force: true }), [probe]);
 
   useEffect(() => {
-    const unsubscribe = subscribeApiLifecycle((event) => {
-      // The wake indicator describes the availability of the service itself.
-      // Do not let a private feature request (for example a database 500)
-      // make the global server status flicker between ready and error.
+    return subscribeApiLifecycle((event) => {
       if (!isHealthCheckEvent(event)) return;
 
       if (event.type === 'success') {
-        lastSuccessfulRequestAt = event.at;
-        setLastSuccessAt(event.at);
+        const successAt = event.at;
+        setLastSuccessAt(successAt);
         setState('ready');
         return;
       }
 
-      if (isLikelyWakeFailure(event.status)) {
-        setState(canReachNetwork() ? 'sleeping' : 'offline');
-      } else if (event.status && event.status >= 500) {
-        setState('error');
-      }
+      const nextState = classifyHealthFailure(event.status);
+      setState(nextState);
     });
-
-    return unsubscribe;
   }, []);
 
   useEffect(() => {
-    const refresh = () => {
-      if (!lastSuccessfulRequestAt || state === 'waking') return;
-      if (Date.now() - lastSuccessfulRequestAt >= RENDER_IDLE_WINDOW_MS) {
-        setState('sleeping');
-      } else if (state === 'sleeping') {
-        setState('ready');
+    void probe();
+  }, [probe]);
+
+  useEffect(() => {
+    let hiddenAt: number | null = null;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now();
+        return;
       }
+
+      if (hiddenAt !== null && Date.now() - hiddenAt >= FOREGROUND_PROBE_WINDOW_MS) {
+        void probe();
+      }
+      hiddenAt = null;
     };
 
-    refresh();
-    const timer = window.setInterval(refresh, STATUS_REFRESH_MS);
-    return () => window.clearInterval(timer);
-  }, [state]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [probe]);
 
   useEffect(() => {
     const handleOffline = () => setState('offline');
     const handleOnline = () => {
-      if (state === 'offline') setState(lastSuccessfulRequestAt ? 'sleeping' : 'checking');
+      if (state === 'offline') void probe();
     };
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
@@ -87,52 +114,24 @@ export function useServerWakeState() {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
     };
-  }, [state]);
+  }, [probe, state]);
 
-  const wake = useCallback(async (): Promise<WakeResult> => {
-    if (wakePromiseRef.current) return wakePromiseRef.current;
-
-    const promise = (async () => {
-      if (!canReachNetwork()) {
-        setState('offline');
-        return { ok: false, state: 'offline' as const };
-      }
-
-      setState('waking');
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), WAKE_TIMEOUT_MS);
-
-      try {
-        await healthCheck({ signal: controller.signal });
-        const result = { ok: true, state: 'ready' as const };
-        lastSuccessfulRequestAt = Date.now();
-        setLastSuccessAt(lastSuccessfulRequestAt);
-        setState(result.state);
-        return result;
-      } catch {
-        const nextState: 'error' | 'offline' = canReachNetwork() ? 'error' : 'offline';
-        setState(nextState);
-        return { ok: false, state: nextState };
-      } finally {
-        window.clearTimeout(timeout);
-      }
-    })();
-
-    wakePromiseRef.current = promise;
-    try {
-      return await promise;
-    } finally {
-      wakePromiseRef.current = null;
-    }
-  }, []);
-
-  const isIdle = Boolean(
-    lastSuccessAt && Date.now() - lastSuccessAt >= RENDER_IDLE_WINDOW_MS,
-  );
-
-  return {
-    state: isIdle && state === 'ready' ? 'sleeping' as const : state,
+  const value = useMemo<ServerAvailabilityContextValue>(() => ({
+    state: lastSuccessAt && Date.now() - lastSuccessAt >= RENDER_IDLE_WINDOW_MS && state === 'ready'
+      ? 'sleeping'
+      : state,
     lastSuccessAt,
     wake,
-  };
+    probe,
+  }), [lastSuccessAt, probe, state, wake]);
+
+  return createElement(ServerAvailabilityContext.Provider, { value }, children);
+}
+
+export function useServerWakeState() {
+  const context = useContext(ServerAvailabilityContext);
+  if (!context) {
+    throw new Error('useServerWakeState must be used within ServerAvailabilityProvider.');
+  }
+  return context;
 }

@@ -42,7 +42,7 @@ import { PlanningDiscussion } from '@/components/planning-discussion';
 import { ReplanningStudio } from '@/components/replanning-studio';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { useOfflineActivitySync, type OfflineSyncStatus } from '@/lib/offline-activity';
-import { useServerWakeState, type ServerWakeState } from '@/lib/server-wake';
+import { ServerAvailabilityProvider, useServerWakeState, type ServerWakeState } from '@/lib/server-wake';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
@@ -338,14 +338,17 @@ function ServerWakeStatus({
   const copy: Record<ServerWakeState, string> = {
     checking: 'Checking the day space',
     ready: 'Day space ready',
-    sleeping: 'Day Tripper may be resting',
-    waking: 'Waking Day Tripper…',
+    sleeping: 'The server may be waking up',
+    waking: 'Waking the server…',
     offline: 'Connection paused',
-    error: 'The day space needs another try',
+    error: 'The server is unavailable',
+    'auth-error': 'Authentication needs attention',
   };
   const canWake = state === 'sleeping' || state === 'error';
   const tone = state === 'sleeping' || state === 'error'
     ? 'border-accent/35 bg-accent/[0.08] text-accent-foreground'
+    : state === 'auth-error'
+      ? 'border-destructive/20 bg-destructive/[0.06] text-destructive'
     : state === 'offline'
       ? 'border-destructive/20 bg-destructive/[0.06] text-destructive'
       : 'border-border/70 bg-card/60 text-muted-foreground';
@@ -366,7 +369,7 @@ function ServerWakeStatus({
           className="font-semibold underline decoration-current/35 underline-offset-4 hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           data-testid="button-wake-server"
         >
-          {state === 'error' ? 'Try wake again' : 'Wake up'}
+          {state === 'error' ? 'Try again' : 'Wake up'}
         </button>
       )}
       {state === 'waking' && <LoaderCircle className="size-3 animate-spin" strokeWidth={1.8} />}
@@ -374,18 +377,37 @@ function ServerWakeStatus({
   );
 }
 
+function GlobalServerAvailabilityIndicator() {
+  const serverWake = useServerWakeState();
+
+  return (
+    <div className="fixed right-3 top-3 z-50 sm:right-5 sm:top-5">
+      <ServerWakeStatus state={serverWake.state} onWake={() => void serverWake.wake()} />
+    </div>
+  );
+}
+
+function AuthenticatedAppShell({ children }: { children: ReactNode }) {
+  const { isLoaded, isSignedIn } = useUser();
+
+  if (!isLoaded || !isSignedIn) return <>{children}</>;
+
+  return (
+    <ServerAvailabilityProvider>
+      <GlobalServerAvailabilityIndicator />
+      {children}
+    </ServerAvailabilityProvider>
+  );
+}
+
 function MobileHeader({
   onAdd,
   onOpenPlanning,
   onQuickJournal,
-  serverState,
-  onWake,
 }: {
   onAdd: () => void;
   onOpenPlanning: () => void;
   onQuickJournal: () => void;
-  serverState: ServerWakeState;
-  onWake: () => void;
 }) {
   return (
     <header className="flex items-center justify-between border-b border-border/70 bg-sidebar px-5 py-4 text-sidebar-foreground lg:hidden">
@@ -394,7 +416,6 @@ function MobileHeader({
         <p className="font-display text-[21px] tracking-[-0.03em]">Day Tripper</p>
       </div>
       <div className="flex items-center gap-2">
-        <ServerWakeStatus state={serverState} onWake={onWake} compact />
         <Link href="/retention" aria-label="Open retention practices" title="Practices" data-testid="link-mobile-retention" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <Circle className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </Link>
@@ -412,14 +433,12 @@ function MobileHeader({
   );
 }
 
-function ApiStatus({ state, onWake }: { state: ServerWakeState; onWake: () => void }) {
+function ApiStatus() {
   const ai = useGetAiStatus();
   const aiCopy = ai.isLoading ? 'checking services' : ai.data?.configured ? 'planning services ready' : 'planning services quiet';
 
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/60 pt-4 text-[11px] text-muted-foreground" data-testid="status-service">
-      <ServerWakeStatus state={state} onWake={onWake} />
-      <span className="text-border">/</span>
       <span>{aiCopy}</span>
     </div>
   );
@@ -1659,23 +1678,16 @@ function Today() {
       <div className="relative flex min-h-[100dvh]">
         <Sidebar onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} onQuickJournal={openQuickJournal} />
         <div className="min-w-0 flex-1">
-          <MobileHeader
-            onAdd={openCreate}
-            onOpenPlanning={() => setPlanningOpen(true)}
-            onQuickJournal={openQuickJournal}
-            serverState={serverWake.state}
-            onWake={() => void wakeAndContinue()}
-          />
+           <MobileHeader onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} onQuickJournal={openQuickJournal} />
           <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
             <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
               <div className="flex items-center gap-2">
                 <Circle className="size-2.5 fill-accent text-accent" strokeWidth={0} />
                 <span className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A private day planner</span>
                 </div>
-               <div className="flex items-center gap-3">
-                  <ServerWakeStatus state={serverWake.state} onWake={() => void wakeAndContinue()} />
-                 <span className="hidden text-xs text-muted-foreground/75 md:block">Take the day as it comes</span>
-                 <AccountControl />
+                <div className="flex items-center gap-3">
+                  <span className="hidden text-xs text-muted-foreground/75 md:block">Take the day as it comes</span>
+                  <AccountControl />
                </div>
             </header>
             <div className="mt-9 flex flex-col gap-6 border-b border-border/60 pb-8 sm:mt-12 sm:flex-row sm:items-end sm:justify-between">
@@ -1756,7 +1768,7 @@ function Today() {
                     <span className="font-mono-ui text-[10px] uppercase tracking-[0.15em]">Held lightly</span>
                   </div>
                   <p className="mt-4 font-display text-[21px] leading-[1.15] tracking-[-0.025em]">Plans are a place to return to, not a test to pass.</p>
-                  <ApiStatus state={serverWake.state} onWake={() => void wakeAndContinue()} />
+                   <ApiStatus />
                 </div>
               </aside>
             </div>
@@ -1954,7 +1966,9 @@ function ClerkProviderWithRoutes() {
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
         <TooltipProvider>
-          <Router />
+          <AuthenticatedAppShell>
+            <Router />
+          </AuthenticatedAppShell>
           <Toaster />
         </TooltipProvider>
       </QueryClientProvider>
