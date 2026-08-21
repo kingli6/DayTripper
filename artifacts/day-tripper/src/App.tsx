@@ -381,8 +381,10 @@ function GlobalServerAvailabilityIndicator() {
   const serverWake = useServerWakeState();
 
   return (
-    <div className="fixed right-3 top-3 z-50 sm:right-5 sm:top-5">
-      <ServerWakeStatus state={serverWake.state} onWake={() => void serverWake.wake()} />
+    <div className="w-full border-b border-border/50 bg-background/95 px-3 py-2 backdrop-blur-sm sm:px-5">
+      <div className="mx-auto flex min-h-7 w-full max-w-[1180px] justify-end">
+        <ServerWakeStatus state={serverWake.state} onWake={() => void serverWake.wake()} />
+      </div>
     </div>
   );
 }
