@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BoardCardUpdateCategory } from './boardCardUpdateCategory';
-import type { BoardCardUpdateStatus } from './boardCardUpdateStatus';
 
 export interface BoardCardUpdate {
   /**
@@ -35,7 +34,6 @@ export interface BoardCardUpdate {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline?: string | null;
-  status?: BoardCardUpdateStatus;
   /** @minimum 0 */
   position?: number;
   expectedUpdatedAt?: string;

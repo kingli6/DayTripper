@@ -52,7 +52,6 @@ router.post("/board-cards", async (req, res): Promise<void> => {
     priority: parsed.data.priority ?? 3,
     estimatedDurationMinutes: parsed.data.estimatedDurationMinutes ?? null,
     deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
-    status: parsed.data.status ?? "active",
     position: parsed.data.position ?? 0,
   }).returning();
 

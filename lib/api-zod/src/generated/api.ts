@@ -458,7 +458,6 @@ export const ListBoardCardsResponseItem = zod.object({
   "priority": zod.number().min(1).max(listBoardCardsResponsePriorityMax),
   "estimatedDurationMinutes": zod.number().min(1).nullable(),
   "deadline": zod.string().regex(listBoardCardsResponseDeadlineRegExp).nullable(),
-  "status": zod.enum(['active', 'completed']),
   "position": zod.number(),
   "archivedAt": zod.string().nullable(),
   "createdAt": zod.string(),
@@ -489,7 +488,6 @@ export const CreateBoardCardBody = zod.object({
   "priority": zod.number().min(1).max(createBoardCardBodyPriorityMax).optional(),
   "estimatedDurationMinutes": zod.number().min(1).nullish(),
   "deadline": zod.string().regex(createBoardCardBodyDeadlineRegExp).nullish(),
-  "status": zod.enum(['active', 'completed']).optional(),
   "position": zod.number().min(createBoardCardBodyPositionMin).optional()
 })
 
@@ -507,7 +505,6 @@ export const CreateBoardCardResponse = zod.object({
   "priority": zod.number().min(1).max(createBoardCardResponsePriorityMax),
   "estimatedDurationMinutes": zod.number().min(1).nullable(),
   "deadline": zod.string().regex(createBoardCardResponseDeadlineRegExp).nullable(),
-  "status": zod.enum(['active', 'completed']),
   "position": zod.number(),
   "archivedAt": zod.string().nullable(),
   "createdAt": zod.string(),
@@ -541,7 +538,6 @@ export const UpdateBoardCardBody = zod.object({
   "priority": zod.number().min(1).max(updateBoardCardBodyPriorityMax).optional(),
   "estimatedDurationMinutes": zod.number().min(1).nullish(),
   "deadline": zod.string().regex(updateBoardCardBodyDeadlineRegExp).nullish(),
-  "status": zod.enum(['active', 'completed']).optional(),
   "position": zod.number().min(updateBoardCardBodyPositionMin).optional(),
   "expectedUpdatedAt": zod.string().optional()
 })
@@ -560,7 +556,6 @@ export const UpdateBoardCardResponse = zod.object({
   "priority": zod.number().min(1).max(updateBoardCardResponsePriorityMax),
   "estimatedDurationMinutes": zod.number().min(1).nullable(),
   "deadline": zod.string().regex(updateBoardCardResponseDeadlineRegExp).nullable(),
-  "status": zod.enum(['active', 'completed']),
   "position": zod.number(),
   "archivedAt": zod.string().nullable(),
   "createdAt": zod.string(),

@@ -1235,9 +1235,6 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
-        status:
-          type: string
-          enum: [active, completed]
         position:
           type: number
         archivedAt:
@@ -1254,7 +1251,6 @@ components:
         - priority
         - estimatedDurationMinutes
         - deadline
-        - status
         - position
         - archivedAt
         - createdAt
@@ -1282,9 +1278,6 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
-        status:
-          type: string
-          enum: [active, completed]
         position:
           type: number
           minimum: 0
@@ -1314,9 +1307,6 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
-        status:
-          type: string
-          enum: [active, completed]
         position:
           type: number
           minimum: 0

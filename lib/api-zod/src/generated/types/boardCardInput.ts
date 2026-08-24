@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BoardCardInputCategory } from './boardCardInputCategory';
-import type { BoardCardInputStatus } from './boardCardInputStatus';
 
 export interface BoardCardInput {
   /**
@@ -35,7 +34,6 @@ export interface BoardCardInput {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline?: string | null;
-  status?: BoardCardInputStatus;
   /** @minimum 0 */
   position?: number;
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "board_cards" DROP COLUMN "status";

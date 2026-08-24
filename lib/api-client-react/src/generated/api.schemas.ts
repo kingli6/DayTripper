@@ -488,14 +488,6 @@ export const BoardCardCategory = {
   fun: 'fun',
 } as const;
 
-export type BoardCardStatus = typeof BoardCardStatus[keyof typeof BoardCardStatus];
-
-
-export const BoardCardStatus = {
-  active: 'active',
-  completed: 'completed',
-} as const;
-
 export interface BoardCard {
   id: number;
   title: string;
@@ -517,7 +509,6 @@ export interface BoardCard {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline: string | null;
-  status: BoardCardStatus;
   position: number;
   /** @nullable */
   archivedAt: string | null;
@@ -534,14 +525,6 @@ export const BoardCardInputCategory = {
   managing: 'managing',
   social: 'social',
   fun: 'fun',
-} as const;
-
-export type BoardCardInputStatus = typeof BoardCardInputStatus[keyof typeof BoardCardInputStatus];
-
-
-export const BoardCardInputStatus = {
-  active: 'active',
-  completed: 'completed',
 } as const;
 
 export interface BoardCardInput {
@@ -571,7 +554,6 @@ export interface BoardCardInput {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline?: string | null;
-  status?: BoardCardInputStatus;
   /** @minimum 0 */
   position?: number;
 }
@@ -585,14 +567,6 @@ export const BoardCardUpdateCategory = {
   managing: 'managing',
   social: 'social',
   fun: 'fun',
-} as const;
-
-export type BoardCardUpdateStatus = typeof BoardCardUpdateStatus[keyof typeof BoardCardUpdateStatus];
-
-
-export const BoardCardUpdateStatus = {
-  active: 'active',
-  completed: 'completed',
 } as const;
 
 export interface BoardCardUpdate {
@@ -622,7 +596,6 @@ export interface BoardCardUpdate {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline?: string | null;
-  status?: BoardCardUpdateStatus;
   /** @minimum 0 */
   position?: number;
   expectedUpdatedAt?: string;

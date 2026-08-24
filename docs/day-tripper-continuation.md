@@ -36,14 +36,17 @@ context. Do not wait for a reminder.
 
 **Active work:** Persistent Board foundation.
 
-**Status:** The Board card database table, Drizzle migration, generated contract
-outputs, and authenticated owner-scoped CRUD API are implemented. The development
-database contains the new table. The existing Board screen was kept compatible
-with the agreed five categories and now sends the API's default priority.
+**Status:** The Board card database table, Drizzle migrations, generated contract
+outputs, and authenticated owner-scoped CRUD API are implemented. Board cards
+use `archivedAt` as their only lifecycle mechanism; there is no card completion
+state. The development database contains the corrected table. The existing Board
+screen remains compatible with the agreed five categories and sends the API's
+default priority.
 
-**Verified:** API typecheck, web typecheck, API build, migration generation,
-development schema push, clean API/web workflow restarts, clean startup logs, and
-signed-out Board access returning 401 without private data.
+**Verified:** API and web typechecks, API build, migration generation including
+the status-column removal, development schema push, clean API/web workflow
+restarts, clean startup logs, and signed-out Board access returning 401 without
+private data.
 
 **Not yet verified:** Authenticated Board create/list/update/archive flows and
 cross-account isolation with real Clerk sessions. The attached task's stop

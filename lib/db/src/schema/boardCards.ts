@@ -11,7 +11,6 @@ export const boardCardsTable = pgTable("board_cards", {
   priority: integer("priority").notNull(),
   estimatedDurationMinutes: integer("estimated_duration_minutes"),
   deadline: timestamp("deadline", { withTimezone: true }),
-  status: text("status").notNull().default("active"),
   position: integer("position").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })

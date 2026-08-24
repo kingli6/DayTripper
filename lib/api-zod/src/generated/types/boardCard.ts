@@ -6,7 +6,6 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { BoardCardCategory } from './boardCardCategory';
-import type { BoardCardStatus } from './boardCardStatus';
 
 export interface BoardCard {
   id: number;
@@ -29,7 +28,6 @@ export interface BoardCard {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline: string | null;
-  status: BoardCardStatus;
   position: number;
   /** @nullable */
   archivedAt: string | null;
