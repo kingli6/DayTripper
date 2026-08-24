@@ -32,6 +32,35 @@ verification result, blocked boundary, or change in the next safe action. The
 user should be able to point a new session to this file without repeating prior
 context. Do not wait for a reminder.
 
+## Nullable Activity → Board association foundation
+
+**Status:** Complete and verified on 2026-08-24.
+
+**Completed:**
+
+- `activities.boardCardId` is nullable in the Drizzle schema and exported through
+  the existing database schema barrel.
+- Migration `0012_dry_solo` adds the nullable integer column and the foreign key to
+  `board_cards.id` with `ON DELETE SET NULL`; the development database has the
+  column and constraint applied.
+- OpenAPI, generated Zod schemas, and generated React client schemas expose the
+  optional nullable `boardCardId` on Activity, ActivityInput, and ActivityUpdate.
+- Authenticated Activity create and update validate that a supplied Board card is
+  owned by the current user before saving it. Activity titles remain independent
+  values.
+
+**Verified:** Migration generation, development schema push, direct database
+inspection of nullability and the `SET NULL` rule, full workspace typecheck, API
+build, and clean API/web workflow restarts.
+
+**Not verified:** Authenticated create/update requests and cross-account behavior
+through a real Clerk browser session, because the available preview session is
+signed out.
+
+**Do not start:** Scheduling, Board occurrence UI, drag-and-drop, AI planning,
+replanning, Journal integration, reality timestamps, energy tracking, analytics,
+or offline Board support.
+
 ## Current checkpoint
 
 **Active work:** Persistent Board foundation.

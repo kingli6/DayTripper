@@ -35,10 +35,7 @@ export interface ReplanningChange {
   proposedEndTime: string | null;
   /** @nullable */
   category: ReplanningChangeCategory;
-  /**
-     * @maxLength 500
-     * @nullable
-     */
+  /** @nullable */
   note: string | null;
   /**
      * @minLength 1

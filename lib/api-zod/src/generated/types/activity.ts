@@ -22,5 +22,7 @@ export interface Activity {
   pinned: boolean;
   /** @nullable */
   note: string | null;
+  /** @nullable */
+  boardCardId?: number | null;
   updatedAt: string;
 }

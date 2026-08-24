@@ -234,8 +234,6 @@ export const createReplanningProposalResponseChangesItemTitleMax = 200;
 
 export const createReplanningProposalResponseChangesItemCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const createReplanningProposalResponseChangesItemProposedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-export const createReplanningProposalResponseChangesItemNoteMax = 500;
-
 export const createReplanningProposalResponseChangesItemReasonMax = 500;
 
 export const createReplanningProposalResponseChangesMax = 100;
@@ -285,7 +283,7 @@ export const CreateReplanningProposalResponse = zod.object({
   "proposedStartTime": zod.string().nullable(),
   "proposedEndTime": zod.string().nullable(),
   "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
-  "note": zod.string().max(createReplanningProposalResponseChangesItemNoteMax).nullable(),
+  "note": zod.string().nullable(),
   "reason": zod.string().min(1).max(createReplanningProposalResponseChangesItemReasonMax)
 })).max(createReplanningProposalResponseChangesMax),
   "assumptions": zod.array(zod.string().min(1).max(createReplanningProposalResponseAssumptionsItemMax)).max(createReplanningProposalResponseAssumptionsMax),
@@ -314,8 +312,6 @@ export const applyReplanningProposalBodyChangesItemIdMax = 100;
 export const applyReplanningProposalBodyChangesItemTitleMax = 200;
 
 export const applyReplanningProposalBodyChangesItemProposedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-export const applyReplanningProposalBodyChangesItemNoteMax = 500;
-
 export const applyReplanningProposalBodyChangesMax = 100;
 
 
@@ -335,7 +331,7 @@ export const ApplyReplanningProposalBody = zod.object({
   "proposedStartTime": zod.string().nullable(),
   "proposedEndTime": zod.string().nullable(),
   "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
-  "note": zod.string().max(applyReplanningProposalBodyChangesItemNoteMax).nullable()
+  "note": zod.string().nullable()
 })).max(applyReplanningProposalBodyChangesMax)
 })
 
@@ -355,6 +351,7 @@ export const ApplyReplanningProposalResponse = zod.object({
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
+  "boardCardId": zod.number().nullish(),
   "updatedAt": zod.string()
 })),
   "addedActivities": zod.array(zod.object({
@@ -368,6 +365,7 @@ export const ApplyReplanningProposalResponse = zod.object({
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
+  "boardCardId": zod.number().nullish(),
   "updatedAt": zod.string()
 })),
   "removedActivityIds": zod.array(zod.number())
@@ -398,6 +396,7 @@ export const ListActivitiesResponseItem = zod.object({
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
+  "boardCardId": zod.number().nullish(),
   "updatedAt": zod.string()
 })
 export const ListActivitiesResponse = zod.array(ListActivitiesResponseItem)
@@ -419,7 +418,8 @@ export const CreateActivityBody = zod.object({
   "completed": zod.boolean().optional(),
   "locked": zod.boolean().optional(),
   "pinned": zod.boolean().optional(),
-  "note": zod.string().nullish()
+  "note": zod.string().nullish(),
+  "boardCardId": zod.number().nullish()
 })
 
 export const createActivityResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
@@ -436,6 +436,7 @@ export const CreateActivityResponse = zod.object({
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
+  "boardCardId": zod.number().nullish(),
   "updatedAt": zod.string()
 })
 
@@ -595,6 +596,7 @@ export const UpdateActivityBody = zod.object({
   "locked": zod.boolean().optional(),
   "pinned": zod.boolean().optional(),
   "note": zod.string().nullish(),
+  "boardCardId": zod.number().nullish(),
   "expectedUpdatedAt": zod.string().optional()
 })
 
@@ -612,6 +614,7 @@ export const UpdateActivityResponse = zod.object({
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
+  "boardCardId": zod.number().nullish(),
   "updatedAt": zod.string()
 })
 

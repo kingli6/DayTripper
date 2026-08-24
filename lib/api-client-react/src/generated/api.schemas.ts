@@ -341,10 +341,7 @@ export interface ReplanningChange {
   proposedEndTime: string | null;
   /** @nullable */
   category: ReplanningChangeCategory;
-  /**
-     * @maxLength 500
-     * @nullable
-     */
+  /** @nullable */
   note: string | null;
   /**
      * @minLength 1
@@ -417,10 +414,7 @@ export interface ReplanningChangeInput {
   proposedEndTime: string | null;
   /** @nullable */
   category: ReplanningChangeInputCategory;
-  /**
-     * @maxLength 500
-     * @nullable
-     */
+  /** @nullable */
   note: string | null;
 }
 
@@ -468,6 +462,8 @@ export interface Activity {
   pinned: boolean;
   /** @nullable */
   note: string | null;
+  /** @nullable */
+  boardCardId?: number | null;
   updatedAt: string;
 }
 
@@ -630,6 +626,8 @@ export interface ActivityInput {
   pinned?: boolean;
   /** @nullable */
   note?: string | null;
+  /** @nullable */
+  boardCardId?: number | null;
 }
 
 /**
@@ -661,6 +659,8 @@ export interface ActivityUpdate {
   pinned?: boolean;
   /** @nullable */
   note?: string | null;
+  /** @nullable */
+  boardCardId?: number | null;
   expectedUpdatedAt?: string;
 }
 

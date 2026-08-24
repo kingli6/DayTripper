@@ -22,5 +22,7 @@ export interface ActivityUpdate {
   pinned?: boolean;
   /** @nullable */
   note?: string | null;
+  /** @nullable */
+  boardCardId?: number | null;
   expectedUpdatedAt?: string;
 }
