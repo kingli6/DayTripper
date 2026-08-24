@@ -43,10 +43,17 @@ state. The development database contains the corrected table. The existing Board
 screen remains compatible with the agreed five categories and sends the API's
 default priority.
 
+The Board UI usability slice is also complete: active cards are shown in five
+category columns with title, priority, optional estimated duration, and optional
+deadline at a glance. Notes remain available through edit. Create, edit, archive,
+and move-up/move-down ordering continue to use the existing API.
+
 **Verified:** API and web typechecks, API build, migration generation including
 the status-column removal, development schema push, clean API/web workflow
 restarts, clean startup logs, and signed-out Board access returning 401 without
-private data.
+private data. The workflow-matched web production build and signed-out browser
+preview also pass; authenticated card interactions remain unverified because the
+available browser session is signed out.
 
 **Not yet verified:** Authenticated Board create/list/update/archive flows and
 cross-account isolation with real Clerk sessions. The attached task's stop

@@ -7,7 +7,7 @@ import {
   useUpdateBoardCard,
 } from '@workspace/api-client-react';
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, Archive, BookOpen, Check, ChevronDown, Circle, Home, LayoutGrid, Pencil, Plus, RotateCcw, ShieldCheck, Stethoscope, Users, BriefcaseBusiness, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Archive, BookOpen, CalendarClock, Check, ChevronDown, Circle, Clock3, Flag, Home, LayoutGrid, Pencil, Plus, RotateCcw, ShieldCheck, Users, BriefcaseBusiness, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { BoardCardForm, BOARD_CATEGORIES, type BoardCategory, type BoardCardFormValues } from '@/components/board-card-form';
 import { useQueryClient } from '@tanstack/react-query';
@@ -46,6 +46,10 @@ const categoryColors: Record<BoardCategory, { ink: string; wash: string; rule: s
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'That change could not be saved. Try again.';
+}
+
+function formatDeadline(deadline: string) {
+  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(deadline));
 }
 
 function BoardBrand() {
@@ -182,7 +186,24 @@ function BoardCardItem({
           <Pencil className="size-3.5" strokeWidth={1.8} />
         </button>
       </div>
-      {card.note && <p className="mt-2 line-clamp-4 whitespace-pre-wrap text-[12px] leading-5 text-muted-foreground" data-testid={`text-board-card-note-${card.id}`}>{card.note}</p>}
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-muted-foreground" data-testid={`meta-board-card-${card.id}`}>
+        <span className="inline-flex items-center gap-1.5 font-semibold text-foreground/75" title={`Priority ${card.priority}`}>
+          <Flag className="size-3.5 text-primary" strokeWidth={1.8} />
+          {card.priority}/5
+        </span>
+        {card.estimatedDurationMinutes !== null && (
+          <span className="inline-flex items-center gap-1.5" data-testid={`text-board-card-duration-${card.id}`}>
+            <Clock3 className="size-3.5" strokeWidth={1.8} />
+            {card.estimatedDurationMinutes} min
+          </span>
+        )}
+        {card.deadline && (
+          <span className="inline-flex items-center gap-1.5" data-testid={`text-board-card-deadline-${card.id}`}>
+            <CalendarClock className="size-3.5" strokeWidth={1.8} />
+            {formatDeadline(card.deadline)}
+          </span>
+        )}
+      </div>
       <div className="mt-4 flex items-center justify-between gap-2 border-t border-border/55 pt-3">
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => onMove('up')} disabled={pending || index === 0} aria-label={`Move ${card.title} up`} data-testid={`button-move-board-card-up-${card.id}`} className="flex size-8 items-center justify-center rounded-lg border border-border/70 text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:cursor-not-allowed disabled:opacity-25">
@@ -316,7 +337,7 @@ export default function BoardPage() {
   };
 
   const handleCreate = async (values: BoardCardFormValues) => {
-    const data: BoardCardInput = { title: values.title, category: values.category, note: values.note || null, priority: 3, position: grouped[values.category].length };
+    const data: BoardCardInput = { title: values.title, category: values.category, note: values.note || null, priority: values.priority, estimatedDurationMinutes: values.estimatedDurationMinutes ?? null, deadline: values.deadline ? new Date(values.deadline).toISOString() : null, position: grouped[values.category].length };
     try {
       await createCard.mutateAsync({ data });
       await queryClient.invalidateQueries({ queryKey: getListBoardCardsQueryKey() });
@@ -328,7 +349,7 @@ export default function BoardPage() {
   };
 
   const handleUpdate = async (card: BoardCard, values: BoardCardFormValues) => {
-    const data: BoardCardUpdate = { title: values.title, category: values.category, note: values.note || null, expectedUpdatedAt: card.updatedAt };
+    const data: BoardCardUpdate = { title: values.title, category: values.category, note: values.note || null, priority: values.priority, estimatedDurationMinutes: values.estimatedDurationMinutes ?? null, deadline: values.deadline ? new Date(values.deadline).toISOString() : null, expectedUpdatedAt: card.updatedAt };
     try {
       await updateCard.mutateAsync({ id: card.id, data });
       await queryClient.invalidateQueries({ queryKey: getListBoardCardsQueryKey() });

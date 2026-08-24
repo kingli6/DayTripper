@@ -10,6 +10,9 @@ export type BoardCategory = (typeof BOARD_CATEGORIES)[number];
 const boardCardSchema = z.object({
   title: z.string().trim().min(1, 'Give this card a short title.').max(200, 'Keep the title under 200 characters.'),
   category: z.enum(BOARD_CATEGORIES),
+  priority: z.preprocess((value) => value === '' ? undefined : Number(value), z.number().int().min(1).max(5)),
+  estimatedDurationMinutes: z.preprocess((value) => value === '' ? undefined : Number(value), z.number().int().min(1).max(1440).optional()),
+  deadline: z.string().optional(),
   note: z.string().max(2000, 'Keep the note under 2,000 characters.'),
 });
 
@@ -41,6 +44,9 @@ export function BoardCardForm({
     defaultValues: {
       title: card?.title ?? '',
       category: card?.category ?? defaultCategory,
+      priority: card?.priority ?? 3,
+      estimatedDurationMinutes: card?.estimatedDurationMinutes ?? undefined,
+      deadline: card?.deadline ? card.deadline.slice(0, 16) : '',
       note: card?.note ?? '',
     },
   });
@@ -54,6 +60,8 @@ export function BoardCardForm({
           ...values,
           title: values.title.trim(),
           note: values.note.trim(),
+          estimatedDurationMinutes: values.estimatedDurationMinutes || undefined,
+          deadline: values.deadline || undefined,
         }))}
         className="space-y-5"
         data-testid={card ? `form-edit-board-card-${card.id}` : 'form-create-board-card'}
@@ -72,6 +80,73 @@ export function BoardCardForm({
                   placeholder="A thing worth having close"
                   data-testid="input-board-card-title"
                   className="flex h-12 w-full rounded-xl border border-input bg-background/70 px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormField
+            control={form.control}
+            name="priority"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold text-foreground">Priority</FormLabel>
+                <FormControl>
+                  <input
+                    {...field}
+                    type="number"
+                    min={1}
+                    max={5}
+                    step={1}
+                    inputMode="numeric"
+                    data-testid="input-board-card-priority"
+                    className="flex h-12 w-full rounded-xl border border-input bg-background/70 px-4 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  />
+                </FormControl>
+                <FormDescription className="text-[11px] leading-5">A personal 1–5 signal, separate from column order.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="estimatedDurationMinutes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold text-foreground">Estimated duration <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
+                <FormControl>
+                  <input
+                    {...field}
+                    value={field.value ?? ''}
+                    type="number"
+                    min={1}
+                    max={1440}
+                    step={1}
+                    inputMode="numeric"
+                    placeholder="Minutes"
+                    data-testid="input-board-card-duration"
+                    className="flex h-12 w-full rounded-xl border border-input bg-background/70 px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/15"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="deadline"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-semibold text-foreground">Deadline <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
+              <FormControl>
+                <input
+                  {...field}
+                  type="datetime-local"
+                  data-testid="input-board-card-deadline"
+                  className="flex h-12 w-full rounded-xl border border-input bg-background/70 px-4 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
                 />
               </FormControl>
               <FormMessage />
