@@ -61,6 +61,34 @@ signed out.
 replanning, Journal integration, reality timestamps, energy tracking, analytics,
 or offline Board support.
 
+## Manual Board-card scheduling
+
+**Status:** Implemented and locally verified on 2026-08-24.
+
+**Completed:**
+
+- Active Board cards have a simple Schedule action.
+- The scheduling form accepts a date, start time, and either a duration or end
+  time; an existing estimated duration is used as the default.
+- Each confirmation creates a new normal Activity with the Board card's title,
+  category, and `boardCardId`. The Board card is not archived or otherwise
+  changed, so it can create multiple independent occurrences.
+- The selected Activity day is invalidated after creation so the existing Today
+  view can show the occurrence when that date is selected.
+
+**Verified:** Full workspace typecheck, API build, workflow-equivalent web
+production build, clean web workflow restart, and signed-out browser preview
+without application errors.
+
+**Not verified:** Authenticated scheduling requests, duplicate occurrence rows,
+cross-account ownership rejection, completion behavior, and Today refresh with
+real private data because the available browser session is signed out.
+
+**Do not start:** Drag-and-drop, AI or automatic scheduling, recurring
+scheduling, planning/replanning changes, actual-time or Reality tracking, energy
+or delay tracking, Journal/Retention changes, analytics, insights, or offline
+Board support.
+
 ## Current checkpoint
 
 **Active work:** Persistent Board foundation.

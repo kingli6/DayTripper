@@ -1,12 +1,18 @@
 import type { BoardCard, BoardCardInput, BoardCardUpdate } from '@workspace/api-client-react';
 import {
   getListBoardCardsQueryKey,
+  getListActivitiesQueryKey,
   useArchiveBoardCard,
+  useCreateActivity,
   useCreateBoardCard,
   useListBoardCards,
   useUpdateBoardCard,
 } from '@workspace/api-client-react';
 import { useMemo, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ArrowDown, ArrowUp, Archive, BookOpen, CalendarClock, Check, ChevronDown, Circle, Clock3, Flag, Home, LayoutGrid, Pencil, Plus, RotateCcw, ShieldCheck, Users, BriefcaseBusiness, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { BoardCardForm, BOARD_CATEGORIES, type BoardCategory, type BoardCardFormValues } from '@/components/board-card-form';
@@ -50,6 +56,19 @@ function errorMessage(error: unknown) {
 
 function formatDeadline(deadline: string) {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(deadline));
+}
+
+function localDate() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
+}
+
+function endTimeFromDuration(startTime: string, duration: number) {
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const total = hours * 60 + minutes + duration;
+  if (total > 23 * 60 + 59) return null;
+  return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
 }
 
 function BoardBrand() {
@@ -166,6 +185,7 @@ function BoardCardItem({
   index,
   count,
   pending,
+  onSchedule,
   onEdit,
   onArchive,
   onMove,
@@ -174,6 +194,7 @@ function BoardCardItem({
   index: number;
   count: number;
   pending: boolean;
+  onSchedule: () => void;
   onEdit: () => void;
   onArchive: () => void;
   onMove: (direction: 'up' | 'down') => void;
@@ -213,10 +234,16 @@ function BoardCardItem({
             <ArrowDown className="size-3.5" strokeWidth={1.8} />
           </button>
         </div>
-        <button type="button" onClick={onArchive} disabled={pending} data-testid={`button-archive-board-card-${card.id}`} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40">
-          <Archive className="size-3.5" strokeWidth={1.8} />
-          Archive
-        </button>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={onSchedule} disabled={pending} data-testid={`button-schedule-board-card-${card.id}`} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-semibold text-primary transition-colors hover:bg-primary/10 disabled:opacity-40">
+            <CalendarClock className="size-3.5" strokeWidth={1.8} />
+            Schedule
+          </button>
+          <button type="button" onClick={onArchive} disabled={pending} data-testid={`button-archive-board-card-${card.id}`} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40">
+            <Archive className="size-3.5" strokeWidth={1.8} />
+            Archive
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -227,6 +254,7 @@ function BoardColumn({
   cards,
   pending,
   onAdd,
+  onSchedule,
   onEdit,
   onArchive,
   onMove,
@@ -235,6 +263,7 @@ function BoardColumn({
   cards: BoardCard[];
   pending: boolean;
   onAdd: () => void;
+  onSchedule: (card: BoardCard) => void;
   onEdit: (card: BoardCard) => void;
   onArchive: (card: BoardCard) => void;
   onMove: (card: BoardCard, direction: 'up' | 'down') => void;
@@ -265,13 +294,128 @@ function BoardColumn({
             </button>
           </div>
         ) : cards.map((card, index) => (
-          <BoardCardItem key={card.id} card={card} index={index} count={cards.length} pending={pending} onEdit={() => onEdit(card)} onArchive={() => onArchive(card)} onMove={(direction) => onMove(card, direction)} />
+          <BoardCardItem key={card.id} card={card} index={index} count={cards.length} pending={pending} onSchedule={() => onSchedule(card)} onEdit={() => onEdit(card)} onArchive={() => onArchive(card)} onMove={(direction) => onMove(card, direction)} />
         ))}
       </div>
       {cards.length > 0 && <button type="button" onClick={onAdd} data-testid={`button-add-board-card-${category}`} className="mt-3 flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-dashed border-border px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.04] hover:text-primary">
         <Plus className="size-3.5" strokeWidth={2} /> Add card
       </button>}
     </section>
+  );
+}
+
+const scheduleSchema = z.object({
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Choose a valid date.'),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Choose a valid start time.'),
+  durationMinutes: z.preprocess((value) => value === '' ? undefined : Number(value), z.number().int().min(1).max(1440).optional()),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Choose an end time.').optional(),
+}).superRefine((values, context) => {
+  if (!values.durationMinutes && !values.endTime) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['durationMinutes'], message: 'Add a duration or end time.' });
+  }
+});
+
+type ScheduleFormValues = z.infer<typeof scheduleSchema>;
+
+function ScheduleModal({ card, onClose, onScheduled }: { card: BoardCard; onClose: () => void; onScheduled: (date: string) => Promise<void> }) {
+  const createActivity = useCreateActivity();
+  const form = useForm<ScheduleFormValues>({
+    resolver: zodResolver(scheduleSchema),
+    defaultValues: {
+      scheduledDate: localDate(),
+      startTime: '09:00',
+      durationMinutes: card.estimatedDurationMinutes ?? undefined,
+      endTime: '',
+    },
+  });
+
+  async function submit(values: ScheduleFormValues) {
+    const endTime = values.durationMinutes ? endTimeFromDuration(values.startTime, values.durationMinutes) : values.endTime;
+    if (!endTime) {
+      form.setError('durationMinutes', { message: 'That duration runs past midnight. Choose an end time or a shorter duration.' });
+      return;
+    }
+    if (!values.durationMinutes && endTime <= values.startTime) {
+      form.setError('endTime', { message: 'The end time needs to be after the start time.' });
+      return;
+    }
+    try {
+      await createActivity.mutateAsync({
+        data: {
+          title: card.title,
+          scheduledDate: values.scheduledDate,
+          startTime: values.startTime,
+          endTime,
+          category: card.category,
+          completed: false,
+          locked: false,
+          pinned: false,
+          note: null,
+          boardCardId: card.id,
+        },
+      });
+      await onScheduled(values.scheduledDate);
+    } catch (error) {
+      form.setError('root', { message: errorMessage(error) });
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !createActivity.isPending) onClose(); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="schedule-board-card-title" className="paper-grain w-full max-w-[520px] rounded-t-[28px] border border-border bg-background p-5 shadow-[0_24px_80px_hsl(205_32%_20%/0.2)] sm:rounded-[28px] sm:p-7" data-testid={`dialog-schedule-board-card-${card.id}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">Schedule a possibility</p>
+            <h2 id="schedule-board-card-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">Make room for “{card.title}”.</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">This creates a new activity occurrence. The Board card stays here for another day.</p>
+          </div>
+          <button type="button" onClick={onClose} disabled={createActivity.isPending} aria-label="Close schedule form" data-testid="button-close-schedule-board-card" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary disabled:opacity-40">
+            <X className="size-4" strokeWidth={1.8} />
+          </button>
+        </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit((values) => void submit(values))} className="mt-7 space-y-5" data-testid={`form-schedule-board-card-${card.id}`}>
+            <FormField control={form.control} name="scheduledDate" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold text-foreground">Date</FormLabel>
+                <FormControl><input {...field} type="date" data-testid={`input-schedule-date-${card.id}`} className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3.5 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField control={form.control} name="startTime" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold text-foreground">Starts</FormLabel>
+                  <FormControl><input {...field} type="time" data-testid={`input-schedule-start-${card.id}`} className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="durationMinutes" render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs font-semibold text-foreground">Duration <span className="font-normal text-muted-foreground">(optional if using end)</span></FormLabel>
+                  <FormControl><input {...field} value={field.value ?? ''} type="number" min={1} max={1440} step={1} placeholder="Minutes" data-testid={`input-schedule-duration-${card.id}`} className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+            <FormField control={form.control} name="endTime" render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-xs font-semibold text-foreground">End time <span className="font-normal text-muted-foreground">(use instead of duration)</span></FormLabel>
+                <FormControl><input {...field} value={field.value ?? ''} type="time" data-testid={`input-schedule-end-${card.id}`} className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            {form.formState.errors.root?.message && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid={`status-schedule-error-${card.id}`}>{form.formState.errors.root.message}</p>}
+            <div className="flex justify-end gap-2 border-t border-border/65 pt-5">
+              <button type="button" onClick={onClose} disabled={createActivity.isPending} data-testid={`button-cancel-schedule-${card.id}`} className="min-h-11 rounded-full border border-border bg-background px-4 py-2.5 text-xs font-semibold hover:border-primary/40 disabled:opacity-40">Cancel</button>
+              <button type="submit" disabled={createActivity.isPending} data-testid={`button-confirm-schedule-${card.id}`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground disabled:cursor-wait disabled:opacity-55">
+                {createActivity.isPending ? 'Scheduling…' : 'Schedule occurrence'}
+              </button>
+            </div>
+          </form>
+        </Form>
+      </section>
+    </div>
   );
 }
 
@@ -282,6 +426,7 @@ export default function BoardPage() {
   const updateCard = useUpdateBoardCard();
   const archiveCard = useArchiveBoardCard();
   const [modal, setModal] = useState<{ card?: BoardCard; category: BoardCategory } | null>(null);
+  const [scheduleCard, setScheduleCard] = useState<BoardCard | null>(null);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [ordering, setOrdering] = useState(false);
 
@@ -371,6 +516,12 @@ export default function BoardPage() {
     }
   };
 
+  const handleScheduled = async (date: string) => {
+    await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date }) });
+    setScheduleCard(null);
+    showSuccess('A new occurrence was added to your schedule.');
+  };
+
   if (list.isLoading) {
     return <div className="paper-grain min-h-[100dvh] bg-background text-foreground"><div className="flex min-h-[100dvh]"><BoardRail /><main className="min-w-0 flex-1 px-5 py-7 sm:px-8 lg:px-14 lg:py-10"><BoardHeader total={0} onAdd={() => setModal({ category: 'work' })} /><div className="mt-8"><BoardSkeleton /></div></main></div></div>;
   }
@@ -403,7 +554,7 @@ export default function BoardPage() {
                 </div>
               ) : (
                 <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                  {BOARD_CATEGORIES.map((category) => <BoardColumn key={category} category={category} cards={grouped[category]} pending={ordering || updateCard.isPending || archiveCard.isPending} onAdd={() => setModal({ category })} onEdit={(card) => setModal({ card, category: card.category })} onArchive={handleArchive} onMove={moveCard} />)}
+                   {BOARD_CATEGORIES.map((category) => <BoardColumn key={category} category={category} cards={grouped[category]} pending={ordering || updateCard.isPending || archiveCard.isPending} onAdd={() => setModal({ category })} onSchedule={setScheduleCard} onEdit={(card) => setModal({ card, category: card.category })} onArchive={handleArchive} onMove={moveCard} />)}
                 </div>
               )}
             </>
@@ -416,6 +567,7 @@ export default function BoardPage() {
         <button type="button" onClick={() => setNotice(null)} aria-label="Dismiss Board message" data-testid="button-dismiss-board-notice" className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="size-3.5" /></button>
       </div>}
       {modal && <BoardModal card={modal.card} defaultCategory={modal.category} pending={createCard.isPending || updateCard.isPending} onSave={(values) => void (modal.card ? handleUpdate(modal.card, values) : handleCreate(values))} onClose={() => setModal(null)} />}
+      {scheduleCard && <ScheduleModal card={scheduleCard} onClose={() => setScheduleCard(null)} onScheduled={handleScheduled} />}
     </div>
   );
 }
