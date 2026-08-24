@@ -1030,7 +1030,6 @@ components:
           enum: [work, recovery, managing, social, fun, null]
         note:
           type: ["string", "null"]
-          maxLength: 500
         reason:
           type: string
           minLength: 1
@@ -1113,7 +1112,6 @@ components:
           enum: [work, recovery, managing, social, fun, null]
         note:
           type: ["string", "null"]
-          maxLength: 500
       required:
         - id
         - activityId
@@ -1199,6 +1197,8 @@ components:
           type: boolean
         note:
           type: ["string", "null"]
+        boardCardId:
+          type: ["number", "null"]
         updatedAt:
           type: string
       required:
@@ -1336,6 +1336,8 @@ components:
           type: boolean
         note:
           type: ["string", "null"]
+        boardCardId:
+          type: ["number", "null"]
       required:
         - title
         - scheduledDate
@@ -1364,6 +1366,8 @@ components:
           type: boolean
         note:
           type: ["string", "null"]
+        boardCardId:
+          type: ["number", "null"]
         expectedUpdatedAt:
           type: string
     ActivityChange:

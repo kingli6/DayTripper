@@ -227,6 +227,7 @@ function optimisticActivity(localId: number, data: ActivityInput): Activity {
     locked: data.locked ?? false,
     pinned: data.pinned ?? false,
     note: data.note ?? null,
+    boardCardId: data.boardCardId ?? null,
     updatedAt: new Date().toISOString(),
   };
 }

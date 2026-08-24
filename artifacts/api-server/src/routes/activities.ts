@@ -1,6 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { activityChangesTable, db, activitiesTable } from "@workspace/db";
+import { activityChangesTable, boardCardsTable, db, activitiesTable } from "@workspace/db";
 import {
   CreateActivityBody,
   CreateActivityResponse,
@@ -35,6 +35,15 @@ function toApiActivity(activity: typeof activitiesTable.$inferSelect) {
     ...activity,
     updatedAt: activity.updatedAt.toISOString(),
   };
+}
+
+async function ownsBoardCard(boardCardId: number, ownerId: string) {
+  const [card] = await db
+    .select({ id: boardCardsTable.id })
+    .from(boardCardsTable)
+    .where(and(eq(boardCardsTable.id, boardCardId), eq(boardCardsTable.ownerId, ownerId)))
+    .limit(1);
+  return Boolean(card);
 }
 
 router.get("/activities", async (req, res): Promise<void> => {
@@ -79,10 +88,17 @@ router.post("/activities", async (req, res): Promise<void> => {
     return;
   }
 
+  if (parsed.data.boardCardId !== undefined && parsed.data.boardCardId !== null &&
+      !(await ownsBoardCard(parsed.data.boardCardId, res.locals.userId as string))) {
+    res.status(404).json({ error: "Board card not found." });
+    return;
+  }
+
   const [activity] = await db
     .insert(activitiesTable)
     .values({
       ownerId: res.locals.userId as string,
+      boardCardId: parsed.data.boardCardId ?? null,
       title: parsed.data.title,
       scheduledDate: parsed.data.scheduledDate,
       startTime: parsed.data.startTime,
@@ -114,6 +130,12 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  if (parsed.data.boardCardId !== undefined && parsed.data.boardCardId !== null &&
+      !(await ownsBoardCard(parsed.data.boardCardId, res.locals.userId as string))) {
+    res.status(404).json({ error: "Board card not found." });
+    return;
+  }
+
   const expectedUpdatedAt = parsed.data.expectedUpdatedAt;
   const expectedUpdatedAtDate = expectedUpdatedAt ? new Date(expectedUpdatedAt) : undefined;
   if (expectedUpdatedAt && Number.isNaN(expectedUpdatedAtDate?.getTime())) {
@@ -137,6 +159,7 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
     ...(parsed.data.locked !== undefined && { locked: parsed.data.locked }),
     ...(parsed.data.pinned !== undefined && { pinned: parsed.data.pinned }),
     ...(parsed.data.note !== undefined && { note: parsed.data.note }),
+    ...(parsed.data.boardCardId !== undefined && { boardCardId: parsed.data.boardCardId }),
   };
 
   if (Object.keys(updateValues).length === 0) {
