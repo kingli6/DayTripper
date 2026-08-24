@@ -16,6 +16,8 @@ tags:
     description: Bounded AI planning proposal operations
   - name: activities
     description: Day Tripper activity operations
+  - name: board
+    description: Persistent Board card operations
   - name: journal
     description: Private timestamped journal operations
   - name: retention
@@ -187,6 +189,82 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Activity"
+  /board-cards:
+    get:
+      operationId: listBoardCards
+      tags: [board]
+      summary: List active Board cards
+      description: Returns the authenticated user's non-archived Board cards ordered by category and position
+      responses:
+        "200":
+          description: Active Board cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BoardCard"
+    post:
+      operationId: createBoardCard
+      tags: [board]
+      summary: Create a Board card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BoardCardInput"
+      responses:
+        "201":
+          description: Board card created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardCard"
+  /board-cards/{id}:
+    patch:
+      operationId: updateBoardCard
+      tags: [board]
+      summary: Update a Board card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BoardCardUpdate"
+      responses:
+        "200":
+          description: Board card updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardCard"
+        "404":
+          description: Board card not found
+        "409":
+          description: The Board card changed after the client last loaded it
+    delete:
+      operationId: archiveBoardCard
+      tags: [board]
+      summary: Archive a Board card
+      description: Archives the card without deleting it permanently
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Board card archived
+        "404":
+          description: Board card not found
   /activities/{id}:
     patch:
       operationId: updateActivity
@@ -1135,6 +1213,115 @@ components:
         - pinned
         - note
         - updatedAt
+    BoardCard:
+      type: object
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        category:
+          type: string
+          enum: [work, recovery, managing, social, fun]
+        note:
+          type: ["string", "null"]
+        priority:
+          type: number
+          minimum: 1
+          maximum: 5
+        estimatedDurationMinutes:
+          type: ["number", "null"]
+          minimum: 1
+        deadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}T'
+        status:
+          type: string
+          enum: [active, completed]
+        position:
+          type: number
+        archivedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - category
+        - note
+        - priority
+        - estimatedDurationMinutes
+        - deadline
+        - status
+        - position
+        - archivedAt
+        - createdAt
+        - updatedAt
+    BoardCardInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        category:
+          type: string
+          enum: [work, recovery, managing, social, fun]
+        note:
+          type: ["string", "null"]
+          maxLength: 2000
+        priority:
+          type: number
+          minimum: 1
+          maximum: 5
+        estimatedDurationMinutes:
+          type: ["number", "null"]
+          minimum: 1
+        deadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}T'
+        status:
+          type: string
+          enum: [active, completed]
+        position:
+          type: number
+          minimum: 0
+      required:
+        - title
+        - category
+    BoardCardUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        category:
+          type: string
+          enum: [work, recovery, managing, social, fun]
+        note:
+          type: ["string", "null"]
+          maxLength: 2000
+        priority:
+          type: number
+          minimum: 1
+          maximum: 5
+        estimatedDurationMinutes:
+          type: ["number", "null"]
+          minimum: 1
+        deadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}T'
+        status:
+          type: string
+          enum: [active, completed]
+        position:
+          type: number
+          minimum: 0
+        expectedUpdatedAt:
+          type: string
     ActivityInput:
       type: object
       properties:

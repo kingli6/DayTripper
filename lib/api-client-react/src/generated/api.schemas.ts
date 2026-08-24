@@ -477,6 +477,157 @@ export interface ApplyReplanningResult {
   removedActivityIds: number[];
 }
 
+export type BoardCardCategory = typeof BoardCardCategory[keyof typeof BoardCardCategory];
+
+
+export const BoardCardCategory = {
+  work: 'work',
+  recovery: 'recovery',
+  managing: 'managing',
+  social: 'social',
+  fun: 'fun',
+} as const;
+
+export type BoardCardStatus = typeof BoardCardStatus[keyof typeof BoardCardStatus];
+
+
+export const BoardCardStatus = {
+  active: 'active',
+  completed: 'completed',
+} as const;
+
+export interface BoardCard {
+  id: number;
+  title: string;
+  category: BoardCardCategory;
+  /** @nullable */
+  note: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  priority: number;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  estimatedDurationMinutes: number | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}T
+     */
+  deadline: string | null;
+  status: BoardCardStatus;
+  position: number;
+  /** @nullable */
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BoardCardInputCategory = typeof BoardCardInputCategory[keyof typeof BoardCardInputCategory];
+
+
+export const BoardCardInputCategory = {
+  work: 'work',
+  recovery: 'recovery',
+  managing: 'managing',
+  social: 'social',
+  fun: 'fun',
+} as const;
+
+export type BoardCardInputStatus = typeof BoardCardInputStatus[keyof typeof BoardCardInputStatus];
+
+
+export const BoardCardInputStatus = {
+  active: 'active',
+  completed: 'completed',
+} as const;
+
+export interface BoardCardInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  category: BoardCardInputCategory;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  note?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  priority?: number;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  estimatedDurationMinutes?: number | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}T
+     */
+  deadline?: string | null;
+  status?: BoardCardInputStatus;
+  /** @minimum 0 */
+  position?: number;
+}
+
+export type BoardCardUpdateCategory = typeof BoardCardUpdateCategory[keyof typeof BoardCardUpdateCategory];
+
+
+export const BoardCardUpdateCategory = {
+  work: 'work',
+  recovery: 'recovery',
+  managing: 'managing',
+  social: 'social',
+  fun: 'fun',
+} as const;
+
+export type BoardCardUpdateStatus = typeof BoardCardUpdateStatus[keyof typeof BoardCardUpdateStatus];
+
+
+export const BoardCardUpdateStatus = {
+  active: 'active',
+  completed: 'completed',
+} as const;
+
+export interface BoardCardUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  category?: BoardCardUpdateCategory;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  note?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  priority?: number;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  estimatedDurationMinutes?: number | null;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}T
+     */
+  deadline?: string | null;
+  status?: BoardCardUpdateStatus;
+  /** @minimum 0 */
+  position?: number;
+  expectedUpdatedAt?: string;
+}
+
 /**
  * @nullable
  */

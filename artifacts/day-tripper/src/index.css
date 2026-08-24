@@ -81,17 +81,15 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 43 36% 94%;
+  --background: 42 35% 93%;
 
-  --foreground: 205 32% 20%;
+  --foreground: 203 29% 21%;
 
-  --border: 39 22% 84%;
+  --border: 38 24% 82%;
 
-  --card: 43 40% 97%;
-
-  --card-foreground: 205 32% 20%;
-
-  --card-border: 39 25% 86%;
+  --card: 43 43% 97%;
+  --card-foreground: 203 29% 21%;
+  --card-border: 38 27% 85%;
 
   --sidebar: 198 31% 24%;
 
@@ -115,9 +113,8 @@
 
   --popover-border: 39 25% 86%;
 
-  --primary: 177 28% 39%;
-
-  --primary-foreground: 43 40% 97%;
+  --primary: 176 31% 37%;
+  --primary-foreground: 43 43% 97%;
 
   --secondary: 38 56% 85%;
 
@@ -136,7 +133,7 @@
   --destructive-foreground: 43 40% 97%;
 
   --input: 39 22% 78%;
-  --ring: 177 28% 39%;
+  --ring: 176 31% 37%;
   --chart-1: 177 28% 39%;
   --chart-2: 34 88% 73%;
   --chart-3: 15 66% 71%;
@@ -230,13 +227,13 @@
   --elevate-1: rgba(255, 255, 255, 0.04);
   --elevate-2: rgba(255, 255, 255, 0.09);
 
-  --background: 205 32% 13%;
+  --background: 202 28% 13%;
 
   --foreground: 43 37% 91%;
 
   --border: 198 20% 27%;
 
-  --card: 201 28% 17%;
+  --card: 201 29% 17%;
 
   --card-foreground: 43 37% 91%;
 
@@ -264,7 +261,7 @@
 
   --popover-border: 198 20% 27%;
 
-  --primary: 177 32% 52%;
+  --primary: 176 35% 53%;
 
   --primary-foreground: 205 35% 10%;
 
@@ -286,7 +283,7 @@
 
   /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
   --input: 198 20% 34%;
-  --ring: 177 32% 52%;
+  --ring: 176 35% 53%;
   --chart-1: 177 32% 52%;
   --chart-2: 34 88% 73%;
   --chart-3: 15 66% 71%;

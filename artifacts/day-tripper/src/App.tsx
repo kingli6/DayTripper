@@ -15,6 +15,7 @@ import {
   Clock3,
   Cloud,
   EyeOff,
+  LayoutGrid,
   LoaderCircle,
   LockKeyhole,
   Menu,
@@ -36,6 +37,7 @@ import {
 } from '@workspace/api-client-react';
 import type { Activity, ActivityInput, PlanningDiscussionMessage, PlanningProposal, PlanningRequest } from '@workspace/api-client-react';
 import { ChangeReviewPanel } from '@/components/change-review-panel';
+import BoardPage from '@/pages/board';
 import { JournalPanel } from '@/components/journal-panel';
 import { JournalPlanningSelector } from '@/components/journal-planning-selector';
 import { PlanningDiscussion } from '@/components/planning-discussion';
@@ -292,6 +294,10 @@ function Sidebar({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => void;
             <Circle className="size-3.5 text-sidebar-primary" strokeWidth={1.8} />
             <span>Practices</span>
           </Link>
+           <Link href="/board" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-board">
+             <LayoutGrid className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+             <span>Board</span>
+           </Link>
         </div>
         <div className="mt-14 px-3">
           <div className="mb-4 flex size-8 items-center justify-center rounded-full border border-sidebar-primary/35 bg-sidebar-primary/10 text-sidebar-primary">
@@ -420,6 +426,9 @@ function MobileHeader({
       <div className="flex items-center gap-2">
         <Link href="/retention" aria-label="Open retention practices" title="Practices" data-testid="link-mobile-retention" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <Circle className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+        </Link>
+        <Link href="/board" aria-label="Open your Board" title="Board" data-testid="link-mobile-board" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
+          <LayoutGrid className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </Link>
         <button type="button" onClick={onOpenPlanning} aria-label="Shape the day with a suggestion" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
@@ -1831,6 +1840,7 @@ function Router() {
       <Switch>
         <Route path="/" component={HomeRedirect} />
         <Route path="/today" component={UserPortal} />
+        <Route path="/board" component={BoardPortal} />
         <Route path="/retention/:id?" component={RetentionPage} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/sign-in/*?" component={SignInPage} />
@@ -1901,6 +1911,14 @@ function UserPortal() {
   if (!isLoaded) return <AuthLoading />;
   if (!isSignedIn) return <Redirect to="/" />;
   return <Today />;
+}
+
+function BoardPortal() {
+  const { isLoaded, isSignedIn } = useUser();
+
+  if (!isLoaded) return <AuthLoading />;
+  if (!isSignedIn) return <Redirect to="/" />;
+  return <BoardPage />;
 }
 
 function SignInPage() {

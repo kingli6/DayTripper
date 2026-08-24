@@ -441,6 +441,145 @@ export const CreateActivityResponse = zod.object({
 
 
 /**
+ * Returns the authenticated user's non-archived Board cards ordered by category and position
+ * @summary List active Board cards
+ */
+export const listBoardCardsResponsePriorityMax = 5;
+
+
+export const listBoardCardsResponseDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const ListBoardCardsResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.enum(['work', 'recovery', 'managing', 'social', 'fun']),
+  "note": zod.string().nullable(),
+  "priority": zod.number().min(1).max(listBoardCardsResponsePriorityMax),
+  "estimatedDurationMinutes": zod.number().min(1).nullable(),
+  "deadline": zod.string().regex(listBoardCardsResponseDeadlineRegExp).nullable(),
+  "status": zod.enum(['active', 'completed']),
+  "position": zod.number(),
+  "archivedAt": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListBoardCardsResponse = zod.array(ListBoardCardsResponseItem)
+
+
+/**
+ * @summary Create a Board card
+ */
+export const createBoardCardBodyTitleMax = 200;
+
+export const createBoardCardBodyNoteMax = 2000;
+
+export const createBoardCardBodyPriorityMax = 5;
+
+
+export const createBoardCardBodyDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+export const createBoardCardBodyPositionMin = 0;
+
+
+
+export const CreateBoardCardBody = zod.object({
+  "title": zod.string().min(1).max(createBoardCardBodyTitleMax),
+  "category": zod.enum(['work', 'recovery', 'managing', 'social', 'fun']),
+  "note": zod.string().max(createBoardCardBodyNoteMax).nullish(),
+  "priority": zod.number().min(1).max(createBoardCardBodyPriorityMax).optional(),
+  "estimatedDurationMinutes": zod.number().min(1).nullish(),
+  "deadline": zod.string().regex(createBoardCardBodyDeadlineRegExp).nullish(),
+  "status": zod.enum(['active', 'completed']).optional(),
+  "position": zod.number().min(createBoardCardBodyPositionMin).optional()
+})
+
+export const createBoardCardResponsePriorityMax = 5;
+
+
+export const createBoardCardResponseDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const CreateBoardCardResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.enum(['work', 'recovery', 'managing', 'social', 'fun']),
+  "note": zod.string().nullable(),
+  "priority": zod.number().min(1).max(createBoardCardResponsePriorityMax),
+  "estimatedDurationMinutes": zod.number().min(1).nullable(),
+  "deadline": zod.string().regex(createBoardCardResponseDeadlineRegExp).nullable(),
+  "status": zod.enum(['active', 'completed']),
+  "position": zod.number(),
+  "archivedAt": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update a Board card
+ */
+export const UpdateBoardCardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateBoardCardBodyTitleMax = 200;
+
+export const updateBoardCardBodyNoteMax = 2000;
+
+export const updateBoardCardBodyPriorityMax = 5;
+
+
+export const updateBoardCardBodyDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+export const updateBoardCardBodyPositionMin = 0;
+
+
+
+export const UpdateBoardCardBody = zod.object({
+  "title": zod.string().min(1).max(updateBoardCardBodyTitleMax).optional(),
+  "category": zod.enum(['work', 'recovery', 'managing', 'social', 'fun']).optional(),
+  "note": zod.string().max(updateBoardCardBodyNoteMax).nullish(),
+  "priority": zod.number().min(1).max(updateBoardCardBodyPriorityMax).optional(),
+  "estimatedDurationMinutes": zod.number().min(1).nullish(),
+  "deadline": zod.string().regex(updateBoardCardBodyDeadlineRegExp).nullish(),
+  "status": zod.enum(['active', 'completed']).optional(),
+  "position": zod.number().min(updateBoardCardBodyPositionMin).optional(),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+export const updateBoardCardResponsePriorityMax = 5;
+
+
+export const updateBoardCardResponseDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const UpdateBoardCardResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.enum(['work', 'recovery', 'managing', 'social', 'fun']),
+  "note": zod.string().nullable(),
+  "priority": zod.number().min(1).max(updateBoardCardResponsePriorityMax),
+  "estimatedDurationMinutes": zod.number().min(1).nullable(),
+  "deadline": zod.string().regex(updateBoardCardResponseDeadlineRegExp).nullable(),
+  "status": zod.enum(['active', 'completed']),
+  "position": zod.number(),
+  "archivedAt": zod.string().nullable(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * Archives the card without deleting it permanently
+ * @summary Archive a Board card
+ */
+export const ArchiveBoardCardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveBoardCardResponse = zod.void()
+
+
+/**
  * @summary Update an activity
  */
 export const UpdateActivityParams = zod.object({

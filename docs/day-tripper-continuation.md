@@ -1,6 +1,6 @@
 # Day Tripper Continuation Checkpoint
 
-Last reviewed: 2026-08-20
+Last reviewed: 2026-08-24
 
 This is the canonical handoff file for continuing Day Tripper across sessions or
 when the available conversation context is nearly exhausted. It is intentionally
@@ -33,6 +33,22 @@ user should be able to point a new session to this file without repeating prior
 context. Do not wait for a reminder.
 
 ## Current checkpoint
+
+**Active work:** Persistent Board foundation.
+
+**Status:** The Board card database table, Drizzle migration, generated contract
+outputs, and authenticated owner-scoped CRUD API are implemented. The development
+database contains the new table. The existing Board screen was kept compatible
+with the agreed five categories and now sends the API's default priority.
+
+**Verified:** API typecheck, web typecheck, API build, migration generation,
+development schema push, clean API/web workflow restarts, clean startup logs, and
+signed-out Board access returning 401 without private data.
+
+**Not yet verified:** Authenticated Board create/list/update/archive flows and
+cross-account isolation with real Clerk sessions. The attached task's stop
+condition is otherwise reached; do not add Board UI behavior, scheduling,
+drag-and-drop, AI, or related integrations in this slice.
 
 **Active work:** Retention-curve implementation follow-up and the minute-practice
 stopwatch verification are complete locally. The latest completed working area
