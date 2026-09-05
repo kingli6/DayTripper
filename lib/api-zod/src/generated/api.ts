@@ -565,6 +565,213 @@ export const UpdateBoardCardResponse = zod.object({
 
 
 /**
+ * @summary List the user's non-archived tasks
+ */
+export const listTasksResponseImportanceMax = 5;
+
+export const listTasksResponseUrgencyMax = 5;
+
+export const listTasksResponseEnergyRequiredMax = 5;
+
+export const listTasksResponseInterestMax = 5;
+
+export const listTasksResponseEstimatedMinutesMax = 1440;
+
+export const listTasksResponseDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const ListTasksResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "notes": zod.string().nullable(),
+  "importance": zod.number().min(1).max(listTasksResponseImportanceMax),
+  "urgency": zod.number().min(1).max(listTasksResponseUrgencyMax),
+  "energyRequired": zod.number().min(1).max(listTasksResponseEnergyRequiredMax),
+  "interest": zod.number().min(1).max(listTasksResponseInterestMax),
+  "estimatedMinutes": zod.number().min(1).max(listTasksResponseEstimatedMinutesMax),
+  "deadline": zod.string().regex(listTasksResponseDeadlineRegExp).nullable(),
+  "status": zod.enum(['inbox', 'active', 'completed', 'archived']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})
+export const ListTasksResponse = zod.array(ListTasksResponseItem)
+
+
+/**
+ * @summary Create a task
+ */
+export const createTaskBodyTitleMax = 200;
+
+export const createTaskBodyNotesMax = 2000;
+
+export const createTaskBodyImportanceMax = 5;
+
+export const createTaskBodyUrgencyMax = 5;
+
+export const createTaskBodyEnergyRequiredMax = 5;
+
+export const createTaskBodyInterestMax = 5;
+
+export const createTaskBodyEstimatedMinutesMax = 1440;
+
+export const createTaskBodyDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const CreateTaskBody = zod.object({
+  "title": zod.string().min(1).max(createTaskBodyTitleMax),
+  "notes": zod.string().max(createTaskBodyNotesMax).nullish(),
+  "importance": zod.number().min(1).max(createTaskBodyImportanceMax),
+  "urgency": zod.number().min(1).max(createTaskBodyUrgencyMax),
+  "energyRequired": zod.number().min(1).max(createTaskBodyEnergyRequiredMax),
+  "interest": zod.number().min(1).max(createTaskBodyInterestMax),
+  "estimatedMinutes": zod.number().min(1).max(createTaskBodyEstimatedMinutesMax),
+  "deadline": zod.string().regex(createTaskBodyDeadlineRegExp).nullish()
+})
+
+export const createTaskResponseImportanceMax = 5;
+
+export const createTaskResponseUrgencyMax = 5;
+
+export const createTaskResponseEnergyRequiredMax = 5;
+
+export const createTaskResponseInterestMax = 5;
+
+export const createTaskResponseEstimatedMinutesMax = 1440;
+
+export const createTaskResponseDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const CreateTaskResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "notes": zod.string().nullable(),
+  "importance": zod.number().min(1).max(createTaskResponseImportanceMax),
+  "urgency": zod.number().min(1).max(createTaskResponseUrgencyMax),
+  "energyRequired": zod.number().min(1).max(createTaskResponseEnergyRequiredMax),
+  "interest": zod.number().min(1).max(createTaskResponseInterestMax),
+  "estimatedMinutes": zod.number().min(1).max(createTaskResponseEstimatedMinutesMax),
+  "deadline": zod.string().regex(createTaskResponseDeadlineRegExp).nullable(),
+  "status": zod.enum(['inbox', 'active', 'completed', 'archived']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})
+
+
+/**
+ * @summary Update a task
+ */
+export const UpdateTaskParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateTaskBodyTitleMax = 200;
+
+export const updateTaskBodyNotesMax = 2000;
+
+export const updateTaskBodyImportanceMax = 5;
+
+export const updateTaskBodyUrgencyMax = 5;
+
+export const updateTaskBodyEnergyRequiredMax = 5;
+
+export const updateTaskBodyInterestMax = 5;
+
+export const updateTaskBodyEstimatedMinutesMax = 1440;
+
+export const updateTaskBodyDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const UpdateTaskBody = zod.object({
+  "title": zod.string().min(1).max(updateTaskBodyTitleMax).optional(),
+  "notes": zod.string().max(updateTaskBodyNotesMax).nullish(),
+  "importance": zod.number().min(1).max(updateTaskBodyImportanceMax).optional(),
+  "urgency": zod.number().min(1).max(updateTaskBodyUrgencyMax).optional(),
+  "energyRequired": zod.number().min(1).max(updateTaskBodyEnergyRequiredMax).optional(),
+  "interest": zod.number().min(1).max(updateTaskBodyInterestMax).optional(),
+  "estimatedMinutes": zod.number().min(1).max(updateTaskBodyEstimatedMinutesMax).optional(),
+  "deadline": zod.string().regex(updateTaskBodyDeadlineRegExp).nullish()
+})
+
+export const updateTaskResponseImportanceMax = 5;
+
+export const updateTaskResponseUrgencyMax = 5;
+
+export const updateTaskResponseEnergyRequiredMax = 5;
+
+export const updateTaskResponseInterestMax = 5;
+
+export const updateTaskResponseEstimatedMinutesMax = 1440;
+
+export const updateTaskResponseDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const UpdateTaskResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "notes": zod.string().nullable(),
+  "importance": zod.number().min(1).max(updateTaskResponseImportanceMax),
+  "urgency": zod.number().min(1).max(updateTaskResponseUrgencyMax),
+  "energyRequired": zod.number().min(1).max(updateTaskResponseEnergyRequiredMax),
+  "interest": zod.number().min(1).max(updateTaskResponseInterestMax),
+  "estimatedMinutes": zod.number().min(1).max(updateTaskResponseEstimatedMinutesMax),
+  "deadline": zod.string().regex(updateTaskResponseDeadlineRegExp).nullable(),
+  "status": zod.enum(['inbox', 'active', 'completed', 'archived']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})
+
+
+/**
+ * @summary Archive a task
+ */
+export const ArchiveTaskParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveTaskResponse = zod.void()
+
+
+/**
+ * @summary Mark a task complete
+ */
+export const CompleteTaskParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const completeTaskResponseImportanceMax = 5;
+
+export const completeTaskResponseUrgencyMax = 5;
+
+export const completeTaskResponseEnergyRequiredMax = 5;
+
+export const completeTaskResponseInterestMax = 5;
+
+export const completeTaskResponseEstimatedMinutesMax = 1440;
+
+export const completeTaskResponseDeadlineRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
+
+
+export const CompleteTaskResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "notes": zod.string().nullable(),
+  "importance": zod.number().min(1).max(completeTaskResponseImportanceMax),
+  "urgency": zod.number().min(1).max(completeTaskResponseUrgencyMax),
+  "energyRequired": zod.number().min(1).max(completeTaskResponseEnergyRequiredMax),
+  "interest": zod.number().min(1).max(completeTaskResponseInterestMax),
+  "estimatedMinutes": zod.number().min(1).max(completeTaskResponseEstimatedMinutesMax),
+  "deadline": zod.string().regex(completeTaskResponseDeadlineRegExp).nullable(),
+  "status": zod.enum(['inbox', 'active', 'completed', 'archived']),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "completedAt": zod.string().nullable()
+})
+
+
+/**
  * Archives the card without deleting it permanently
  * @summary Archive a Board card
  */

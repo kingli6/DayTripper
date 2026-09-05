@@ -597,6 +597,144 @@ export interface BoardCardUpdate {
   expectedUpdatedAt?: string;
 }
 
+export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
+
+
+export const TaskStatus = {
+  inbox: 'inbox',
+  active: 'active',
+  completed: 'completed',
+  archived: 'archived',
+} as const;
+
+export interface Task {
+  id: number;
+  title: string;
+  /** @nullable */
+  notes: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  importance: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  urgency: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  energyRequired: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  interest: number;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  estimatedMinutes: number;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}T
+     */
+  deadline: string | null;
+  status: TaskStatus;
+  createdAt: string;
+  updatedAt: string;
+  /** @nullable */
+  completedAt: string | null;
+}
+
+export interface TaskInput {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  notes?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  importance: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  urgency: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  energyRequired: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  interest: number;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  estimatedMinutes: number;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}T
+     */
+  deadline?: string | null;
+}
+
+export interface TaskUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  title?: string;
+  /**
+     * @maxLength 2000
+     * @nullable
+     */
+  notes?: string | null;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  importance?: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  urgency?: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  energyRequired?: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  interest?: number;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  estimatedMinutes?: number;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}T
+     */
+  deadline?: string | null;
+}
+
 /**
  * @nullable
  */

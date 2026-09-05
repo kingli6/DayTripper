@@ -18,6 +18,8 @@ tags:
     description: Day Tripper activity operations
   - name: board
     description: Persistent Board card operations
+  - name: tasks
+    description: Private task operations
   - name: journal
     description: Private timestamped journal operations
   - name: retention
@@ -247,6 +249,98 @@ paths:
                 $ref: "#/components/schemas/BoardCard"
         "404":
           description: Board card not found
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [tasks]
+      summary: List the user's non-archived tasks
+      responses:
+        "200":
+          description: Tasks owned by the authenticated user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Task"
+    post:
+      operationId: createTask
+      tags: [tasks]
+      summary: Create a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskInput"
+      responses:
+        "201":
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+  /tasks/{id}:
+    patch:
+      operationId: updateTask
+      tags: [tasks]
+      summary: Update a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskUpdate"
+      responses:
+        "200":
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
+    delete:
+      operationId: archiveTask
+      tags: [tasks]
+      summary: Archive a task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "204":
+          description: Task archived
+        "404":
+          description: Task not found
+  /tasks/{id}/complete:
+    post:
+      operationId: completeTask
+      tags: [tasks]
+      summary: Mark a task complete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      responses:
+        "200":
+          description: Completed task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Task"
+        "404":
+          description: Task not found
         "409":
           description: The Board card changed after the client last loaded it
     delete:
@@ -1312,6 +1406,134 @@ components:
           minimum: 0
         expectedUpdatedAt:
           type: string
+    Task:
+      type: object
+      properties:
+        id:
+          type: number
+        title:
+          type: string
+        notes:
+          type: ["string", "null"]
+        importance:
+          type: number
+          minimum: 1
+          maximum: 5
+        urgency:
+          type: number
+          minimum: 1
+          maximum: 5
+        energyRequired:
+          type: number
+          minimum: 1
+          maximum: 5
+        interest:
+          type: number
+          minimum: 1
+          maximum: 5
+        estimatedMinutes:
+          type: number
+          minimum: 1
+          maximum: 1440
+        deadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}T'
+        status:
+          type: string
+          enum: [inbox, active, completed, archived]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        completedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - title
+        - notes
+        - importance
+        - urgency
+        - energyRequired
+        - interest
+        - estimatedMinutes
+        - deadline
+        - status
+        - createdAt
+        - updatedAt
+        - completedAt
+    TaskInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        notes:
+          type: ["string", "null"]
+          maxLength: 2000
+        importance:
+          type: number
+          minimum: 1
+          maximum: 5
+        urgency:
+          type: number
+          minimum: 1
+          maximum: 5
+        energyRequired:
+          type: number
+          minimum: 1
+          maximum: 5
+        interest:
+          type: number
+          minimum: 1
+          maximum: 5
+        estimatedMinutes:
+          type: number
+          minimum: 1
+          maximum: 1440
+        deadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}T'
+      required:
+        - title
+        - importance
+        - urgency
+        - energyRequired
+        - interest
+        - estimatedMinutes
+    TaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        notes:
+          type: ["string", "null"]
+          maxLength: 2000
+        importance:
+          type: number
+          minimum: 1
+          maximum: 5
+        urgency:
+          type: number
+          minimum: 1
+          maximum: 5
+        energyRequired:
+          type: number
+          minimum: 1
+          maximum: 5
+        interest:
+          type: number
+          minimum: 1
+          maximum: 5
+        estimatedMinutes:
+          type: number
+          minimum: 1
+          maximum: 1440
+        deadline:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}T'
     ActivityInput:
       type: object
       properties:

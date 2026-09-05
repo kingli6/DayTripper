@@ -80,3 +80,7 @@ export * from './retentionPracticeInput';
 export * from './retentionPracticeUnit';
 export * from './retentionPracticeUpdate';
 export * from './retentionSpeed';
+export * from './task';
+export * from './taskInput';
+export * from './taskStatus';
+export * from './taskUpdate';

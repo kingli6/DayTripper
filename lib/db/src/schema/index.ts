@@ -26,3 +26,4 @@ export * from "./journalEntries";
 export * from "./pushSubscriptions";
 export * from "./reminderDeliveries";
 export * from "./retention";
+export * from "./tasks";

@@ -32,6 +32,33 @@ verification result, blocked boundary, or change in the next safe action. The
 user should be able to point a new session to this file without repeating prior
 context. Do not wait for a reminder.
 
+## Tasks MVP foundation
+
+**Status:** Implemented and locally verified on 2026-09-05.
+
+**Completed:**
+
+- Added the first-class, Clerk-owned `tasks` table with Eisenhower signals,
+  energy/interest fields, estimate, deadline, lifecycle status, and timestamps.
+- Added migration `0013_yielding_karen_page` and applied it to the development
+  database without changing Practices/Retention tables or routes.
+- Added authenticated list/create/update/complete/archive task endpoints and
+  generated OpenAPI Zod/client types.
+- Added a focused Tasks page at `/tasks` with quick add, edit, complete, archive,
+  active/inbox ordering, completed visibility, and navigation beside Board and
+  Practices.
+
+**Verified:** Migration generation, development schema push, full workspace
+typecheck, API build, clean API/web workflow restart, health 200, signed-out
+task access returning 401, and signed-out landing-page rendering.
+
+**Not yet verified:** Authenticated task create, reload/list persistence, edit,
+complete, archive, and cross-account ownership behavior because the available
+browser preview session is signed out.
+
+**Do not start:** Projects, dependencies, calendar integrations, AI, reminders,
+notifications, or changes to Practices/Retention as part of this slice.
+
 ## Nullable Activity → Board association foundation
 
 **Status:** Complete and verified on 2026-08-24.

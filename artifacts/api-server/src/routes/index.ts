@@ -8,6 +8,7 @@ import healthRouter from "./health";
 import journalEntriesRouter from "./journalEntries";
 import planningRouter from "./planning";
 import retentionRouter from "./retention";
+import tasksRouter from "./tasks";
 
 const router: IRouter = Router();
 
@@ -19,6 +20,7 @@ router.use(boardCardsRouter);
 router.use(activityChangesRouter);
 router.use(journalEntriesRouter);
 router.use(retentionRouter);
+router.use(tasksRouter);
 router.use(adminRouter);
 
 export default router;
