@@ -26,7 +26,6 @@ router.use(requireAuth);
 type RecommendationInputs = {
   availableMinutes: number;
   currentEnergy: number;
-  currentInterest: number;
 };
 
 function toApiTask(task: typeof tasksTable.$inferSelect) {
@@ -76,12 +75,10 @@ function timeFitScore(estimatedMinutes: number, availableMinutes: number) {
 function recommendationScore(task: typeof tasksTable.$inferSelect, inputs: RecommendationInputs) {
   const priority = task.importance * 4 + task.urgency * 4;
   const energyFit = 12 - Math.abs(task.energyRequired - inputs.currentEnergy) * 3;
-  const interestFit = 10 - Math.abs(task.interest - inputs.currentInterest) * 2;
   return priority
     + deadlineScore(task.deadline)
     + timeFitScore(task.estimatedMinutes, inputs.availableMinutes)
-    + energyFit
-    + interestFit;
+    + energyFit;
 }
 
 function recommendationReason(task: typeof tasksTable.$inferSelect, inputs: RecommendationInputs) {
@@ -108,12 +105,8 @@ function recommendationReason(task: typeof tasksTable.$inferSelect, inputs: Reco
     reasons.push("Its energy need is manageable right now");
   }
 
-  if (Math.abs(task.interest - inputs.currentInterest) <= 1) {
-    reasons.push("Its interest level matches your motivation");
-  }
-
   const selected = reasons.slice(0, 3);
-  return `${selected.join(". ")}${selected.length ? "." : "A balanced fit across priority, time, energy, and interest."}`;
+  return `${selected.join(". ")}${selected.length ? "." : "A balanced fit across priority, time, energy, and deadline."}`;
 }
 
 function deterministicRecommendations(tasks: Array<typeof tasksTable.$inferSelect>, inputs: RecommendationInputs) {
@@ -185,7 +178,7 @@ async function geminiRecommendations(
   const prompt = `You recommend the next work item for a person. Return only JSON in this exact shape:
 {"recommendations":[{"taskId":123,"rank":1,"reason":"Short human explanation."}]}
 
-Select at most 3 task IDs from the supplied active task list. Do not invent task information or IDs. Do not simply choose the highest-priority task. Consider what is realistically achievable right now: a lower-priority task can be better if it fits available time, energy, or interest substantially better. Deadlines and urgency matter. The user remains in control; recommend only and do not schedule anything.
+Select at most 3 task IDs from the supplied active task list. Do not invent task information or IDs. Do not simply choose the highest-priority task. Consider what is realistically achievable right now: a lower-priority task can be better if it fits available time or energy substantially better. Task-level interest describes how appealing a task may be. Deadlines and urgency matter. The user remains in control; recommend only and do not schedule anything.
 
 Current situation:
 ${JSON.stringify(inputs, null, 2)}
@@ -318,8 +311,7 @@ router.post("/tasks/recommend", async (req, res): Promise<void> => {
   }
 
   if (!Number.isInteger(parsed.data.availableMinutes)
-    || !Number.isInteger(parsed.data.currentEnergy)
-    || !Number.isInteger(parsed.data.currentInterest)) {
+    || !Number.isInteger(parsed.data.currentEnergy)) {
     res.status(400).json({ error: "Recommendation inputs must be whole numbers." });
     return;
   }
@@ -418,7 +410,7 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const { deadline, ...data } = parsed.data;
+  const { deadline, status, ...data } = parsed.data;
   const [task] = await db
     .update(tasksTable)
     .set({
@@ -426,6 +418,7 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
       ...(data.title !== undefined ? { title: data.title.trim() } : {}),
       ...(data.notes !== undefined ? { notes: data.notes?.trim() || null } : {}),
       ...(deadline !== undefined ? { deadline: deadline ? new Date(deadline) : null } : {}),
+      ...(status !== undefined ? { status, completedAt: null } : {}),
     })
     .where(and(
       eq(tasksTable.id, params.data.id),

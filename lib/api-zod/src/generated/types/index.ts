@@ -89,3 +89,4 @@ export * from './taskRecommendationResponseSource';
 export * from './taskScheduleInput';
 export * from './taskStatus';
 export * from './taskUpdate';
+export * from './taskUpdateStatus';

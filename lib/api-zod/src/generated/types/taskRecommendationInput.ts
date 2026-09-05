@@ -17,9 +17,4 @@ export interface TaskRecommendationInput {
      * @maximum 5
      */
   currentEnergy: number;
-  /**
-     * @minimum 1
-     * @maximum 5
-     */
-  currentInterest: number;
 }

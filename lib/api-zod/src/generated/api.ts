@@ -667,14 +667,11 @@ export const recommendTasksBodyAvailableMinutesMax = 1440;
 
 export const recommendTasksBodyCurrentEnergyMax = 5;
 
-export const recommendTasksBodyCurrentInterestMax = 5;
-
 
 
 export const RecommendTasksBody = zod.object({
   "availableMinutes": zod.number().min(1).max(recommendTasksBodyAvailableMinutesMax),
-  "currentEnergy": zod.number().min(1).max(recommendTasksBodyCurrentEnergyMax),
-  "currentInterest": zod.number().min(1).max(recommendTasksBodyCurrentInterestMax)
+  "currentEnergy": zod.number().min(1).max(recommendTasksBodyCurrentEnergyMax)
 })
 
 export const recommendTasksResponseRecommendationsItemRankMax = 3;
@@ -765,7 +762,8 @@ export const UpdateTaskBody = zod.object({
   "energyRequired": zod.number().min(1).max(updateTaskBodyEnergyRequiredMax).optional(),
   "interest": zod.number().min(1).max(updateTaskBodyInterestMax).optional(),
   "estimatedMinutes": zod.number().min(1).max(updateTaskBodyEstimatedMinutesMax).optional(),
-  "deadline": zod.string().regex(updateTaskBodyDeadlineRegExp).nullish()
+  "deadline": zod.string().regex(updateTaskBodyDeadlineRegExp).nullish(),
+  "status": zod.enum(['inbox', 'active']).optional()
 })
 
 export const updateTaskResponseImportanceMax = 5;

@@ -102,8 +102,10 @@ changes.
 - Added authenticated `POST /tasks/recommend` using the existing server-only
   Gemini helper and `gemini-3-flash-preview`.
 - The route loads only the signed-in user's `inbox` and `active` tasks and sends
-  task decision signals plus current minutes, energy, and interest. It does not
-  send notes, journal entries, or other private planning context.
+  task decision signals plus current minutes and energy. Task-level interest
+  remains available to Gemini as a property of each task; the user is no longer
+  asked for a current-interest input. It does not send notes, journal entries,
+  or other private planning context.
 - Gemini is instructed to return at most three supplied task IDs, consider fit
   instead of simply choosing the highest priority, respect deadlines/urgency,
   and never invent task information.
@@ -130,6 +132,37 @@ is signed out.
 **Do not start:** Scheduling, calendar blocks, Activities changes, AI memory,
 AI history tables, projects, dependencies, notifications, Google Calendar,
 Board changes, or Practices/Retention changes.
+
+## Task recommendation input and completion safety
+
+**Status:** Implemented and locally verified on 2026-09-05.
+
+**Completed:**
+
+- Removed current interest from the recommendation panel, frontend state,
+  request contract, API validation, deterministic ranking inputs, and Gemini
+  current-situation prompt.
+- Kept the task-level `interest` field in task creation/editing and in the
+  task data supplied to Gemini.
+- Active-task completion now requires a pointer/touch-friendly three-second
+  hold. The progress indicator cancels on release, cancellation, pointer leave,
+  or unmount, and normal click does not complete the task.
+- Completed-task ticks now restore the task with a normal click by using the
+  existing task update route. Restoring sets the task to `active` and clears
+  `completedAt`, so it returns to the active list and matrix.
+
+**Verified:** OpenAPI codegen, full workspace typecheck, API and Day Tripper
+typechecks, API and web production builds, `git diff --check`, clean API/web
+workflow restarts, API health 200, signed-out recommendation and scheduling
+requests returning 401, and signed-out preview rendering without new
+application errors.
+
+**Not yet verified:** Signed-in pointer/touch interaction for early release,
+the full three-second hold, completed-task restore, and persistence after
+reload. The available preview session is signed out.
+
+**Do not start:** Practices/Retention, Board, Activities/Today, scheduling,
+projects/dependencies, notifications, or AI memory/history changes.
 
 ## Nullable Activity → Board association foundation
 

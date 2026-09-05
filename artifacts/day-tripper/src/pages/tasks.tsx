@@ -12,7 +12,7 @@ import {
 } from '@workspace/api-client-react';
 import type { Task, TaskInput, TaskScheduleInput, TaskUpdate } from '@workspace/api-client-react';
 import { Check, Clock3, Flag, Gauge, ListTodo, Pencil, Plus, RotateCcw, ShieldCheck, Sparkles, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation } from 'wouter';
 import { z } from 'zod';
@@ -35,7 +35,6 @@ type TaskFormValues = z.infer<typeof taskSchema>;
 type RecommendationInputs = {
   availableMinutes: number;
   energy: number;
-  interest: number;
 };
 
 type RecommendationResult = {
@@ -100,8 +99,7 @@ function timeFitScore(task: Task, availableMinutes: number) {
 function recommendationScore(task: Task, inputs: RecommendationInputs) {
   const priority = task.importance * 4 + task.urgency * 4;
   const energyFit = 12 - Math.abs(task.energyRequired - inputs.energy) * 3;
-  const interestFit = 10 - Math.abs(task.interest - inputs.interest) * 2;
-  return priority + deadlineScore(task) + timeFitScore(task, inputs.availableMinutes) + energyFit + interestFit;
+  return priority + deadlineScore(task) + timeFitScore(task, inputs.availableMinutes) + energyFit;
 }
 
 function deadlineReason(task: Task) {
@@ -135,12 +133,8 @@ function recommendationExplanation(task: Task, inputs: RecommendationInputs) {
     reasons.push('Its energy need is manageable right now');
   }
 
-  if (Math.abs(task.interest - inputs.interest) <= 1) {
-    reasons.push('Its interest level matches your motivation');
-  }
-
   const selected = reasons.slice(0, 3);
-  return `${selected.join('. ')}${selected.length ? '.' : 'A balanced fit across priority, time, energy, and interest.'}`;
+  return `${selected.join('. ')}${selected.length ? '.' : 'A balanced fit across priority, time, energy, and deadline.'}`;
 }
 
 function deterministicRecommendations(tasks: Task[], inputs: RecommendationInputs) {
@@ -313,12 +307,69 @@ function TaskForm({
   );
 }
 
+const TASK_COMPLETION_HOLD_MS = 3000;
+
 function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task; onEdit: () => void; onComplete: () => void; onArchive: () => void; pending: boolean }) {
+  const holdTimerRef = useRef<number | null>(null);
+  const holdAnimationRef = useRef<number | null>(null);
+  const [holdProgress, setHoldProgress] = useState(0);
+  const [isHolding, setIsHolding] = useState(false);
+
+  const cancelHold = () => {
+    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    if (holdAnimationRef.current !== null) window.cancelAnimationFrame(holdAnimationRef.current);
+    holdTimerRef.current = null;
+    holdAnimationRef.current = null;
+    setHoldProgress(0);
+    setIsHolding(false);
+  };
+
+  useEffect(() => () => {
+    if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
+    if (holdAnimationRef.current !== null) window.cancelAnimationFrame(holdAnimationRef.current);
+  }, []);
+
+  const startHold = () => {
+    if (pending || holdTimerRef.current !== null) return;
+    const startedAt = performance.now();
+    setIsHolding(true);
+    setHoldProgress(0);
+
+    const updateProgress = () => {
+      const progress = Math.min(100, ((performance.now() - startedAt) / TASK_COMPLETION_HOLD_MS) * 100);
+      setHoldProgress(progress);
+      if (progress < 100) holdAnimationRef.current = window.requestAnimationFrame(updateProgress);
+    };
+    holdAnimationRef.current = window.requestAnimationFrame(updateProgress);
+    holdTimerRef.current = window.setTimeout(() => {
+      holdTimerRef.current = null;
+      if (holdAnimationRef.current !== null) window.cancelAnimationFrame(holdAnimationRef.current);
+      holdAnimationRef.current = null;
+      setHoldProgress(100);
+      setIsHolding(false);
+      onComplete();
+    }, TASK_COMPLETION_HOLD_MS);
+  };
+
   return (
     <article className="group rounded-[20px] border border-border/70 bg-card/75 p-4 transition-transform hover:-translate-y-0.5 hover:border-primary/35" data-testid={`card-task-${task.id}`}>
       <div className="flex items-start gap-3">
-        <button type="button" onClick={onComplete} disabled={pending} aria-label={`Complete ${task.title}`} data-testid={`button-complete-task-${task.id}`} className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border-2 border-primary/45 text-transparent transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-40">
-          <Check className="size-3.5" strokeWidth={2.4} />
+        <button
+          type="button"
+          onPointerDown={(event) => { event.preventDefault(); startHold(); }}
+          onPointerUp={cancelHold}
+          onPointerCancel={cancelHold}
+          onPointerLeave={cancelHold}
+          onClick={(event) => { event.preventDefault(); }}
+          onContextMenu={(event) => event.preventDefault()}
+          disabled={pending}
+          aria-label={`Hold for 3 seconds to complete ${task.title}`}
+          title={isHolding ? 'Keep holding to complete' : 'Hold for 3 seconds to complete'}
+          data-testid={`button-complete-task-${task.id}`}
+          className={`relative mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 text-transparent transition-colors disabled:opacity-40 ${isHolding ? 'border-primary bg-primary/10 text-primary' : 'border-primary/45 hover:bg-primary hover:text-primary-foreground'}`}
+        >
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-primary/80" style={{ width: `${holdProgress}%` }} />
+          <Check className="relative size-3.5" strokeWidth={2.4} />
         </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
@@ -507,7 +558,7 @@ export default function TasksPage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [schedulingTask, setSchedulingTask] = useState<Task | null>(null);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
-  const [recommendationInputs, setRecommendationInputs] = useState<RecommendationInputs>({ availableMinutes: 60, energy: 3, interest: 3 });
+  const [recommendationInputs, setRecommendationInputs] = useState<RecommendationInputs>({ availableMinutes: 60, energy: 3 });
   const [recommendationRun, setRecommendationRun] = useState<RecommendationInputs | null>(null);
   const [serverRecommendations, setServerRecommendations] = useState<RecommendationResult[]>([]);
   const [recommendationSource, setRecommendationSource] = useState<'gemini' | 'deterministic'>('deterministic');
@@ -597,6 +648,16 @@ export default function TasksPage() {
     }
   };
 
+  const restore = async (task: Task) => {
+    try {
+      await updateTask.mutateAsync({ id: task.id, data: { status: 'active' } });
+      await invalidateTasks();
+      showSuccess('Task restored.');
+    } catch (error) {
+      setNotice({ tone: 'error', text: errorMessage(error) });
+    }
+  };
+
   const archive = async (task: Task) => {
     if (!window.confirm(`Archive “${task.title}”?`)) return;
     try {
@@ -627,7 +688,6 @@ export default function TasksPage() {
         data: {
           availableMinutes: inputs.availableMinutes,
           currentEnergy: inputs.energy,
-          currentInterest: inputs.interest,
         },
       });
       setServerRecommendations(response.recommendations);
@@ -666,7 +726,7 @@ export default function TasksPage() {
               <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">A little direction</p></div>
               <p className="mt-4 font-display text-[25px] leading-tight tracking-[-0.035em]">What should I work on?</p>
               <p className="mt-3 text-xs leading-5 text-muted-foreground">Tell the list what fits right now. Gemini can help weigh the tradeoffs without changing your tasks.</p>
-              <div className="mt-5 grid grid-cols-3 gap-2">
+              <div className="mt-5 grid grid-cols-2 gap-2">
                 <label className="text-[10px] font-semibold text-muted-foreground">
                   <span className="mb-1.5 block">Minutes</span>
                   <input type="number" min={1} max={1440} value={recommendationInputs.availableMinutes} onChange={(event) => setRecommendationInputs((current) => ({ ...current, availableMinutes: Math.max(1, Number(event.target.value) || 1) }))} data-testid="input-recommendation-minutes" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
@@ -675,21 +735,17 @@ export default function TasksPage() {
                   <span className="mb-1.5 block">Energy</span>
                   <input type="number" min={1} max={5} value={recommendationInputs.energy} onChange={(event) => setRecommendationInputs((current) => ({ ...current, energy: Math.min(5, Math.max(1, Number(event.target.value) || 1)) }))} data-testid="input-recommendation-energy" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
                 </label>
-                <label className="text-[10px] font-semibold text-muted-foreground">
-                  <span className="mb-1.5 block">Interest</span>
-                  <input type="number" min={1} max={5} value={recommendationInputs.interest} onChange={(event) => setRecommendationInputs((current) => ({ ...current, interest: Math.min(5, Math.max(1, Number(event.target.value) || 1)) }))} data-testid="input-recommendation-interest" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                </label>
               </div>
               <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || recommendTask.isPending} data-testid="button-recommend-tasks" className="mt-4 min-h-11 w-full rounded-full bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">{recommendTask.isPending ? 'Finding a good fit…' : 'WHAT SHOULD I WORK ON?'}</button>
               {recommendTask.isPending ? (
-                <p className="mt-4 rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground" role="status" data-testid="status-recommendations-loading">Comparing your active tasks with the time, energy, and interest you have right now…</p>
+                 <p className="mt-4 rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground" role="status" data-testid="status-recommendations-loading">Comparing your active tasks with the time and energy you have right now…</p>
               ) : recommendationRun ? (
                 <div className="mt-5 space-y-2" data-testid="list-recommendations">
-                  <div className="flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Your next three</p><span className="text-[10px] text-muted-foreground">{recommendationSource === 'gemini' ? 'AI-assisted' : 'Local ranking'} · {recommendationRun.availableMinutes} min / energy {recommendationRun.energy} / interest {recommendationRun.interest}</span></div>
+                   <div className="flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Your next three</p><span className="text-[10px] text-muted-foreground">{recommendationSource === 'gemini' ? 'AI-assisted' : 'Local ranking'} · {recommendationRun.availableMinutes} min / energy {recommendationRun.energy}</span></div>
                    {recommendations.length ? recommendations.map((recommendation, index) => <RecommendationCard key={recommendation.task.id} rank={index + 1} task={recommendation.task} explanation={recommendation.explanation} onEdit={() => setEditingTask(recommendation.task)} onSchedule={() => setSchedulingTask(recommendation.task)} />) : <p className="rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground">Add an active task and I’ll help you choose a next step.</p>}
                 </div>
               ) : (
-                <p className="mt-4 text-[11px] leading-5 text-muted-foreground">The top three will balance priority with time, energy, interest, and deadline proximity.</p>
+                 <p className="mt-4 text-[11px] leading-5 text-muted-foreground">The top three will balance priority with time, energy, and deadline proximity.</p>
               )}
               <div className="mt-6 grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-2xl bg-secondary/65 px-3 py-3"><p className="font-display text-2xl">{activeTasks.length}</p><p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-muted-foreground">to choose from</p></div>
@@ -726,7 +782,7 @@ export default function TasksPage() {
               {activeTasks.length === 0 ? (
                 <div className="rounded-[24px] border border-dashed border-primary/30 bg-primary/[0.045] px-6 py-14 text-center" data-testid="status-tasks-empty"><div className="mx-auto flex size-14 items-center justify-center rounded-full bg-secondary text-primary"><Check className="size-6" /></div><p className="mt-5 font-display text-[29px]">Nothing asking for you yet.</p><p className="mx-auto mt-2 max-w-[360px] text-sm leading-6 text-muted-foreground">Add one task above, or let this be enough for now.</p></div>
               ) : <div className="space-y-3">{activeTasks.map((task) => <TaskItem key={task.id} task={task} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
-              {completedTasks.length > 0 && <div className="mt-10 border-t border-border/60 pt-7"><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Completed</p><div className="mt-3 space-y-2">{completedTasks.map((task) => <div key={task.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/50 px-4 py-3" data-testid={`row-completed-task-${task.id}`}><span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-primary"><Check className="size-3.5" /></span><p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{task.title}</p><button type="button" onClick={() => void archive(task)} disabled={pending} data-testid={`button-archive-completed-task-${task.id}`} className="text-[10px] font-semibold text-muted-foreground hover:text-destructive disabled:opacity-40">Archive</button></div>)}</div></div>}
+              {completedTasks.length > 0 && <div className="mt-10 border-t border-border/60 pt-7"><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Completed</p><div className="mt-3 space-y-2">{completedTasks.map((task) => <div key={task.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/50 px-4 py-3" data-testid={`row-completed-task-${task.id}`}><button type="button" onClick={() => void restore(task)} disabled={pending} aria-label={`Restore ${task.title}`} data-testid={`button-restore-task-${task.id}`} className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-40"><Check className="size-3.5" /></button><p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{task.title}</p><button type="button" onClick={() => void archive(task)} disabled={pending} data-testid={`button-archive-completed-task-${task.id}`} className="text-[10px] font-semibold text-muted-foreground hover:text-destructive disabled:opacity-40">Archive</button></div>)}</div></div>}
             </div>
           )}
         </main>

@@ -1584,6 +1584,9 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
+        status:
+          type: string
+          enum: [inbox, active]
     TaskRecommendationInput:
       type: object
       properties:
@@ -1595,14 +1598,9 @@ components:
           type: number
           minimum: 1
           maximum: 5
-        currentInterest:
-          type: number
-          minimum: 1
-          maximum: 5
       required:
         - availableMinutes
         - currentEnergy
-        - currentInterest
     TaskRecommendationResponse:
       type: object
       properties:

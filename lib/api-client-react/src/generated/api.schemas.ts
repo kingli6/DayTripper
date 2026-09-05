@@ -692,6 +692,14 @@ export interface TaskInput {
   deadline?: string | null;
 }
 
+export type TaskUpdateStatus = typeof TaskUpdateStatus[keyof typeof TaskUpdateStatus];
+
+
+export const TaskUpdateStatus = {
+  inbox: 'inbox',
+  active: 'active',
+} as const;
+
 export interface TaskUpdate {
   /**
      * @minLength 1
@@ -733,6 +741,7 @@ export interface TaskUpdate {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline?: string | null;
+  status?: TaskUpdateStatus;
 }
 
 export interface TaskRecommendationInput {
@@ -746,11 +755,6 @@ export interface TaskRecommendationInput {
      * @maximum 5
      */
   currentEnergy: number;
-  /**
-     * @minimum 1
-     * @maximum 5
-     */
-  currentInterest: number;
 }
 
 export type TaskRecommendationResponseRecommendationsItem = {
