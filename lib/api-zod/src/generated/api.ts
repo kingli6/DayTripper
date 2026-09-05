@@ -660,6 +660,42 @@ export const CreateTaskResponse = zod.object({
 
 
 /**
+ * Uses Gemini when available and otherwise returns the deterministic task ranking
+ * @summary Recommend tasks for the user's current situation
+ */
+export const recommendTasksBodyAvailableMinutesMax = 1440;
+
+export const recommendTasksBodyCurrentEnergyMax = 5;
+
+export const recommendTasksBodyCurrentInterestMax = 5;
+
+
+
+export const RecommendTasksBody = zod.object({
+  "availableMinutes": zod.number().min(1).max(recommendTasksBodyAvailableMinutesMax),
+  "currentEnergy": zod.number().min(1).max(recommendTasksBodyCurrentEnergyMax),
+  "currentInterest": zod.number().min(1).max(recommendTasksBodyCurrentInterestMax)
+})
+
+export const recommendTasksResponseRecommendationsItemRankMax = 3;
+
+export const recommendTasksResponseRecommendationsItemReasonMax = 500;
+
+export const recommendTasksResponseRecommendationsMax = 3;
+
+
+
+export const RecommendTasksResponse = zod.object({
+  "recommendations": zod.array(zod.object({
+  "taskId": zod.number(),
+  "rank": zod.number().min(1).max(recommendTasksResponseRecommendationsItemRankMax),
+  "reason": zod.string().min(1).max(recommendTasksResponseRecommendationsItemReasonMax)
+})).max(recommendTasksResponseRecommendationsMax),
+  "source": zod.enum(['gemini', 'deterministic'])
+})
+
+
+/**
  * @summary Update a task
  */
 export const UpdateTaskParams = zod.object({

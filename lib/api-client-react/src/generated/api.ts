@@ -55,6 +55,8 @@ import type {
   RetentionPracticeUpdate,
   Task,
   TaskInput,
+  TaskRecommendationInput,
+  TaskRecommendationResponse,
   TaskUpdate
 } from './api.schemas';
 
@@ -1051,6 +1053,78 @@ export const useCreateTask = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateTaskMutationOptions(options));
+    }
+
+export const getRecommendTasksUrl = () => {
+
+
+
+
+  return `/api/tasks/recommend`
+}
+
+/**
+ * Uses Gemini when available and otherwise returns the deterministic task ranking
+ * @summary Recommend tasks for the user's current situation
+ */
+export const recommendTasks = async (taskRecommendationInput: TaskRecommendationInput, options?: Parameters<typeof customFetch>[1]): Promise<TaskRecommendationResponse> => {
+
+  return customFetch<TaskRecommendationResponse>(getRecommendTasksUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taskRecommendationInput)
+  }
+);}
+
+
+
+
+
+export const getRecommendTasksMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recommendTasks>>, TError,{data: BodyType<TaskRecommendationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recommendTasks>>, TError,{data: BodyType<TaskRecommendationInput>}, TContext> => {
+
+const mutationKey = ['recommendTasks'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recommendTasks>>, {data: BodyType<TaskRecommendationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  recommendTasks(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecommendTasksMutationResult = NonNullable<Awaited<ReturnType<typeof recommendTasks>>>
+    export type RecommendTasksMutationBody = BodyType<TaskRecommendationInput>
+    export type RecommendTasksMutationError = ErrorType<void>
+
+    /**
+ * @summary Recommend tasks for the user's current situation
+ */
+export const useRecommendTasks = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recommendTasks>>, TError,{data: BodyType<TaskRecommendationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recommendTasks>>,
+        TError,
+        {data: BodyType<TaskRecommendationInput>},
+        TContext
+      > => {
+      return useMutation(getRecommendTasksMutationOptions(options));
     }
 
 export const getUpdateTaskUrl = (id: number,) => {

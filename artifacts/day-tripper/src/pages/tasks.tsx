@@ -5,6 +5,7 @@ import {
   useCompleteTask,
   useCreateTask,
   useListTasks,
+  useRecommendTasks,
   useUpdateTask,
 } from '@workspace/api-client-react';
 import type { Task, TaskInput, TaskUpdate } from '@workspace/api-client-react';
@@ -33,6 +34,12 @@ type RecommendationInputs = {
   availableMinutes: number;
   energy: number;
   interest: number;
+};
+
+type RecommendationResult = {
+  taskId: number;
+  rank: number;
+  reason: string;
 };
 
 type QuadrantKey = 'importantUrgent' | 'importantNotUrgent' | 'notImportantUrgent' | 'notImportantNotUrgent';
@@ -132,6 +139,17 @@ function recommendationExplanation(task: Task, inputs: RecommendationInputs) {
 
   const selected = reasons.slice(0, 3);
   return `${selected.join('. ')}${selected.length ? '.' : 'A balanced fit across priority, time, energy, and interest.'}`;
+}
+
+function deterministicRecommendations(tasks: Task[], inputs: RecommendationInputs) {
+  return tasks
+    .map((task) => ({
+      task,
+      score: recommendationScore(task, inputs),
+      explanation: recommendationExplanation(task, inputs),
+    }))
+    .sort((first, second) => second.score - first.score || focusScore(second.task) - focusScore(first.task) || first.task.id - second.task.id)
+    .slice(0, 3);
 }
 
 function TaskRail() {
@@ -360,6 +378,7 @@ export default function TasksPage() {
   const queryClient = useQueryClient();
   const list = useListTasks();
   const createTask = useCreateTask();
+  const recommendTask = useRecommendTasks();
   const updateTask = useUpdateTask();
   const completeTask = useCompleteTask();
   const archiveTask = useArchiveTask();
@@ -367,6 +386,8 @@ export default function TasksPage() {
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [recommendationInputs, setRecommendationInputs] = useState<RecommendationInputs>({ availableMinutes: 60, energy: 3, interest: 3 });
   const [recommendationRun, setRecommendationRun] = useState<RecommendationInputs | null>(null);
+  const [serverRecommendations, setServerRecommendations] = useState<RecommendationResult[]>([]);
+  const [recommendationSource, setRecommendationSource] = useState<'gemini' | 'deterministic'>('deterministic');
 
   const tasks = useMemo(() => [...(list.data ?? [])].filter((task) => task.status !== 'archived').sort((a, b) => focusScore(b) - focusScore(a) || a.id - b.id), [list.data]);
   const activeTasks = tasks.filter((task) => task.status === 'inbox' || task.status === 'active');
@@ -381,17 +402,21 @@ export default function TasksPage() {
     activeTasks.forEach((task) => groups[quadrantKey(task)].push(task));
     return groups;
   }, [activeTasks]);
+  const localRecommendations = useMemo(() => {
+    if (!recommendationRun) return [];
+    return deterministicRecommendations(activeTasks, recommendationRun);
+  }, [activeTasks, recommendationRun]);
   const recommendations = useMemo(() => {
     if (!recommendationRun) return [];
-    return activeTasks
-      .map((task) => ({
-        task,
-        score: recommendationScore(task, recommendationRun),
-        explanation: recommendationExplanation(task, recommendationRun),
-      }))
-      .sort((a, b) => b.score - a.score || focusScore(b.task) - focusScore(a.task) || a.task.id - b.task.id)
-      .slice(0, 3);
-  }, [activeTasks, recommendationRun]);
+    const tasksById = new Map(activeTasks.map((task) => [task.id, task]));
+    const remoteRecommendations = serverRecommendations
+      .map((recommendation) => {
+        const task = tasksById.get(recommendation.taskId);
+        return task ? { task, explanation: recommendation.reason } : null;
+      })
+      .filter((recommendation): recommendation is { task: Task; explanation: string } => recommendation !== null);
+    return remoteRecommendations.length ? remoteRecommendations : localRecommendations;
+  }, [activeTasks, localRecommendations, recommendationRun, serverRecommendations]);
   const showSuccess = (text: string) => {
     setNotice({ tone: 'success', text });
     window.setTimeout(() => setNotice(null), 3200);
@@ -460,6 +485,28 @@ export default function TasksPage() {
     }
   };
 
+  const runRecommendations = async () => {
+    if (!activeTasks.length) return;
+    const inputs = { ...recommendationInputs };
+    setRecommendationRun(inputs);
+    setServerRecommendations([]);
+    setRecommendationSource('deterministic');
+
+    try {
+      const response = await recommendTask.mutateAsync({
+        data: {
+          availableMinutes: inputs.availableMinutes,
+          currentEnergy: inputs.energy,
+          currentInterest: inputs.interest,
+        },
+      });
+      setServerRecommendations(response.recommendations);
+      setRecommendationSource(response.source);
+    } catch {
+      // The local ranking remains visible if the recommendation request cannot reach the server.
+    }
+  };
+
   const pending = createTask.isPending || updateTask.isPending || completeTask.isPending || archiveTask.isPending;
 
   return (
@@ -488,7 +535,7 @@ export default function TasksPage() {
             <aside className="rounded-[26px] border border-border/70 bg-card/70 p-5 sm:p-6" data-testid="section-recommendations">
               <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">A little direction</p></div>
               <p className="mt-4 font-display text-[25px] leading-tight tracking-[-0.035em]">What should I work on?</p>
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">Tell the list what fits right now. This stays local and uses your task signals.</p>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">Tell the list what fits right now. Gemini can help weigh the tradeoffs without changing your tasks.</p>
               <div className="mt-5 grid grid-cols-3 gap-2">
                 <label className="text-[10px] font-semibold text-muted-foreground">
                   <span className="mb-1.5 block">Minutes</span>
@@ -503,10 +550,12 @@ export default function TasksPage() {
                   <input type="number" min={1} max={5} value={recommendationInputs.interest} onChange={(event) => setRecommendationInputs((current) => ({ ...current, interest: Math.min(5, Math.max(1, Number(event.target.value) || 1)) }))} data-testid="input-recommendation-interest" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
                 </label>
               </div>
-              <button type="button" onClick={() => setRecommendationRun({ ...recommendationInputs })} disabled={!activeTasks.length} data-testid="button-recommend-tasks" className="mt-4 min-h-11 w-full rounded-full bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">WHAT SHOULD I WORK ON?</button>
-              {recommendationRun ? (
+              <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || recommendTask.isPending} data-testid="button-recommend-tasks" className="mt-4 min-h-11 w-full rounded-full bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">{recommendTask.isPending ? 'Finding a good fit…' : 'WHAT SHOULD I WORK ON?'}</button>
+              {recommendTask.isPending ? (
+                <p className="mt-4 rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground" role="status" data-testid="status-recommendations-loading">Comparing your active tasks with the time, energy, and interest you have right now…</p>
+              ) : recommendationRun ? (
                 <div className="mt-5 space-y-2" data-testid="list-recommendations">
-                  <div className="flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Your next three</p><span className="text-[10px] text-muted-foreground">{recommendationRun.availableMinutes} min / energy {recommendationRun.energy} / interest {recommendationRun.interest}</span></div>
+                  <div className="flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Your next three</p><span className="text-[10px] text-muted-foreground">{recommendationSource === 'gemini' ? 'AI-assisted' : 'Local ranking'} · {recommendationRun.availableMinutes} min / energy {recommendationRun.energy} / interest {recommendationRun.interest}</span></div>
                   {recommendations.length ? recommendations.map((recommendation, index) => <RecommendationCard key={recommendation.task.id} rank={index + 1} task={recommendation.task} explanation={recommendation.explanation} onEdit={() => setEditingTask(recommendation.task)} />) : <p className="rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground">Add an active task and I’ll help you choose a next step.</p>}
                 </div>
               ) : (

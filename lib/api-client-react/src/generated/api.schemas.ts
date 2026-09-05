@@ -735,6 +735,52 @@ export interface TaskUpdate {
   deadline?: string | null;
 }
 
+export interface TaskRecommendationInput {
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  availableMinutes: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  currentEnergy: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  currentInterest: number;
+}
+
+export type TaskRecommendationResponseRecommendationsItem = {
+  taskId: number;
+  /**
+     * @minimum 1
+     * @maximum 3
+     */
+  rank: number;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
+};
+
+export type TaskRecommendationResponseSource = typeof TaskRecommendationResponseSource[keyof typeof TaskRecommendationResponseSource];
+
+
+export const TaskRecommendationResponseSource = {
+  gemini: 'gemini',
+  deterministic: 'deterministic',
+} as const;
+
+export interface TaskRecommendationResponse {
+  /** @maxItems 3 */
+  recommendations: TaskRecommendationResponseRecommendationsItem[];
+  source: TaskRecommendationResponseSource;
+}
+
 /**
  * @nullable
  */
