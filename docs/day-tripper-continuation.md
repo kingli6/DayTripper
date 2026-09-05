@@ -93,6 +93,44 @@ available preview session is signed out.
 projects, dependencies, Google Calendar, notifications, or Practices/Retention
 changes.
 
+## Gemini task recommendations
+
+**Status:** Implemented and locally verified on 2026-09-05.
+
+**Completed:**
+
+- Added authenticated `POST /tasks/recommend` using the existing server-only
+  Gemini helper and `gemini-3-flash-preview`.
+- The route loads only the signed-in user's `inbox` and `active` tasks and sends
+  task decision signals plus current minutes, energy, and interest. It does not
+  send notes, journal entries, or other private planning context.
+- Gemini is instructed to return at most three supplied task IDs, consider fit
+  instead of simply choosing the highest priority, respect deadlines/urgency,
+  and never invent task information.
+- Server-side response validation filters unknown/duplicate task IDs and
+  normalizes returned ranks.
+- Gemini failures, timeouts, unavailable configuration, invalid JSON, invalid
+  shapes, or no valid IDs fall back to the existing deterministic ranking.
+- The Tasks panel now shows a loading state, calls the endpoint, labels
+  AI-assisted results quietly, and still uses the local ranking if the request
+  itself cannot reach the server.
+- `GEMINI_API_KEY` was securely confirmed in the secret store and the API
+  workflow restarted; `/api/ai/status` reports `configured: true` without
+  exposing the key.
+
+**Verified:** OpenAPI codegen, full workspace typecheck, API typecheck/build,
+Day Tripper typecheck/build, `git diff --check`, clean API/web workflow
+restarts, signed-out recommendation requests returning 401, and safe Gemini
+configuration status.
+
+**Not yet verified:** A signed-in recommendation request reaching Gemini and
+the populated AI-assisted results in the browser. The available preview session
+is signed out.
+
+**Do not start:** Scheduling, calendar blocks, Activities changes, AI memory,
+AI history tables, projects, dependencies, notifications, Google Calendar,
+Board changes, or Practices/Retention changes.
+
 ## Nullable Activity → Board association foundation
 
 **Status:** Complete and verified on 2026-08-24.
