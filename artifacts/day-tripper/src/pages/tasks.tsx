@@ -1,18 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
+  getListActivitiesQueryKey,
   getListTasksQueryKey,
   useArchiveTask,
   useCompleteTask,
   useCreateTask,
   useListTasks,
   useRecommendTasks,
+  useScheduleTask,
   useUpdateTask,
 } from '@workspace/api-client-react';
-import type { Task, TaskInput, TaskUpdate } from '@workspace/api-client-react';
+import type { Task, TaskInput, TaskScheduleInput, TaskUpdate } from '@workspace/api-client-react';
 import { Check, Clock3, Flag, Gauge, ListTodo, Pencil, Plus, RotateCcw, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { z } from 'zod';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useQueryClient } from '@tanstack/react-query';
@@ -150,6 +152,25 @@ function deterministicRecommendations(tasks: Task[], inputs: RecommendationInput
     }))
     .sort((first, second) => second.score - first.score || focusScore(second.task) - focusScore(first.task) || first.task.id - second.task.id)
     .slice(0, 3);
+}
+
+function localDate(date = new Date()) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function timeFromMinutes(minutes: number) {
+  return `${`${Math.floor(minutes / 60)}`.padStart(2, '0')}:${`${minutes % 60}`.padStart(2, '0')}`;
+}
+
+function defaultScheduleStart(estimatedMinutes: number) {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const roundedMinutes = Math.ceil(currentMinutes / 15) * 15;
+  const candidate = roundedMinutes < 24 * 60 ? roundedMinutes : 9 * 60;
+  return candidate + estimatedMinutes < 24 * 60 ? timeFromMinutes(candidate) : '09:00';
 }
 
 function TaskRail() {
@@ -337,21 +358,120 @@ function MatrixTaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   );
 }
 
-function RecommendationCard({ rank, task, explanation, onEdit }: { rank: number; task: Task; explanation: string; onEdit: () => void }) {
+function RecommendationCard({ rank, task, explanation, onEdit, onSchedule }: { rank: number; task: Task; explanation: string; onEdit: () => void; onSchedule: () => void }) {
   return (
-    <button type="button" onClick={onEdit} className="w-full rounded-2xl border border-primary/20 bg-background/70 p-4 text-left transition-transform hover:-translate-y-0.5 hover:border-primary/45" data-testid={`card-recommendation-${task.id}`}>
-      <div className="flex items-start gap-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{rank}</span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">{task.title}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
-            <span>{task.estimatedMinutes} min</span>
-            <span>{quadrantTitle(task)}</span>
+    <article className="w-full rounded-2xl border border-primary/20 bg-background/70 p-4 text-left transition-transform hover:-translate-y-0.5 hover:border-primary/45" data-testid={`card-recommendation-${task.id}`}>
+      <button type="button" onClick={onEdit} className="w-full text-left" data-testid={`button-edit-recommendation-${task.id}`}>
+        <div className="flex items-start gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{rank}</span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{task.title}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
+              <span>{task.estimatedMinutes} min</span>
+              <span>{quadrantTitle(task)}</span>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-muted-foreground">{explanation}</p>
           </div>
-          <p className="mt-2 text-xs leading-5 text-muted-foreground">{explanation}</p>
         </div>
+      </button>
+      <div className="mt-4 flex justify-end border-t border-border/55 pt-3">
+        <button type="button" onClick={onSchedule} data-testid={`button-schedule-task-${task.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-[11px] font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <Clock3 className="size-3.5" strokeWidth={1.9} />
+          Work on this
+        </button>
       </div>
-    </button>
+    </article>
+  );
+}
+
+function ScheduleTaskModal({ task, pending, onSchedule, onClose }: {
+  task: Task;
+  pending: boolean;
+  onSchedule: (data: TaskScheduleInput) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [startTime, setStartTime] = useState(() => defaultScheduleStart(task.estimatedMinutes));
+  const [durationMinutes, setDurationMinutes] = useState(task.estimatedMinutes);
+  const [formError, setFormError] = useState('');
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startMinutes = /^\d{2}:\d{2}$/.test(startTime) && hours <= 23 && minutes <= 59
+      ? hours * 60 + minutes
+      : null;
+
+    if (startMinutes === null) {
+      setFormError('Choose a valid start time.');
+      return;
+    }
+    if (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > 1439) {
+      setFormError('Choose a duration between 1 and 1,439 minutes.');
+      return;
+    }
+    if (startMinutes + durationMinutes >= 24 * 60) {
+      setFormError('This work session needs to finish before midnight. Choose an earlier start or a shorter duration.');
+      return;
+    }
+
+    setFormError('');
+    try {
+      await onSchedule({
+        scheduledDate: localDate(),
+        startTime,
+        durationMinutes,
+      });
+    } catch (error) {
+      setFormError(errorMessage(error));
+    }
+  }
+
+  const endMinutes = /^\d{2}:\d{2}$/.test(startTime) && Number.isInteger(durationMinutes)
+    ? startTime.split(':').map(Number)[0] * 60 + startTime.split(':').map(Number)[1] + durationMinutes
+    : null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="schedule-task-title" aria-describedby="schedule-task-description" className="paper-grain w-full max-w-[520px] rounded-t-[28px] border border-border bg-background p-5 shadow-[0_24px_80px_hsl(205_32%_20%/0.2)] sm:rounded-[28px] sm:p-7" data-testid={`dialog-schedule-task-${task.id}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">Schedule into Today</p>
+            <h2 id="schedule-task-title" className="mt-2 font-display text-[31px] leading-none tracking-[-0.04em]">Make room to begin.</h2>
+            <p id="schedule-task-description" className="mt-3 text-sm leading-6 text-muted-foreground">Choose a simple work block. The task will stay active until you complete it.</p>
+          </div>
+          <button type="button" onClick={onClose} disabled={pending} aria-label="Close schedule task dialog" data-testid="button-close-schedule-task" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary disabled:opacity-40">
+            <X className="size-4" strokeWidth={1.8} />
+          </button>
+        </div>
+        <div className="mt-7 rounded-2xl border border-primary/20 bg-primary/[0.05] p-4">
+          <p className="font-mono-ui text-[9px] uppercase tracking-[0.16em] text-primary">Work block</p>
+          <p className="mt-2 text-[15px] font-semibold leading-6 text-foreground" data-testid={`text-schedule-task-title-${task.id}`}>{task.title}</p>
+        </div>
+        <form onSubmit={(event) => void submit(event)} className="mt-6 space-y-5">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="text-xs font-semibold text-foreground">
+              Starts
+              <input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} disabled={pending} data-testid="input-schedule-start" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3.5 py-3 text-sm font-normal outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-55" />
+            </label>
+            <label className="text-xs font-semibold text-foreground">
+              Duration
+              <div className="relative mt-2">
+                <input type="number" min={1} max={1439} step={1} value={durationMinutes} onChange={(event) => setDurationMinutes(Number(event.target.value))} disabled={pending} data-testid="input-schedule-duration" className="min-h-11 w-full rounded-xl border border-input bg-card px-3.5 py-3 pr-16 text-sm font-normal outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:opacity-55" />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-normal text-muted-foreground">minutes</span>
+              </div>
+            </label>
+          </div>
+          <p className="text-[11px] leading-5 text-muted-foreground">{endMinutes !== null && endMinutes < 24 * 60 ? `This block will end at ${timeFromMinutes(endMinutes)}.` : 'Choose a start and duration that fit within Today.'}</p>
+          {formError && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid="status-schedule-task-error">{formError}</p>}
+          <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-5 sm:flex-row sm:justify-end">
+            <button type="button" onClick={onClose} disabled={pending} data-testid="button-cancel-schedule-task" className="min-h-11 rounded-full border border-border px-5 py-2 text-xs font-semibold text-muted-foreground hover:border-primary/45 hover:text-foreground disabled:opacity-50">Cancel</button>
+            <button type="submit" disabled={pending} data-testid="button-confirm-schedule-task" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60">
+              {pending ? 'Adding to Today…' : 'Add to Today'}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
 
@@ -375,14 +495,17 @@ function TaskEditModal({ task, pending, onSave, onClose }: { task: Task; pending
 }
 
 export default function TasksPage() {
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const list = useListTasks();
   const createTask = useCreateTask();
   const recommendTask = useRecommendTasks();
+  const scheduleTask = useScheduleTask();
   const updateTask = useUpdateTask();
   const completeTask = useCompleteTask();
   const archiveTask = useArchiveTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [schedulingTask, setSchedulingTask] = useState<Task | null>(null);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [recommendationInputs, setRecommendationInputs] = useState<RecommendationInputs>({ availableMinutes: 60, energy: 3, interest: 3 });
   const [recommendationRun, setRecommendationRun] = useState<RecommendationInputs | null>(null);
@@ -485,6 +608,13 @@ export default function TasksPage() {
     }
   };
 
+  const schedule = async (task: Task, data: TaskScheduleInput) => {
+    await scheduleTask.mutateAsync({ id: task.id, data });
+    await queryClient.invalidateQueries({ queryKey: getListActivitiesQueryKey({ date: data.scheduledDate }) });
+    setSchedulingTask(null);
+    navigate('/today');
+  };
+
   const runRecommendations = async () => {
     if (!activeTasks.length) return;
     const inputs = { ...recommendationInputs };
@@ -507,7 +637,7 @@ export default function TasksPage() {
     }
   };
 
-  const pending = createTask.isPending || updateTask.isPending || completeTask.isPending || archiveTask.isPending;
+  const pending = createTask.isPending || updateTask.isPending || completeTask.isPending || archiveTask.isPending || scheduleTask.isPending;
 
   return (
     <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
@@ -556,7 +686,7 @@ export default function TasksPage() {
               ) : recommendationRun ? (
                 <div className="mt-5 space-y-2" data-testid="list-recommendations">
                   <div className="flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Your next three</p><span className="text-[10px] text-muted-foreground">{recommendationSource === 'gemini' ? 'AI-assisted' : 'Local ranking'} · {recommendationRun.availableMinutes} min / energy {recommendationRun.energy} / interest {recommendationRun.interest}</span></div>
-                  {recommendations.length ? recommendations.map((recommendation, index) => <RecommendationCard key={recommendation.task.id} rank={index + 1} task={recommendation.task} explanation={recommendation.explanation} onEdit={() => setEditingTask(recommendation.task)} />) : <p className="rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground">Add an active task and I’ll help you choose a next step.</p>}
+                   {recommendations.length ? recommendations.map((recommendation, index) => <RecommendationCard key={recommendation.task.id} rank={index + 1} task={recommendation.task} explanation={recommendation.explanation} onEdit={() => setEditingTask(recommendation.task)} onSchedule={() => setSchedulingTask(recommendation.task)} />) : <p className="rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground">Add an active task and I’ll help you choose a next step.</p>}
                 </div>
               ) : (
                 <p className="mt-4 text-[11px] leading-5 text-muted-foreground">The top three will balance priority with time, energy, interest, and deadline proximity.</p>
@@ -603,6 +733,7 @@ export default function TasksPage() {
       </div>
       {notice && <div className={`fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)] ${notice.tone === 'error' ? 'border-destructive/25' : 'border-primary/25'}`} role="status" data-testid="status-tasks-notice"><span className={`flex size-7 shrink-0 items-center justify-center rounded-full ${notice.tone === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>{notice.tone === 'error' ? <X className="size-3.5" /> : <Check className="size-3.5" />}</span><p className="min-w-0 flex-1 text-xs font-semibold text-foreground">{notice.text}</p><button type="button" onClick={() => setNotice(null)} aria-label="Dismiss task message" data-testid="button-dismiss-tasks-notice" className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="size-3.5" /></button></div>}
       {editingTask && <TaskEditModal task={editingTask} pending={updateTask.isPending} onSave={(values) => void update(editingTask, values)} onClose={() => setEditingTask(null)} />}
+      {schedulingTask && <ScheduleTaskModal task={schedulingTask} pending={scheduleTask.isPending} onSchedule={(data) => schedule(schedulingTask, data)} onClose={() => setSchedulingTask(null)} />}
     </div>
   );
 }

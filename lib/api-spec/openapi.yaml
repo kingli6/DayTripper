@@ -301,6 +301,35 @@ paths:
                 $ref: "#/components/schemas/TaskRecommendationResponse"
         "400":
           description: Invalid recommendation inputs
+  /tasks/{id}/schedule:
+    post:
+      operationId: scheduleTask
+      tags: [tasks]
+      summary: Schedule an owned task into Today
+      description: Creates a normal work Activity for an active task without completing or changing the task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: number
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskScheduleInput"
+      responses:
+        "201":
+          description: Work activity created for the task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+        "400":
+          description: Invalid schedule details
+        "404":
+          description: Active task not found
   /tasks/{id}:
     patch:
       operationId: updateTask
@@ -1603,6 +1632,22 @@ components:
       required:
         - recommendations
         - source
+    TaskScheduleInput:
+      type: object
+      properties:
+        scheduledDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+        startTime:
+          type: string
+        durationMinutes:
+          type: number
+          minimum: 1
+          maximum: 1439
+      required:
+        - scheduledDate
+        - startTime
+        - durationMinutes
     ActivityInput:
       type: object
       properties:

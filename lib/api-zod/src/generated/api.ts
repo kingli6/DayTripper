@@ -696,6 +696,44 @@ export const RecommendTasksResponse = zod.object({
 
 
 /**
+ * Creates a normal work Activity for an active task without completing or changing the task
+ * @summary Schedule an owned task into Today
+ */
+export const ScheduleTaskParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const scheduleTaskBodyScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const scheduleTaskBodyDurationMinutesMax = 1439;
+
+
+
+export const ScheduleTaskBody = zod.object({
+  "scheduledDate": zod.string().regex(scheduleTaskBodyScheduledDateRegExp),
+  "startTime": zod.string(),
+  "durationMinutes": zod.number().min(1).max(scheduleTaskBodyDurationMinutesMax)
+})
+
+export const scheduleTaskResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ScheduleTaskResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "scheduledDate": zod.string().regex(scheduleTaskResponseScheduledDateRegExp),
+  "startTime": zod.string(),
+  "endTime": zod.string().nullable(),
+  "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
+  "completed": zod.boolean(),
+  "locked": zod.boolean(),
+  "pinned": zod.boolean(),
+  "note": zod.string().nullable(),
+  "boardCardId": zod.number().nullish(),
+  "updatedAt": zod.string()
+})
+
+
+/**
  * @summary Update a task
  */
 export const UpdateTaskParams = zod.object({

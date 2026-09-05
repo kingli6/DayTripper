@@ -57,6 +57,7 @@ import type {
   TaskInput,
   TaskRecommendationInput,
   TaskRecommendationResponse,
+  TaskScheduleInput,
   TaskUpdate
 } from './api.schemas';
 
@@ -1125,6 +1126,79 @@ export const useRecommendTasks = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getRecommendTasksMutationOptions(options));
+    }
+
+export const getScheduleTaskUrl = (id: number,) => {
+
+
+
+
+  return `/api/tasks/${id}/schedule`
+}
+
+/**
+ * Creates a normal work Activity for an active task without completing or changing the task
+ * @summary Schedule an owned task into Today
+ */
+export const scheduleTask = async (id: number,
+    taskScheduleInput: TaskScheduleInput, options?: Parameters<typeof customFetch>[1]): Promise<Activity> => {
+
+  return customFetch<Activity>(getScheduleTaskUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taskScheduleInput)
+  }
+);}
+
+
+
+
+
+export const getScheduleTaskMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scheduleTask>>, TError,{id: number;data: BodyType<TaskScheduleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scheduleTask>>, TError,{id: number;data: BodyType<TaskScheduleInput>}, TContext> => {
+
+const mutationKey = ['scheduleTask'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scheduleTask>>, {id: number;data: BodyType<TaskScheduleInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  scheduleTask(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScheduleTaskMutationResult = NonNullable<Awaited<ReturnType<typeof scheduleTask>>>
+    export type ScheduleTaskMutationBody = BodyType<TaskScheduleInput>
+    export type ScheduleTaskMutationError = ErrorType<void>
+
+    /**
+ * @summary Schedule an owned task into Today
+ */
+export const useScheduleTask = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scheduleTask>>, TError,{id: number;data: BodyType<TaskScheduleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scheduleTask>>,
+        TError,
+        {id: number;data: BodyType<TaskScheduleInput>},
+        TContext
+      > => {
+      return useMutation(getScheduleTaskMutationOptions(options));
     }
 
 export const getUpdateTaskUrl = (id: number,) => {

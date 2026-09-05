@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { db, tasksTable } from "@workspace/db";
+import { activitiesTable, db, tasksTable } from "@workspace/db";
 import {
   ArchiveTaskParams,
   CompleteTaskParams,
@@ -10,6 +10,9 @@ import {
   ListTasksResponse,
   RecommendTasksBody,
   RecommendTasksResponse,
+  ScheduleTaskBody,
+  ScheduleTaskParams,
+  ScheduleTaskResponse,
   UpdateTaskBody,
   UpdateTaskParams,
   UpdateTaskResponse,
@@ -35,6 +38,17 @@ function toApiTask(task: typeof tasksTable.$inferSelect) {
     updatedAt: task.updatedAt.toISOString(),
     completedAt: task.completedAt?.toISOString() ?? null,
   };
+}
+
+function timeToMinutes(value: string) {
+  if (!/^\d{2}:\d{2}$/.test(value)) return null;
+  const [hours, minutes] = value.split(":").map(Number);
+  if (hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+function minutesToTime(value: number) {
+  return `${`${Math.floor(value / 60)}`.padStart(2, "0")}:${`${value % 60}`.padStart(2, "0")}`;
 }
 
 function deadlineDaysAway(deadline: Date | null) {
@@ -334,6 +348,62 @@ router.post("/tasks/recommend", async (req, res): Promise<void> => {
   const aiResult = await geminiRecommendations(tasks, inputs, req.log);
   res.setHeader("Cache-Control", "private, no-store");
   res.json(RecommendTasksResponse.parse(aiResult ?? fallback));
+});
+
+router.post("/tasks/:id/schedule", async (req, res): Promise<void> => {
+  const params = ScheduleTaskParams.safeParse(req.params);
+  const parsed = ScheduleTaskBody.safeParse(req.body);
+  if (!params.success || !parsed.success) {
+    res.status(400).json({ error: "Please choose a valid start time and duration." });
+    return;
+  }
+
+  if (!Number.isInteger(parsed.data.durationMinutes)) {
+    res.status(400).json({ error: "Duration must be a whole number of minutes." });
+    return;
+  }
+
+  const startMinutes = timeToMinutes(parsed.data.startTime);
+  if (startMinutes === null || startMinutes + parsed.data.durationMinutes >= 24 * 60) {
+    res.status(400).json({ error: "The work session must fit within the selected day." });
+    return;
+  }
+
+  const [task] = await db
+    .select()
+    .from(tasksTable)
+    .where(and(
+      eq(tasksTable.id, params.data.id),
+      eq(tasksTable.ownerId, res.locals.userId as string),
+      inArray(tasksTable.status, ["inbox", "active"]),
+    ))
+    .limit(1);
+
+  if (!task) {
+    res.status(404).json({ error: "Active task not found." });
+    return;
+  }
+
+  const [activity] = await db
+    .insert(activitiesTable)
+    .values({
+      ownerId: res.locals.userId as string,
+      title: task.title,
+      scheduledDate: parsed.data.scheduledDate,
+      startTime: parsed.data.startTime,
+      endTime: minutesToTime(startMinutes + parsed.data.durationMinutes),
+      category: "work",
+      completed: false,
+      locked: false,
+      pinned: false,
+      note: null,
+    })
+    .returning();
+
+  res.status(201).json(ScheduleTaskResponse.parse({
+    ...activity,
+    updatedAt: activity.updatedAt.toISOString(),
+  }));
 });
 
 router.patch("/tasks/:id", async (req, res): Promise<void> => {

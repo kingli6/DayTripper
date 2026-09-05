@@ -86,5 +86,6 @@ export * from './taskRecommendationInput';
 export * from './taskRecommendationResponse';
 export * from './taskRecommendationResponseRecommendationsItem';
 export * from './taskRecommendationResponseSource';
+export * from './taskScheduleInput';
 export * from './taskStatus';
 export * from './taskUpdate';

@@ -188,7 +188,7 @@ scheduling, planning/replanning changes, actual-time or Reality tracking, energy
 or delay tracking, Journal/Retention changes, analytics, insights, or offline
 Board support.
 
-## Current checkpoint
+## Board foundation checkpoint
 
 **Active work:** Persistent Board foundation.
 
@@ -215,6 +215,40 @@ available browser session is signed out.
 cross-account isolation with real Clerk sessions. The attached task's stop
 condition is otherwise reached; do not add Board UI behavior, scheduling,
 drag-and-drop, AI, or related integrations in this slice.
+
+## Task → Today scheduling bridge
+
+**Status:** Implemented and locally verified on 2026-09-05.
+
+**Completed:**
+
+- Added `POST /tasks/{id}/schedule` to the existing authenticated Tasks API.
+- The route verifies that the task belongs to the signed-in user and is still
+  `inbox` or `active` before creating a normal work Activity.
+- The created Activity uses the task title, selected local date, start time, and
+  duration-derived end time. The task itself is not completed, archived, or
+  otherwise changed.
+- Recommendation cards now offer “Work on this”, with a dialog for start time
+  and duration defaulted from the task estimate.
+- Successful scheduling invalidates the selected Today activity list and
+  navigates to Today. Invalid inputs remain in the dialog with a visible error.
+- OpenAPI, generated React client hooks, and generated Zod validators are
+  aligned with the new endpoint.
+
+**Verified:** OpenAPI codegen, full workspace typecheck, API typecheck, Day
+Tripper typecheck, API production build, workflow-matched web production build,
+`git diff --check`, clean API/web workflow restarts, health 200, signed-out
+schedule/recommendation requests returning 401, and signed-out preview
+rendering without new application errors.
+
+**Not yet verified:** Authenticated scheduling with a real private task,
+cross-account ownership rejection, activity persistence after reload, and the
+Today screen showing the newly created occurrence. The available preview
+session is signed out.
+
+**Do not start:** Task-to-calendar integrations, automatic scheduling,
+notifications, task/activity association columns, changes to Gemini
+recommendation behavior, or Practices/Retention changes.
 
 **Active work:** Retention-curve implementation follow-up and the minute-practice
 stopwatch verification are complete locally. The latest completed working area

@@ -781,6 +781,17 @@ export interface TaskRecommendationResponse {
   source: TaskRecommendationResponseSource;
 }
 
+export interface TaskScheduleInput {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  scheduledDate: string;
+  startTime: string;
+  /**
+     * @minimum 1
+     * @maximum 1439
+     */
+  durationMinutes: number;
+}
+
 /**
  * @nullable
  */
