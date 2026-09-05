@@ -1,6 +1,6 @@
 # Day Tripper Continuation Checkpoint
 
-Last reviewed: 2026-08-24
+Last reviewed: 2026-09-05
 
 This is the canonical handoff file for continuing Day Tripper across sessions or
 when the available conversation context is nearly exhausted. It is intentionally
@@ -58,6 +58,40 @@ browser preview session is signed out.
 
 **Do not start:** Projects, dependencies, calendar integrations, AI, reminders,
 notifications, or changes to Practices/Retention as part of this slice.
+
+## Tasks matrix and local recommendation slice
+
+**Status:** Implemented and locally verified on 2026-09-05.
+
+**Completed:**
+
+- Added an Eisenhower matrix to the existing Tasks page using active/inbox task
+  records only. Importance `>= 3` is Important and urgency `>= 3` is Urgent.
+- Added four clickable quadrants. Each compact task card shows title, estimate,
+  energy, interest, and deadline when present, and opens the existing editor.
+- Added a local “WHAT SHOULD I WORK ON?” panel with available minutes, current
+  energy, and current interest inputs. The first version intentionally leaves out
+  mental/physical energy inputs to keep the panel quick.
+- Added deterministic top-three recommendations with human-readable reasons.
+  No Gemini call, new API, database change, or duplicate task model was added.
+
+**Ranking rule:** Priority contributes importance and urgency, then the score
+adds deadline proximity, available-time fit, energy match, and interest match.
+Priority remains the largest single influence, while a task with a better
+time/energy/interest fit can beat a higher-priority task when the mismatch is
+large.
+
+**Verified:** Day Tripper typecheck, production build with the required `PORT`
+and `BASE_PATH`, clean web workflow restart, signed-out `/tasks` auth behavior,
+and no browser console errors beyond the existing Clerk development-key warning.
+
+**Not yet verified:** Signed-in visual checks for populated quadrants and
+recommendation reranking when minutes, energy, and interest change. The
+available preview session is signed out.
+
+**Do not start:** Gemini, AI memory, calendar blocks, Activities changes,
+projects, dependencies, Google Calendar, notifications, or Practices/Retention
+changes.
 
 ## Nullable Activity → Board association foundation
 

@@ -29,6 +29,21 @@ const taskSchema = z.object({
 
 type TaskFormValues = z.infer<typeof taskSchema>;
 
+type RecommendationInputs = {
+  availableMinutes: number;
+  energy: number;
+  interest: number;
+};
+
+type QuadrantKey = 'importantUrgent' | 'importantNotUrgent' | 'notImportantUrgent' | 'notImportantNotUrgent';
+
+const QUADRANTS: Array<{ key: QuadrantKey; title: string; description: string; tone: string }> = [
+  { key: 'importantUrgent', title: 'Important + Urgent', description: 'Do next', tone: 'border-primary/35 bg-primary/[0.07]' },
+  { key: 'importantNotUrgent', title: 'Important + Not urgent', description: 'Make room for', tone: 'border-accent/35 bg-accent/[0.08]' },
+  { key: 'notImportantUrgent', title: 'Not important + Urgent', description: 'Keep contained', tone: 'border-secondary-foreground/15 bg-secondary/40' },
+  { key: 'notImportantNotUrgent', title: 'Not important + Not urgent', description: 'Later, if useful', tone: 'border-border/70 bg-card/60' },
+];
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'That change could not be saved. Try again.';
 }
@@ -39,6 +54,84 @@ function formatDeadline(deadline: string) {
 
 function focusScore(task: Task) {
   return task.importance + task.urgency + task.interest - task.energyRequired;
+}
+
+function quadrantKey(task: Task): QuadrantKey {
+  if (task.importance >= 3 && task.urgency >= 3) return 'importantUrgent';
+  if (task.importance >= 3) return 'importantNotUrgent';
+  if (task.urgency >= 3) return 'notImportantUrgent';
+  return 'notImportantNotUrgent';
+}
+
+function quadrantTitle(task: Task) {
+  return QUADRANTS.find((quadrant) => quadrant.key === quadrantKey(task))?.title ?? 'Task';
+}
+
+function deadlineDaysAway(deadline: string) {
+  return (new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+}
+
+function deadlineScore(task: Task) {
+  if (!task.deadline) return 0;
+  const days = deadlineDaysAway(task.deadline);
+  if (days < 0) return 22;
+  if (days <= 1) return 18;
+  if (days <= 3) return 13;
+  if (days <= 7) return 8;
+  return 3;
+}
+
+function timeFitScore(task: Task, availableMinutes: number) {
+  const ratio = task.estimatedMinutes / Math.max(1, availableMinutes);
+  if (ratio <= 1) return 16 - Math.min(4, ((1 - ratio) * 4));
+  if (ratio <= 1.5) return 5;
+  return -12;
+}
+
+function recommendationScore(task: Task, inputs: RecommendationInputs) {
+  const priority = task.importance * 4 + task.urgency * 4;
+  const energyFit = 12 - Math.abs(task.energyRequired - inputs.energy) * 3;
+  const interestFit = 10 - Math.abs(task.interest - inputs.interest) * 2;
+  return priority + deadlineScore(task) + timeFitScore(task, inputs.availableMinutes) + energyFit + interestFit;
+}
+
+function deadlineReason(task: Task) {
+  if (!task.deadline) return '';
+  const days = deadlineDaysAway(task.deadline);
+  if (days < 0) return 'Its deadline has passed';
+  if (days <= 1) return 'Its deadline is close';
+  if (days <= 3) return 'Its deadline is within three days';
+  if (days <= 7) return 'Its deadline is within a week';
+  return '';
+}
+
+function recommendationExplanation(task: Task, inputs: RecommendationInputs) {
+  const reasons: string[] = [];
+  if (task.importance >= 3 && task.urgency >= 3) reasons.push('High priority and urgent');
+  else if (task.importance >= 4) reasons.push('It carries important work');
+  else if (task.urgency >= 4) reasons.push('It is time-sensitive');
+
+  const dueReason = deadlineReason(task);
+  if (dueReason) reasons.push(dueReason);
+
+  if (task.estimatedMinutes <= inputs.availableMinutes) {
+    reasons.push(`Its ${task.estimatedMinutes}-minute estimate fits your available time`);
+  } else {
+    reasons.push(`It is the strongest fit despite needing ${task.estimatedMinutes} minutes`);
+  }
+
+  if (Math.abs(task.energyRequired - inputs.energy) <= 1) {
+    reasons.push('Its energy need matches your current energy');
+  } else if (task.energyRequired < inputs.energy) {
+    reasons.push('Its energy need is manageable right now');
+  }
+
+  if (Math.abs(task.interest - inputs.interest) <= 1) {
+    reasons.push('Its interest level matches your motivation');
+  }
+
+  const selected = reasons.slice(0, 3);
+  return `${selected.join('. ')}${selected.length ? '.' : 'A balanced fit across priority, time, energy, and interest.'}`;
 }
 
 function TaskRail() {
@@ -212,6 +305,38 @@ function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task
   );
 }
 
+function MatrixTaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
+  return (
+    <button type="button" onClick={onEdit} className="w-full rounded-2xl border border-border/65 bg-background/60 p-3 text-left transition-transform hover:-translate-y-0.5 hover:border-primary/45" data-testid={`card-matrix-task-${task.id}`}>
+      <p className="truncate text-[13px] font-semibold text-foreground">{task.title}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
+        <span>{task.estimatedMinutes} min</span>
+        <span>Energy {task.energyRequired}/5</span>
+        <span>Interest {task.interest}/5</span>
+        {task.deadline && <span>Due {formatDeadline(task.deadline)}</span>}
+      </div>
+    </button>
+  );
+}
+
+function RecommendationCard({ rank, task, explanation, onEdit }: { rank: number; task: Task; explanation: string; onEdit: () => void }) {
+  return (
+    <button type="button" onClick={onEdit} className="w-full rounded-2xl border border-primary/20 bg-background/70 p-4 text-left transition-transform hover:-translate-y-0.5 hover:border-primary/45" data-testid={`card-recommendation-${task.id}`}>
+      <div className="flex items-start gap-3">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{rank}</span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">{task.title}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
+            <span>{task.estimatedMinutes} min</span>
+            <span>{quadrantTitle(task)}</span>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">{explanation}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 function TaskEditModal({ task, pending, onSave, onClose }: { task: Task; pending: boolean; onSave: (values: TaskFormValues) => void; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
@@ -240,10 +365,33 @@ export default function TasksPage() {
   const archiveTask = useArchiveTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
+  const [recommendationInputs, setRecommendationInputs] = useState<RecommendationInputs>({ availableMinutes: 60, energy: 3, interest: 3 });
+  const [recommendationRun, setRecommendationRun] = useState<RecommendationInputs | null>(null);
 
   const tasks = useMemo(() => [...(list.data ?? [])].filter((task) => task.status !== 'archived').sort((a, b) => focusScore(b) - focusScore(a) || a.id - b.id), [list.data]);
   const activeTasks = tasks.filter((task) => task.status === 'inbox' || task.status === 'active');
   const completedTasks = tasks.filter((task) => task.status === 'completed');
+  const matrixTasks = useMemo(() => {
+    const groups: Record<QuadrantKey, Task[]> = {
+      importantUrgent: [],
+      importantNotUrgent: [],
+      notImportantUrgent: [],
+      notImportantNotUrgent: [],
+    };
+    activeTasks.forEach((task) => groups[quadrantKey(task)].push(task));
+    return groups;
+  }, [activeTasks]);
+  const recommendations = useMemo(() => {
+    if (!recommendationRun) return [];
+    return activeTasks
+      .map((task) => ({
+        task,
+        score: recommendationScore(task, recommendationRun),
+        explanation: recommendationExplanation(task, recommendationRun),
+      }))
+      .sort((a, b) => b.score - a.score || focusScore(b.task) - focusScore(a.task) || a.task.id - b.task.id)
+      .slice(0, 3);
+  }, [activeTasks, recommendationRun]);
   const showSuccess = (text: string) => {
     setNotice({ tone: 'success', text });
     window.setTimeout(() => setNotice(null), 3200);
@@ -337,10 +485,33 @@ export default function TasksPage() {
               </div>
               <TaskForm pending={createTask.isPending} onSubmit={(values) => void create(values)} />
             </section>
-            <aside className="rounded-[26px] border border-border/70 bg-card/70 p-5 sm:p-6">
-              <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">A gentle order</p></div>
-              <p className="mt-4 font-display text-[25px] leading-tight tracking-[-0.035em]">Start with the highest signal, not the loudest feeling.</p>
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">The list favors importance, urgency, and interest, while making high-energy tasks more visible as a choice.</p>
+            <aside className="rounded-[26px] border border-border/70 bg-card/70 p-5 sm:p-6" data-testid="section-recommendations">
+              <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">A little direction</p></div>
+              <p className="mt-4 font-display text-[25px] leading-tight tracking-[-0.035em]">What should I work on?</p>
+              <p className="mt-3 text-xs leading-5 text-muted-foreground">Tell the list what fits right now. This stays local and uses your task signals.</p>
+              <div className="mt-5 grid grid-cols-3 gap-2">
+                <label className="text-[10px] font-semibold text-muted-foreground">
+                  <span className="mb-1.5 block">Minutes</span>
+                  <input type="number" min={1} max={1440} value={recommendationInputs.availableMinutes} onChange={(event) => setRecommendationInputs((current) => ({ ...current, availableMinutes: Math.max(1, Number(event.target.value) || 1) }))} data-testid="input-recommendation-minutes" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                </label>
+                <label className="text-[10px] font-semibold text-muted-foreground">
+                  <span className="mb-1.5 block">Energy</span>
+                  <input type="number" min={1} max={5} value={recommendationInputs.energy} onChange={(event) => setRecommendationInputs((current) => ({ ...current, energy: Math.min(5, Math.max(1, Number(event.target.value) || 1)) }))} data-testid="input-recommendation-energy" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                </label>
+                <label className="text-[10px] font-semibold text-muted-foreground">
+                  <span className="mb-1.5 block">Interest</span>
+                  <input type="number" min={1} max={5} value={recommendationInputs.interest} onChange={(event) => setRecommendationInputs((current) => ({ ...current, interest: Math.min(5, Math.max(1, Number(event.target.value) || 1)) }))} data-testid="input-recommendation-interest" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                </label>
+              </div>
+              <button type="button" onClick={() => setRecommendationRun({ ...recommendationInputs })} disabled={!activeTasks.length} data-testid="button-recommend-tasks" className="mt-4 min-h-11 w-full rounded-full bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">WHAT SHOULD I WORK ON?</button>
+              {recommendationRun ? (
+                <div className="mt-5 space-y-2" data-testid="list-recommendations">
+                  <div className="flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Your next three</p><span className="text-[10px] text-muted-foreground">{recommendationRun.availableMinutes} min / energy {recommendationRun.energy} / interest {recommendationRun.interest}</span></div>
+                  {recommendations.length ? recommendations.map((recommendation, index) => <RecommendationCard key={recommendation.task.id} rank={index + 1} task={recommendation.task} explanation={recommendation.explanation} onEdit={() => setEditingTask(recommendation.task)} />) : <p className="rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground">Add an active task and I’ll help you choose a next step.</p>}
+                </div>
+              ) : (
+                <p className="mt-4 text-[11px] leading-5 text-muted-foreground">The top three will balance priority with time, energy, interest, and deadline proximity.</p>
+              )}
               <div className="mt-6 grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-2xl bg-secondary/65 px-3 py-3"><p className="font-display text-2xl">{activeTasks.length}</p><p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-muted-foreground">to choose from</p></div>
                 <div className="rounded-2xl bg-secondary/65 px-3 py-3"><p className="font-display text-2xl">{completedTasks.length}</p><p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-muted-foreground">completed</p></div>
@@ -356,7 +527,23 @@ export default function TasksPage() {
             </div>
           ) : (
             <div className="mt-10 max-w-[980px]">
-              <div className="mb-4 flex items-end justify-between gap-3"><div><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">Active and inbox</p><h2 className="mt-2 font-display text-[30px] leading-none tracking-[-0.04em]">{activeTasks.length ? 'What could fit next?' : 'Your list is clear.'}</h2></div><span className="text-xs text-muted-foreground">{activeTasks.length} {activeTasks.length === 1 ? 'task' : 'tasks'}</span></div>
+              <section data-testid="section-eisenhower">
+                <div className="mb-4 flex items-end justify-between gap-3"><div><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">See the shape of your list</p><h2 className="mt-2 font-display text-[30px] leading-none tracking-[-0.04em]">Eisenhower matrix</h2></div><span className="text-xs text-muted-foreground">Importance and urgency, 1–5</span></div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  {QUADRANTS.map((quadrant) => (
+                    <div key={quadrant.key} className={`rounded-[22px] border p-4 ${quadrant.tone}`} data-testid={`quadrant-${quadrant.key}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div><h3 className="text-sm font-semibold text-foreground">{quadrant.title}</h3><p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{quadrant.description}</p></div>
+                        <span className="flex size-7 items-center justify-center rounded-full bg-background/75 text-xs font-semibold text-foreground">{matrixTasks[quadrant.key].length}</span>
+                      </div>
+                      <div className="mt-4 space-y-2">
+                        {matrixTasks[quadrant.key].length ? matrixTasks[quadrant.key].map((task) => <MatrixTaskCard key={task.id} task={task} onEdit={() => setEditingTask(task)} />) : <p className="rounded-2xl border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">No active tasks here yet.</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <div className="mb-4 mt-12 flex items-end justify-between gap-3"><div><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">Active and inbox</p><h2 className="mt-2 font-display text-[30px] leading-none tracking-[-0.04em]">{activeTasks.length ? 'What could fit next?' : 'Your list is clear.'}</h2></div><span className="text-xs text-muted-foreground">{activeTasks.length} {activeTasks.length === 1 ? 'task' : 'tasks'}</span></div>
               {activeTasks.length === 0 ? (
                 <div className="rounded-[24px] border border-dashed border-primary/30 bg-primary/[0.045] px-6 py-14 text-center" data-testid="status-tasks-empty"><div className="mx-auto flex size-14 items-center justify-center rounded-full bg-secondary text-primary"><Check className="size-6" /></div><p className="mt-5 font-display text-[29px]">Nothing asking for you yet.</p><p className="mx-auto mt-2 max-w-[360px] text-sm leading-6 text-muted-foreground">Add one task above, or let this be enough for now.</p></div>
               ) : <div className="space-y-3">{activeTasks.map((task) => <TaskItem key={task.id} task={task} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
