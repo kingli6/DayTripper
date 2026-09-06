@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation } from 'wouter';
 import { z } from 'zod';
+import { AppShell } from '@/components/app-shell';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -169,40 +170,6 @@ function defaultScheduleStart(estimatedMinutes: number) {
   const roundedMinutes = Math.ceil(currentMinutes / 15) * 15;
   const candidate = roundedMinutes < 24 * 60 ? roundedMinutes : 9 * 60;
   return candidate + estimatedMinutes < 24 * 60 ? timeFromMinutes(candidate) : '09:00';
-}
-
-function TaskRail() {
-  return (
-    <aside className="hidden w-[220px] shrink-0 bg-sidebar px-3 py-5 text-sidebar-foreground lg:block">
-      <div>
-        <Link href="/today" className="flex items-center gap-2.5 px-2" data-testid="link-tasks-brand">
-          <div aria-hidden="true" className="relative flex size-8 shrink-0 items-center justify-center rounded-xl border border-sidebar-primary/40 bg-sidebar-primary/15 text-base font-semibold text-sidebar-primary">
-            <span className="font-display -mt-0.5">d</span>
-            <span className="absolute bottom-[5px] right-[5px] size-1.5 rounded-full bg-sidebar-primary" />
-          </div>
-          <div>
-            <p className="font-display text-[19px] leading-none tracking-[-0.03em]">Day Tripper</p>
-          </div>
-        </Link>
-        <nav className="mt-10" aria-label="Private space">
-          <p className="px-3 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/45">Your space</p>
-          <Link href="/tasks" className="mt-2 flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-tasks-tasks">
-            <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-            Tasks
-            <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
-          </Link>
-          <Link href="/today" className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-today">
-            <span className="size-3.5 rounded-full border border-sidebar-primary" />
-            Today
-          </Link>
-          <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-practices">
-            <span className="size-3.5 rounded-full border border-sidebar-primary" />
-            Practices
-          </Link>
-        </nav>
-      </div>
-    </aside>
-  );
 }
 
 function TaskForm({
@@ -704,14 +671,8 @@ export default function TasksPage() {
 
   return (
     <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
-      <div className="relative flex min-h-[100dvh]">
-        <TaskRail />
-        <main className="min-w-0 flex-1 px-5 pb-12 pt-5 sm:px-8 sm:pt-7 lg:px-10 lg:pb-14 lg:pt-8">
-          <nav className="mb-4 flex items-center gap-4 overflow-x-auto border-b border-border/60 pb-3 text-[11px] font-semibold lg:hidden" aria-label="Primary navigation">
-            <Link href="/tasks" data-testid="link-mobile-tasks-page" className="text-primary">Tasks</Link>
-            <Link href="/today" data-testid="link-mobile-today-page" className="text-muted-foreground">Today</Link>
-            <Link href="/retention" data-testid="link-mobile-practices-page" className="text-muted-foreground">Practices</Link>
-          </nav>
+      <AppShell>
+        <main className="min-w-0 px-5 pb-12 pt-5 sm:px-8 sm:pt-7 lg:px-10 lg:pb-14 lg:pt-8">
           <header className="flex items-center justify-between border-b border-border/60 pb-3">
             <div className="flex items-center gap-2"><ListTodo className="size-4 text-primary" /><span className="text-sm font-semibold text-foreground">Tasks</span></div>
             <Link href="/today" data-testid="link-tasks-back-today" className="hidden items-center rounded-full border border-border bg-card px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:border-primary/45 hover:text-primary sm:inline-flex">Today</Link>
@@ -780,7 +741,7 @@ export default function TasksPage() {
           )}
           </div>
         </main>
-      </div>
+      </AppShell>
       {notice && <div className={`fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)] ${notice.tone === 'error' ? 'border-destructive/25' : 'border-primary/25'}`} role="status" data-testid="status-tasks-notice"><span className={`flex size-7 shrink-0 items-center justify-center rounded-full ${notice.tone === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>{notice.tone === 'error' ? <X className="size-3.5" /> : <Check className="size-3.5" />}</span><p className="min-w-0 flex-1 text-xs font-semibold text-foreground">{notice.text}</p><button type="button" onClick={() => setNotice(null)} aria-label="Dismiss task message" data-testid="button-dismiss-tasks-notice" className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="size-3.5" /></button></div>}
       {editingTask && <TaskEditModal task={editingTask} pending={updateTask.isPending} onSave={(values) => void update(editingTask, values)} onClose={() => setEditingTask(null)} />}
       {schedulingTask && <ScheduleTaskModal task={schedulingTask} pending={scheduleTask.isPending} onSchedule={(data) => schedule(schedulingTask, data)} onClose={() => setSchedulingTask(null)} />}

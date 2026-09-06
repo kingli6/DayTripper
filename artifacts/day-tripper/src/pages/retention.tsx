@@ -15,7 +15,8 @@ import {
   useUpdateRetentionPractice,
 } from '@workspace/api-client-react';
 import type { RetentionObservation, RetentionPractice, RetentionPracticeInput } from '@workspace/api-client-react';
-import { ArrowLeft, BookOpen, CalendarDays, Check, ChevronRight, Circle, ListTodo, Pencil, Play, Plus, RotateCcw, Square, Timer, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check, ChevronRight, Circle, Pencil, Play, Plus, RotateCcw, Square, Timer, Trash2 } from 'lucide-react';
+import { AppShell } from '@/components/app-shell';
 import { RetentionChart } from '@/components/retention/retention-chart';
 import { RetentionPracticeForm } from '@/components/retention/retention-practice-form';
 import {
@@ -72,77 +73,6 @@ function practiceAvailability(practice: RetentionPractice, today = localDate()) 
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'That change could not be saved. Try once more.';
-}
-
-function BrandMark() {
-  return (
-    <div aria-hidden="true" className="relative flex size-10 shrink-0 items-center justify-center rounded-[14px] border border-sidebar-primary/40 bg-sidebar-primary/15 text-lg font-semibold text-sidebar-primary">
-      <span className="font-display -mt-0.5">d</span>
-      <span className="absolute bottom-[7px] right-[7px] size-1.5 rounded-full bg-sidebar-primary" />
-    </div>
-  );
-}
-
-function RetentionRail() {
-  return (
-    <aside className="hidden w-[264px] shrink-0 flex-col justify-between bg-sidebar px-5 py-6 text-sidebar-foreground lg:flex">
-      <div>
-        <Link href="/today" className="flex items-center gap-3 px-2" data-testid="link-retention-brand">
-          <BrandMark />
-          <div>
-            <p className="font-display text-[22px] leading-none tracking-[-0.03em]">Day Tripper</p>
-            <p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.2em] text-sidebar-foreground/55">a softer daily practice</p>
-          </div>
-        </Link>
-        <nav className="mt-16" aria-label="Private space">
-          <p className="px-3 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/45">Your space</p>
-          <Link href="/tasks" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-retention-tasks">
-            <ListTodo className="size-4" strokeWidth={1.8} />
-            Tasks
-          </Link>
-          <Link href="/today" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-retention-today">
-            <CalendarDays className="size-4" strokeWidth={1.8} />
-            Today
-          </Link>
-          <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-xl bg-sidebar-accent px-3 py-3 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-retention-practices">
-            <Circle className="size-3.5 fill-sidebar-primary text-sidebar-primary" strokeWidth={1.7} />
-            Practices
-            <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
-          </Link>
-        </nav>
-        <div className="mt-14 px-3">
-          <div className="mb-4 flex size-8 items-center justify-center rounded-full border border-sidebar-primary/35 bg-sidebar-primary/10 text-sidebar-primary">
-            <BookOpen className="size-3.5" strokeWidth={1.8} />
-          </div>
-          <p className="font-display text-[20px] leading-[1.15] text-sidebar-foreground/90">Keep what you learn close.</p>
-          <p className="mt-3 text-[12px] leading-5 text-sidebar-foreground/55">A quiet record of capability, not a scorecard.</p>
-        </div>
-      </div>
-      <div className="border-t border-sidebar-border/80 px-3 pt-5">
-        <p className="flex items-center gap-2 text-[11px] text-sidebar-foreground/55">
-          <span className="size-1.5 rounded-full bg-sidebar-primary" />
-          Private by design
-        </p>
-        <p className="mt-2 font-mono-ui text-[9px] uppercase tracking-[0.16em] text-sidebar-foreground/35">Retention / 01</p>
-      </div>
-    </aside>
-  );
-}
-
-function RetentionHeader() {
-  return (
-    <header className="flex items-center justify-between border-b border-border/60 bg-sidebar px-5 py-4 text-sidebar-foreground lg:hidden">
-      <Link href="/today" className="flex items-center gap-3" data-testid="link-retention-mobile-brand">
-        <BrandMark />
-        <span className="font-display text-[21px] tracking-[-0.03em]">Day Tripper</span>
-      </Link>
-      <nav className="flex items-center gap-3 overflow-x-auto text-[10px] font-semibold" aria-label="Primary navigation">
-        <Link href="/tasks" data-testid="link-mobile-retention-tasks">Tasks</Link>
-        <Link href="/today" data-testid="link-mobile-retention-today">Today</Link>
-        <Link href="/retention" data-testid="link-mobile-retention-practices" className="text-sidebar-primary">Practices</Link>
-      </nav>
-    </header>
-  );
 }
 
 function PracticesLoading() {
@@ -599,11 +529,8 @@ function RetentionWorkspace() {
   const pageTitle = selectedPractice ? selectedPractice.name : 'Practices';
   return (
     <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
-      <div className="relative flex min-h-[100dvh]">
-        <RetentionRail />
-        <div className="min-w-0 flex-1">
-          <RetentionHeader />
-          <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
+      <AppShell>
+        <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
             <header className="flex items-center justify-between border-b border-border/60 pb-5">
               <div className="flex items-center gap-2"><Circle className="size-2.5 fill-accent text-accent" strokeWidth={0} /><span className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A private record of capability</span></div>
               <Link href="/today" className="hidden text-xs font-semibold text-muted-foreground hover:text-primary sm:inline-flex" data-testid="link-retention-return-today">Back to today</Link>
@@ -622,9 +549,8 @@ function RetentionWorkspace() {
               <div className="mt-9 sm:mt-12"><p className="text-xs text-muted-foreground">Starting a new practice…</p></div>
             )}
             <footer className="mt-12 border-t border-border/60 pt-5 text-[11px] text-muted-foreground/75"><p>{pageTitle === 'Practices' ? 'No scores, streaks, or performance signals here.' : 'Your observations stay grounded in what you actually noticed.'}</p></footer>
-          </main>
-        </div>
-      </div>
+        </main>
+      </AppShell>
       {formOpen && <RetentionPracticeForm practice={editing} pending={createPractice.isPending || updatePractice.isPending} error={mutationError} onClose={() => { setFormOpen(false); setEditing(null); setMutationError(''); setLocation(editing ? `/retention/${editing.id}` : '/retention'); }} onSubmit={savePractice} />}
       {deletePractice.isPending && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold shadow-lg" role="status" data-testid="status-retention-delete">Removing practice…</div>}
       {mutationError && !formOpen && <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-destructive/25 bg-card px-4 py-3 text-xs text-destructive shadow-lg" role="alert" data-testid="status-retention-mutation-error"><span>{mutationError}</span><button type="button" onClick={() => setMutationError('')} className="font-semibold underline underline-offset-4" data-testid="button-dismiss-retention-error">Dismiss</button></div>}

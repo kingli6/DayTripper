@@ -100,6 +100,38 @@ available preview session is signed out.
 **Do not start:** Any replacement pin/reuse workflow, distribution dashboard,
 Matrix route, or unrelated redesign as part of this cleanup.
 
+## Application shell and navigation
+
+**Status:** Implemented and locally verified on 2026-09-06.
+
+**Completed:**
+
+- Added one shared shell navigation component for Tasks, Today, and Practices,
+  using the existing `/tasks`, `/today`, and `/retention` routes.
+- Replaced the separate Today, Tasks, and Practices desktop/mobile navigation
+  implementations with one narrow expandable desktop rail and one mobile header.
+- Kept the rail limited to primary navigation; page-specific actions remain in
+  their page content.
+- Moved the existing account, Operations, and sign-out controls into the
+  persistent desktop rail footer and a compact mobile account menu.
+- Quieted the normal authenticated server-ready state while preserving visible
+  offline, pending, authentication, wake, and server-error states.
+- Removed the redundant Today-specific account header and the old decorative
+  shell copy without changing feature behavior, routes, APIs, or data models.
+
+**Verified:** Day Tripper typecheck, API build, web production build with the
+managed `PORT`/`BASE_PATH` values, clean web workflow restart, `git diff --check`,
+no live Board references, and signed-out landing-page preview without new
+browser errors after the final restart.
+
+**Not yet verified:** Authenticated visual interaction with the expanded rail,
+mobile account menu, account sign-out, and page-to-page active states because the
+available preview session is signed out.
+
+**Do not start:** Feature-page redesign, Today planning-dialog changes, Task or
+Matrix row redesign, Practices functionality changes, new Settings feature, or
+new Plan today task-selection behavior as part of this shell slice.
+
 ## Tasks MVP foundation
 
 **Status:** Implemented and locally verified on 2026-09-05.

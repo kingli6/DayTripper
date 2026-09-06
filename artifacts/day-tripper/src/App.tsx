@@ -14,14 +14,11 @@ import {
   Clock3,
   Cloud,
   EyeOff,
-  ListTodo,
   LoaderCircle,
   LockKeyhole,
-  Menu,
   Pencil,
   Plus,
   RotateCcw,
-  ShieldCheck,
   Sparkles,
   Trash2,
   X,
@@ -35,6 +32,7 @@ import {
 } from '@workspace/api-client-react';
 import type { Activity, ActivityInput, PlanningDiscussionMessage, PlanningProposal, PlanningRequest } from '@workspace/api-client-react';
 import { ChangeReviewPanel } from '@/components/change-review-panel';
+import { AppShell } from '@/components/app-shell';
 import TasksPage from '@/pages/tasks';
 import { PlanningDiscussion } from '@/components/planning-discussion';
 import { ReplanningStudio } from '@/components/replanning-studio';
@@ -253,62 +251,6 @@ function BrandMark() {
   );
 }
 
-function Sidebar({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning: () => void }) {
-  return (
-    <aside className="hidden w-[264px] shrink-0 flex-col justify-between bg-sidebar px-5 py-6 text-sidebar-foreground lg:flex">
-      <div>
-        <div className="flex items-center gap-3 px-2">
-          <BrandMark />
-          <div>
-            <p className="font-display text-[22px] leading-none tracking-[-0.03em]">Day Tripper</p>
-            <p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.2em] text-sidebar-foreground/55">a softer daily practice</p>
-          </div>
-        </div>
-        <div className="mt-16">
-          <p className="px-3 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/45">Your space</p>
-          <Link href="/tasks" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-tasks">
-            <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-            <span>Tasks</span>
-          </Link>
-          <Link href="/today" className="mt-1 flex items-center gap-3 rounded-xl bg-sidebar-accent px-3 py-3 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-sidebar-today">
-            <CalendarDays className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-            <span>Today</span>
-            <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
-          </Link>
-          <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-retention">
-            <Circle className="size-3.5 text-sidebar-primary" strokeWidth={1.8} />
-            <span>Practices</span>
-          </Link>
-        </div>
-        <div className="mt-14 px-3">
-          <div className="mb-4 flex size-8 items-center justify-center rounded-full border border-sidebar-primary/35 bg-sidebar-primary/10 text-sidebar-primary">
-            <Circle className="size-3.5 fill-current" strokeWidth={1.7} />
-          </div>
-          <p className="font-display text-[20px] leading-[1.15] text-sidebar-foreground/90">A day can change shape.</p>
-          <p className="mt-3 text-[12px] leading-5 text-sidebar-foreground/55">Keep the next thing close. Let the rest be allowed to move.</p>
-        </div>
-      </div>
-      <div>
-        <button type="button" onClick={onAdd} data-testid="button-sidebar-add" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-3 py-3 text-sm font-semibold text-sidebar-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0">
-          <Plus className="size-4" strokeWidth={2.2} />
-          Add to the day
-        </button>
-        <button type="button" onClick={onOpenPlanning} data-testid="button-sidebar-planning" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-primary/35 px-3 py-3 text-sm font-semibold text-sidebar-foreground transition-colors hover:border-sidebar-primary/70 hover:bg-sidebar-accent">
-          <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-          Plan today
-        </button>
-        <div className="border-t border-sidebar-border/80 px-3 pt-5">
-          <div className="flex items-center gap-2 text-[11px] text-sidebar-foreground/55">
-            <ShieldCheck className="size-3.5 text-sidebar-primary/80" strokeWidth={1.8} />
-            <span>Private by design</span>
-          </div>
-          <p className="mt-2 font-mono-ui text-[9px] uppercase tracking-[0.16em] text-sidebar-foreground/35">Foundation / 01</p>
-        </div>
-      </div>
-    </aside>
-  );
-}
-
 function ServerWakeStatus({
   state,
   onWake,
@@ -343,7 +285,7 @@ function ServerWakeStatus({
       data-testid="status-server-wake"
     >
       <EyeOff className={`size-3.5 shrink-0 ${state === 'waking' ? 'animate-breathe' : ''}`} strokeWidth={1.8} />
-      {!compact && <span className="hidden sm:inline">{copy[state]}</span>}
+      {!compact && <span>{copy[state]}</span>}
       {compact && <span className="sr-only">{copy[state]}</span>}
       {canWake && (
         <button
@@ -362,10 +304,11 @@ function ServerWakeStatus({
 
 function GlobalServerAvailabilityIndicator() {
   const serverWake = useServerWakeState();
+  const quiet = serverWake.state === 'checking' || serverWake.state === 'ready';
 
   return (
-    <div className="w-full border-b border-border/50 bg-background/95 px-3 py-2 backdrop-blur-sm sm:px-5">
-      <div className="mx-auto flex min-h-7 w-full max-w-[1180px] justify-end">
+    <div className={quiet ? 'sr-only' : 'pointer-events-none fixed right-4 top-3 z-50 sm:right-6'}>
+      <div className="pointer-events-auto">
         <ServerWakeStatus state={serverWake.state} onWake={() => void serverWake.wake()} />
       </div>
     </div>
@@ -382,40 +325,6 @@ function AuthenticatedAppShell({ children }: { children: ReactNode }) {
       <GlobalServerAvailabilityIndicator />
       {children}
     </ServerAvailabilityProvider>
-  );
-}
-
-function MobileHeader({
-  onAdd,
-  onOpenPlanning,
-}: {
-  onAdd: () => void;
-  onOpenPlanning: () => void;
-}) {
-  return (
-    <header className="flex items-center justify-between border-b border-border/70 bg-sidebar px-5 py-4 text-sidebar-foreground lg:hidden">
-      <div className="flex items-center gap-3">
-        <BrandMark />
-        <p className="font-display text-[21px] tracking-[-0.03em]">Day Tripper</p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Link href="/tasks" aria-label="Open your Tasks" title="Tasks" data-testid="link-mobile-tasks" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
-          <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-        </Link>
-        <Link href="/today" aria-label="Open Today" title="Today" data-testid="link-mobile-today" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
-          <CalendarDays className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-        </Link>
-        <Link href="/retention" aria-label="Open retention practices" title="Practices" data-testid="link-mobile-retention" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
-          <Circle className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-        </Link>
-        <button type="button" onClick={onOpenPlanning} aria-label="Plan today" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
-          <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-        </button>
-        <button type="button" onClick={onAdd} aria-label="Add an activity" data-testid="button-mobile-add" className="flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
-          <Plus className="size-5" strokeWidth={2} />
-        </button>
-      </div>
-    </header>
   );
 }
 
@@ -488,29 +397,6 @@ function OfflineSyncBanner({
           {shouldWake ? 'Wake & continue' : 'Try again'}
         </button>
       )}
-    </div>
-  );
-}
-
-function AccountControl() {
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const label = user?.firstName || user?.primaryEmailAddress?.emailAddress || 'Your account';
-
-  return (
-    <div className="flex items-center gap-3">
-      <span className="hidden max-w-[220px] truncate text-xs text-muted-foreground sm:block">{label}</span>
-      <Link href="/admin" data-testid="link-account-operations" className="hidden items-center gap-1.5 rounded-full border border-primary/25 bg-primary/[0.05] px-3 py-2 text-[11px] font-semibold text-primary transition-colors hover:border-primary/50 hover:bg-primary/10 md:inline-flex">
-        <ShieldCheck className="size-3.5" strokeWidth={1.8} />
-        Operations
-      </Link>
-      <button
-        type="button"
-        onClick={() => void signOut({ redirectUrl: basePath || '/' })}
-        className="rounded-full border border-border bg-card px-3 py-2 text-[11px] font-semibold text-foreground transition-colors hover:border-primary/45 hover:text-primary"
-      >
-        Sign out
-      </button>
     </div>
   );
 }
@@ -1549,21 +1435,8 @@ function Today() {
     <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
       <div className="pointer-events-none absolute -right-24 -top-28 size-[430px] rounded-full bg-accent/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-[-180px] left-[25%] size-[420px] rounded-full bg-secondary/35 blur-3xl" />
-      <div className="relative flex min-h-[100dvh]">
-        <Sidebar onAdd={openCreate} onOpenPlanning={openPlanToday} />
-        <div className="min-w-0 flex-1">
-          <MobileHeader onAdd={openCreate} onOpenPlanning={openPlanToday} />
-          <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
-            <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
-              <div className="flex items-center gap-2">
-                <Circle className="size-2.5 fill-accent text-accent" strokeWidth={0} />
-                <span className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A private day planner</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="hidden text-xs text-muted-foreground/75 md:block">Take the day as it comes</span>
-                  <AccountControl />
-               </div>
-            </header>
+      <AppShell>
+        <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
             <div className="mt-9 flex flex-col gap-6 border-b border-border/60 pb-8 sm:mt-12 sm:flex-row sm:items-end sm:justify-between">
               <div className="animate-rise min-w-0">
                 <p className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">{date === today ? 'Today' : 'Looking back'}</p>
@@ -1644,9 +1517,8 @@ function Today() {
               <p data-testid="text-privacy-note">Your day stays yours. No scores, streaks, or performance signals here.</p>
               <span className="font-mono-ui text-[9px] uppercase tracking-[0.15em]">Day Tripper / Today</span>
             </footer>
-          </main>
-        </div>
-      </div>
+        </main>
+      </AppShell>
       {acceptedNotice && (
         <div className="fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center justify-between gap-3 rounded-2xl border border-primary/25 bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)]" role="status" data-testid="status-planning-accepted">
           <div className="flex min-w-0 items-center gap-2.5">
