@@ -15,7 +15,7 @@ import {
   useUpdateRetentionPractice,
 } from '@workspace/api-client-react';
 import type { RetentionObservation, RetentionPractice, RetentionPracticeInput } from '@workspace/api-client-react';
-import { ArrowLeft, BookOpen, CalendarDays, Check, ChevronRight, Circle, LayoutGrid, ListTodo, Pencil, Play, Plus, RotateCcw, Square, Timer, Trash2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, CalendarDays, Check, ChevronRight, Circle, ListTodo, Pencil, Play, Plus, RotateCcw, Square, Timer, Trash2 } from 'lucide-react';
 import { RetentionChart } from '@/components/retention/retention-chart';
 import { RetentionPracticeForm } from '@/components/retention/retention-practice-form';
 import {
@@ -104,10 +104,6 @@ function RetentionRail() {
             <CalendarDays className="size-4" strokeWidth={1.8} />
             Today
           </Link>
-          <Link href="/board" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-retention-board">
-            <LayoutGrid className="size-4" strokeWidth={1.8} />
-            Board
-          </Link>
           <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-xl bg-sidebar-accent px-3 py-3 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-retention-practices">
             <Circle className="size-3.5 fill-sidebar-primary text-sidebar-primary" strokeWidth={1.7} />
             Practices
@@ -143,7 +139,6 @@ function RetentionHeader() {
       <nav className="flex items-center gap-3 overflow-x-auto text-[10px] font-semibold" aria-label="Primary navigation">
         <Link href="/tasks" data-testid="link-mobile-retention-tasks">Tasks</Link>
         <Link href="/today" data-testid="link-mobile-retention-today">Today</Link>
-        <Link href="/board" data-testid="link-mobile-retention-board">Board</Link>
         <Link href="/retention" data-testid="link-mobile-retention-practices" className="text-sidebar-primary">Practices</Link>
       </nav>
     </header>

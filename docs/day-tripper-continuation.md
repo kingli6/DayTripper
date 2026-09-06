@@ -60,15 +60,21 @@ forced because it detected an unrelated pre-existing `journal_entries` table
 drift with two rows that it wanted to delete; only the new availability column
 was applied to development.
 
-## Information architecture cleanup
+## Product surface simplification
 
 **Status:** Implemented and locally verified on 2026-09-06.
 
 **Completed:**
 
-- Normalized the primary navigation to Tasks, Today, Board, Practices in that
+- Normalized the primary navigation to Tasks, Today, Practices in that
   order across the existing product surfaces, while keeping `/admin` outside
   normal navigation and adding no Matrix route.
+- Removed the retired secondary task repository and its UI, routes, API,
+  generated contracts, database schema, and activity association. Existing
+  Tasks, Today, Practices, authentication, planning, and AI paths remain.
+- Added the append-only schema migration that removes the retired table and
+  association from the development database; historical migrations remain
+  unchanged.
 - Replaced the separate visible Today planning actions with the single
   user-facing “Plan today” action. It still opens the existing day-planning flow
   for an open day and the existing replanning flow when a schedule remains.
@@ -77,11 +83,17 @@ was applied to development.
   Pin/Pinned activity control without changing the underlying activity model or
   data.
 
-**Verified:** Full workspace typecheck, API build, workflow-matched web
-production build, `git diff --check`, clean API/web workflow restarts, and
-signed-out preview rendering without new application errors.
+**Verified:** OpenAPI codegen, full workspace typecheck, API and web production
+builds, clean API/web workflow restarts, API health 200, development schema
+removal, no live source references, `git diff --check`, and signed-out preview
+rendering without new application errors.
 
-**Not yet verified:** Authenticated visual checks for the four navigation links,
+**Database note:** The normal schema-push prompt also detected unrelated
+pre-existing `journal_entries` drift, so it was not forced. The new
+append-only removal migration was applied directly after confirming the only
+database dependency was the retired activity foreign key.
+
+**Not yet verified:** Authenticated visual checks for the three navigation links,
 Plan today routing, Today activities, and secondary status controls because the
 available preview session is signed out.
 
@@ -101,7 +113,7 @@ Matrix route, or unrelated redesign as part of this cleanup.
 - Added authenticated list/create/update/complete/archive task endpoints and
   generated OpenAPI Zod/client types.
 - Added a focused Tasks page at `/tasks` with quick add, edit, complete, archive,
-  active/inbox ordering, completed visibility, and navigation beside Board and
+  active/inbox ordering, completed visibility, and navigation beside Today and
   Practices.
 
 **Verified:** Migration generation, development schema push, full workspace
@@ -186,8 +198,8 @@ the populated AI-assisted results in the browser. The available preview session
 is signed out.
 
 **Do not start:** Scheduling, calendar blocks, Activities changes, AI memory,
-AI history tables, projects, dependencies, notifications, Google Calendar,
-Board changes, or Practices/Retention changes.
+AI history tables, projects, dependencies, notifications, Google Calendar, or
+Practices/Retention changes.
 
 ## Task recommendation input and completion safety
 
@@ -217,93 +229,21 @@ application errors.
 the full three-second hold, completed-task restore, and persistence after
 reload. The available preview session is signed out.
 
-**Do not start:** Practices/Retention, Board, Activities/Today, scheduling,
+**Do not start:** Practices/Retention, Activities/Today, scheduling,
 projects/dependencies, notifications, or AI memory/history changes.
 
-## Nullable Activity → Board association foundation
+## Removed activity association
 
 **Status:** Complete and verified on 2026-08-24.
 
-**Completed:**
+**Completed:** The former activity association was retired with the secondary
+task repository. Existing activities remain independent records.
 
-- `activities.boardCardId` is nullable in the Drizzle schema and exported through
-  the existing database schema barrel.
-- Migration `0012_dry_solo` adds the nullable integer column and the foreign key to
-  `board_cards.id` with `ON DELETE SET NULL`; the development database has the
-  column and constraint applied.
-- OpenAPI, generated Zod schemas, and generated React client schemas expose the
-  optional nullable `boardCardId` on Activity, ActivityInput, and ActivityUpdate.
-- Authenticated Activity create and update validate that a supplied Board card is
-  owned by the current user before saving it. Activity titles remain independent
-  values.
+**Verified:** The removal migration was generated and the existing activity
+paths remain part of the product.
 
-**Verified:** Migration generation, development schema push, direct database
-inspection of nullability and the `SET NULL` rule, full workspace typecheck, API
-build, and clean API/web workflow restarts.
-
-**Not verified:** Authenticated create/update requests and cross-account behavior
-through a real Clerk browser session, because the available preview session is
-signed out.
-
-**Do not start:** Scheduling, Board occurrence UI, drag-and-drop, AI planning,
-replanning, reality timestamps, energy tracking, analytics, or offline Board
-support.
-
-## Manual Board-card scheduling
-
-**Status:** Implemented and locally verified on 2026-08-24.
-
-**Completed:**
-
-- Active Board cards have a simple Schedule action.
-- The scheduling form accepts a date, start time, and either a duration or end
-  time; an existing estimated duration is used as the default.
-- Each confirmation creates a new normal Activity with the Board card's title,
-  category, and `boardCardId`. The Board card is not archived or otherwise
-  changed, so it can create multiple independent occurrences.
-- The selected Activity day is invalidated after creation so the existing Today
-  view can show the occurrence when that date is selected.
-
-**Verified:** Full workspace typecheck, API build, workflow-equivalent web
-production build, clean web workflow restart, and signed-out browser preview
-without application errors.
-
-**Not verified:** Authenticated scheduling requests, duplicate occurrence rows,
-cross-account ownership rejection, completion behavior, and Today refresh with
-real private data because the available browser session is signed out.
-
-**Do not start:** Drag-and-drop, AI or automatic scheduling, recurring
-scheduling, planning/replanning changes, actual-time or Reality tracking, energy
-or delay tracking, Retention changes, analytics, insights, or offline Board
-support.
-
-## Board foundation checkpoint
-
-**Active work:** Persistent Board foundation.
-
-**Status:** The Board card database table, Drizzle migrations, generated contract
-outputs, and authenticated owner-scoped CRUD API are implemented. Board cards
-use `archivedAt` as their only lifecycle mechanism; there is no card completion
-state. The development database contains the corrected table. The existing Board
-screen remains compatible with the agreed five categories and sends the API's
-default priority.
-
-The Board UI usability slice is also complete: active cards are shown in five
-category columns with title, priority, optional estimated duration, and optional
-deadline at a glance. Notes remain available through edit. Create, edit, archive,
-and move-up/move-down ordering continue to use the existing API.
-
-**Verified:** API and web typechecks, API build, migration generation including
-the status-column removal, development schema push, clean API/web workflow
-restarts, clean startup logs, and signed-out Board access returning 401 without
-private data. The workflow-matched web production build and signed-out browser
-preview also pass; authenticated card interactions remain unverified because the
-available browser session is signed out.
-
-**Not yet verified:** Authenticated Board create/list/update/archive flows and
-cross-account isolation with real Clerk sessions. The attached task's stop
-condition is otherwise reached; do not add Board UI behavior, scheduling,
-drag-and-drop, AI, or related integrations in this slice.
+**Do not start:** New activity associations, replacement repositories, or
+unrelated planning changes.
 
 ## Task → Today scheduling bridge
 

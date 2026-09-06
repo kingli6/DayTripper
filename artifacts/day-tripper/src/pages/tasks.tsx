@@ -195,10 +195,6 @@ function TaskRail() {
             <span className="size-3.5 rounded-full border border-sidebar-primary" />
             Today
           </Link>
-          <Link href="/board" className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-board">
-            <span className="size-3.5 rounded border border-sidebar-primary" />
-            Board
-          </Link>
           <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-practices">
             <span className="size-3.5 rounded-full border border-sidebar-primary" />
             Practices
@@ -714,7 +710,6 @@ export default function TasksPage() {
           <nav className="mb-4 flex items-center gap-4 overflow-x-auto border-b border-border/60 pb-3 text-[11px] font-semibold lg:hidden" aria-label="Primary navigation">
             <Link href="/tasks" data-testid="link-mobile-tasks-page" className="text-primary">Tasks</Link>
             <Link href="/today" data-testid="link-mobile-today-page" className="text-muted-foreground">Today</Link>
-            <Link href="/board" data-testid="link-mobile-board-page" className="text-muted-foreground">Board</Link>
             <Link href="/retention" data-testid="link-mobile-practices-page" className="text-muted-foreground">Practices</Link>
           </nav>
           <header className="flex items-center justify-between border-b border-border/60 pb-3">

@@ -22,6 +22,4 @@ export interface ActivityInput {
   pinned?: boolean;
   /** @nullable */
   note?: string | null;
-  /** @nullable */
-  boardCardId?: number | null;
 }

@@ -454,8 +454,6 @@ export interface Activity {
   pinned: boolean;
   /** @nullable */
   note: string | null;
-  /** @nullable */
-  boardCardId?: number | null;
   updatedAt: string;
 }
 
@@ -463,130 +461,6 @@ export interface ApplyReplanningResult {
   updatedActivities: Activity[];
   addedActivities: Activity[];
   removedActivityIds: number[];
-}
-
-export type BoardCardCategory = typeof BoardCardCategory[keyof typeof BoardCardCategory];
-
-
-export const BoardCardCategory = {
-  work: 'work',
-  recovery: 'recovery',
-  managing: 'managing',
-  social: 'social',
-  fun: 'fun',
-} as const;
-
-export interface BoardCard {
-  id: number;
-  title: string;
-  category: BoardCardCategory;
-  /** @nullable */
-  note: string | null;
-  /**
-     * @minimum 1
-     * @maximum 5
-     */
-  priority: number;
-  /**
-     * @minimum 1
-     * @nullable
-     */
-  estimatedDurationMinutes: number | null;
-  /**
-     * @nullable
-     * @pattern ^\d{4}-\d{2}-\d{2}T
-     */
-  deadline: string | null;
-  position: number;
-  /** @nullable */
-  archivedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export type BoardCardInputCategory = typeof BoardCardInputCategory[keyof typeof BoardCardInputCategory];
-
-
-export const BoardCardInputCategory = {
-  work: 'work',
-  recovery: 'recovery',
-  managing: 'managing',
-  social: 'social',
-  fun: 'fun',
-} as const;
-
-export interface BoardCardInput {
-  /**
-     * @minLength 1
-     * @maxLength 200
-     */
-  title: string;
-  category: BoardCardInputCategory;
-  /**
-     * @maxLength 2000
-     * @nullable
-     */
-  note?: string | null;
-  /**
-     * @minimum 1
-     * @maximum 5
-     */
-  priority?: number;
-  /**
-     * @minimum 1
-     * @nullable
-     */
-  estimatedDurationMinutes?: number | null;
-  /**
-     * @nullable
-     * @pattern ^\d{4}-\d{2}-\d{2}T
-     */
-  deadline?: string | null;
-  /** @minimum 0 */
-  position?: number;
-}
-
-export type BoardCardUpdateCategory = typeof BoardCardUpdateCategory[keyof typeof BoardCardUpdateCategory];
-
-
-export const BoardCardUpdateCategory = {
-  work: 'work',
-  recovery: 'recovery',
-  managing: 'managing',
-  social: 'social',
-  fun: 'fun',
-} as const;
-
-export interface BoardCardUpdate {
-  /**
-     * @minLength 1
-     * @maxLength 200
-     */
-  title?: string;
-  category?: BoardCardUpdateCategory;
-  /**
-     * @maxLength 2000
-     * @nullable
-     */
-  note?: string | null;
-  /**
-     * @minimum 1
-     * @maximum 5
-     */
-  priority?: number;
-  /**
-     * @minimum 1
-     * @nullable
-     */
-  estimatedDurationMinutes?: number | null;
-  /**
-     * @nullable
-     * @pattern ^\d{4}-\d{2}-\d{2}T
-     */
-  deadline?: string | null;
-  /** @minimum 0 */
-  position?: number;
-  expectedUpdatedAt?: string;
 }
 
 export type TaskStatus = typeof TaskStatus[keyof typeof TaskStatus];
@@ -817,8 +691,6 @@ export interface ActivityInput {
   pinned?: boolean;
   /** @nullable */
   note?: string | null;
-  /** @nullable */
-  boardCardId?: number | null;
 }
 
 /**
@@ -850,8 +722,6 @@ export interface ActivityUpdate {
   pinned?: boolean;
   /** @nullable */
   note?: string | null;
-  /** @nullable */
-  boardCardId?: number | null;
   expectedUpdatedAt?: string;
 }
 
