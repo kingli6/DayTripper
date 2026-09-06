@@ -744,6 +744,61 @@ export interface ExecutionSessionInput {
   stoppingPoint: string;
 }
 
+export interface ExecutionAnalysisSignals {
+  /** @minimum 0 */
+  completedCount: number;
+  /** @minimum 0 */
+  stoppedCount: number;
+  /** @minimum 0 */
+  earlyCount: number;
+  /** @minimum 0 */
+  overrunCount: number;
+  /** @minimum 0 */
+  averagePlannedMinutes: number;
+  /** @minimum 0 */
+  averageActualMinutes: number;
+  /** @minimum 0 */
+  averageDurationRatio: number;
+}
+
+export type ExecutionCandidateObservationDimension = typeof ExecutionCandidateObservationDimension[keyof typeof ExecutionCandidateObservationDimension];
+
+
+export const ExecutionCandidateObservationDimension = {
+  time_estimation: 'time_estimation',
+  session_completion: 'session_completion',
+} as const;
+
+export type ExecutionCandidateObservationSource = typeof ExecutionCandidateObservationSource[keyof typeof ExecutionCandidateObservationSource];
+
+
+export const ExecutionCandidateObservationSource = {
+  'execution-analysis': 'execution-analysis',
+} as const;
+
+export interface ExecutionCandidateObservation {
+  dimension: ExecutionCandidateObservationDimension;
+  /** @minLength 1 */
+  finding: string;
+  /** @minimum 3 */
+  evidenceCount: number;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  confidence: number;
+  source: ExecutionCandidateObservationSource;
+}
+
+export interface ExecutionAnalysis {
+  /** @minimum 0 */
+  analyzedSessions: number;
+  signals: ExecutionAnalysisSignals;
+  candidateObservations: ExecutionCandidateObservation[];
+  /** @items.minLength 1 */
+  limitations: string[];
+}
+
 export interface TaskScheduleInput {
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   scheduledDate: string;

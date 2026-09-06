@@ -13,6 +13,7 @@ import {
   CreateExecutionObservationBody,
   CreateExecutionObservationResponse,
   GetActiveExecutionSessionResponse,
+  GetExecutionAnalysisResponse,
   GetExecutionStateResponse,
   ListExecutionObservationsResponse,
   SetExecutionStateBody,
@@ -31,6 +32,7 @@ import {
   endExecutionSessionStatus,
   validateExecutionSessionStart,
 } from "../lib/executionSession";
+import { analyzeExecutionHistory } from "../lib/executionAnalysis";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -346,6 +348,52 @@ router.put("/execution/state", async (req, res): Promise<void> => {
       .returning();
 
   res.json(SetExecutionStateResponse.parse(serializeState(state)));
+});
+
+router.get("/execution/analysis", async (_req, res): Promise<void> => {
+  const ownerId = ownerIdFromRequest(res);
+  if (!ownerId) {
+    res.status(401).json({ error: "Authentication is required." });
+    return;
+  }
+
+  const sessions = await db
+    .select({
+      id: executionSessionsTable.id,
+      taskId: executionSessionsTable.taskId,
+      startedAt: executionSessionsTable.startedAt,
+      endedAt: executionSessionsTable.endedAt,
+      plannedMinutes: executionSessionsTable.plannedMinutes,
+      status: executionSessionsTable.status,
+      taskEstimatedMinutes: tasksTable.estimatedMinutes,
+    })
+    .from(executionSessionsTable)
+    .leftJoin(tasksTable, and(
+      eq(tasksTable.id, executionSessionsTable.taskId),
+      eq(tasksTable.ownerId, ownerId),
+    ))
+    .where(and(
+      eq(executionSessionsTable.ownerId, ownerId),
+      inArray(executionSessionsTable.status, ["completed", "stopped"]),
+    ))
+    .orderBy(desc(executionSessionsTable.endedAt));
+
+  const analysis = analyzeExecutionHistory(sessions.map((session) => ({
+    session: {
+      id: session.id,
+      taskId: session.taskId,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt,
+      plannedMinutes: session.plannedMinutes,
+      status: session.status as "completed" | "stopped",
+    },
+    task: session.taskEstimatedMinutes === null
+      ? null
+      : { estimatedMinutes: session.taskEstimatedMinutes },
+  })));
+
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(GetExecutionAnalysisResponse.parse(analysis));
 });
 
 router.get("/execution/sessions/active", async (_req, res): Promise<void> => {

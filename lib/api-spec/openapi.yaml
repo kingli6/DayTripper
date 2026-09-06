@@ -750,6 +750,21 @@ paths:
           description: Authentication required
         "404":
           description: No active execution session
+  /execution/analysis:
+    get:
+      operationId: getExecutionAnalysis
+      tags: [execution]
+      summary: Analyze the user's terminal execution sessions
+      description: Returns deterministic execution signals and candidate observations for later review
+      responses:
+        "200":
+          description: Execution analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionAnalysis"
+        "401":
+          description: Authentication required
   /execution/sessions:
     post:
       operationId: startExecutionSession
@@ -1679,6 +1694,88 @@ components:
         - plannedMinutes
         - firstAction
         - stoppingPoint
+    ExecutionAnalysisSignals:
+      type: object
+      additionalProperties: false
+      properties:
+        completedCount:
+          type: number
+          minimum: 0
+        stoppedCount:
+          type: number
+          minimum: 0
+        earlyCount:
+          type: number
+          minimum: 0
+        overrunCount:
+          type: number
+          minimum: 0
+        averagePlannedMinutes:
+          type: number
+          minimum: 0
+        averageActualMinutes:
+          type: number
+          minimum: 0
+        averageDurationRatio:
+          type: number
+          minimum: 0
+      required:
+        - completedCount
+        - stoppedCount
+        - earlyCount
+        - overrunCount
+        - averagePlannedMinutes
+        - averageActualMinutes
+        - averageDurationRatio
+    ExecutionCandidateObservation:
+      type: object
+      additionalProperties: false
+      properties:
+        dimension:
+          type: string
+          enum: [time_estimation, session_completion]
+        finding:
+          type: string
+          minLength: 1
+        evidenceCount:
+          type: number
+          minimum: 3
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        source:
+          type: string
+          enum: [execution-analysis]
+      required:
+        - dimension
+        - finding
+        - evidenceCount
+        - confidence
+        - source
+    ExecutionAnalysis:
+      type: object
+      additionalProperties: false
+      properties:
+        analyzedSessions:
+          type: number
+          minimum: 0
+        signals:
+          $ref: "#/components/schemas/ExecutionAnalysisSignals"
+        candidateObservations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExecutionCandidateObservation"
+        limitations:
+          type: array
+          items:
+            type: string
+            minLength: 1
+      required:
+        - analyzedSessions
+        - signals
+        - candidateObservations
+        - limitations
     TaskScheduleInput:
       type: object
       properties:

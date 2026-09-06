@@ -1305,6 +1305,57 @@ export const GetActiveExecutionSessionResponse = zod.object({
 
 
 /**
+ * Returns deterministic execution signals and candidate observations for later review
+ * @summary Analyze the user's terminal execution sessions
+ */
+export const getExecutionAnalysisResponseAnalyzedSessionsMin = 0;
+
+export const getExecutionAnalysisResponseSignalsCompletedCountMin = 0;
+
+export const getExecutionAnalysisResponseSignalsStoppedCountMin = 0;
+
+export const getExecutionAnalysisResponseSignalsEarlyCountMin = 0;
+
+export const getExecutionAnalysisResponseSignalsOverrunCountMin = 0;
+
+export const getExecutionAnalysisResponseSignalsAveragePlannedMinutesMin = 0;
+
+export const getExecutionAnalysisResponseSignalsAverageActualMinutesMin = 0;
+
+export const getExecutionAnalysisResponseSignalsAverageDurationRatioMin = 0;
+
+
+export const getExecutionAnalysisResponseCandidateObservationsItemEvidenceCountMin = 3;
+
+export const getExecutionAnalysisResponseCandidateObservationsItemConfidenceMin = 0;
+export const getExecutionAnalysisResponseCandidateObservationsItemConfidenceMax = 1;
+
+
+
+
+export const GetExecutionAnalysisResponse = zod.object({
+  "analyzedSessions": zod.number().min(getExecutionAnalysisResponseAnalyzedSessionsMin),
+  "signals": zod.object({
+  "completedCount": zod.number().min(getExecutionAnalysisResponseSignalsCompletedCountMin),
+  "stoppedCount": zod.number().min(getExecutionAnalysisResponseSignalsStoppedCountMin),
+  "earlyCount": zod.number().min(getExecutionAnalysisResponseSignalsEarlyCountMin),
+  "overrunCount": zod.number().min(getExecutionAnalysisResponseSignalsOverrunCountMin),
+  "averagePlannedMinutes": zod.number().min(getExecutionAnalysisResponseSignalsAveragePlannedMinutesMin),
+  "averageActualMinutes": zod.number().min(getExecutionAnalysisResponseSignalsAverageActualMinutesMin),
+  "averageDurationRatio": zod.number().min(getExecutionAnalysisResponseSignalsAverageDurationRatioMin)
+}),
+  "candidateObservations": zod.array(zod.object({
+  "dimension": zod.enum(['time_estimation', 'session_completion']),
+  "finding": zod.string().min(1),
+  "evidenceCount": zod.number().min(getExecutionAnalysisResponseCandidateObservationsItemEvidenceCountMin),
+  "confidence": zod.number().min(getExecutionAnalysisResponseCandidateObservationsItemConfidenceMin).max(getExecutionAnalysisResponseCandidateObservationsItemConfidenceMax),
+  "source": zod.enum(['execution-analysis'])
+})),
+  "limitations": zod.array(zod.string().min(1))
+})
+
+
+/**
  * @summary Start a bounded execution session for an owned task
  */
 

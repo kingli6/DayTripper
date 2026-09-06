@@ -31,6 +31,7 @@ import type {
   AiStatus,
   ApplyReplanningProposalRequest,
   ApplyReplanningResult,
+  ExecutionAnalysis,
   ExecutionDecision,
   ExecutionDecisionInput,
   ExecutionObservation,
@@ -2599,6 +2600,84 @@ export function useGetActiveExecutionSession<TData = Awaited<ReturnType<typeof g
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetActiveExecutionSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetExecutionAnalysisUrl = () => {
+
+
+
+
+  return `/api/execution/analysis`
+}
+
+/**
+ * Returns deterministic execution signals and candidate observations for later review
+ * @summary Analyze the user's terminal execution sessions
+ */
+export const getExecutionAnalysis = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExecutionAnalysis> => {
+
+  return customFetch<ExecutionAnalysis>(getGetExecutionAnalysisUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExecutionAnalysisQueryKey = () => {
+    return [
+    `/api/execution/analysis`
+    ] as const;
+    }
+
+
+export const getGetExecutionAnalysisQueryOptions = <TData = Awaited<ReturnType<typeof getExecutionAnalysis>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExecutionAnalysis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExecutionAnalysisQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExecutionAnalysis>>> = ({ signal }) => getExecutionAnalysis({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExecutionAnalysis>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExecutionAnalysisQueryResult = NonNullable<Awaited<ReturnType<typeof getExecutionAnalysis>>>
+export type GetExecutionAnalysisQueryError = ErrorType<void>
+
+
+/**
+ * @summary Analyze the user's terminal execution sessions
+ */
+
+export function useGetExecutionAnalysis<TData = Awaited<ReturnType<typeof getExecutionAnalysis>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExecutionAnalysis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExecutionAnalysisQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

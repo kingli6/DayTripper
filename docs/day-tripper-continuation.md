@@ -618,3 +618,43 @@ preview rendering, and `git diff --check`.
 flow and reload recovery is still unavailable because the current browser
 preview is signed out. The signed-out root preview and API protection boundary
 are clean.
+
+## Step 7A — Execution outcome analysis
+
+**Status:** Implemented and locally verified on 2026-09-06.
+
+**Completed:**
+
+- Added a deterministic, reusable analysis function over terminal execution
+  sessions. Active sessions, missing timestamps, reversed timestamps, invalid
+  planned durations, and unknown statuses are excluded.
+- Derived planned minutes, actual elapsed minutes from `endedAt - startedAt`,
+  actual-minus-planned duration difference, actual/planned ratio, completed vs
+  stopped status, early-ending flag, and overrun flag.
+- Added aggregate signals for completed, stopped, early, and overrun sessions,
+  plus average planned duration, average actual duration, and average duration
+  ratio.
+- Added repeated-pattern detection with minimum evidence of three matching
+  sessions and at least 60% support. Significant early/long patterns require
+  both a 25% ratio difference and at least five minutes of absolute difference.
+- Added a small task-duration context check for repeated early stops across
+  short, medium, and long estimated-task bands. No unsupported task category or
+  execution-state inference is attempted.
+- Added the authenticated read-only `GET /api/execution/analysis` endpoint.
+  It is owner-scoped, private/no-store, and returns aggregate signals,
+  candidate observations, and explicit limitations.
+- Candidate observations are returned in memory only with
+  `source: "execution-analysis"`. They are not inserted into
+  `execution_observations`, guidance, policy, estimates, recommendations, or
+  any other user-controlled data.
+
+**Database:** No schema or migration changes. The existing
+`execution_sessions`, `tasks`, and execution-state tables are read only.
+Execution state at session start is not preserved by the current session model,
+so state-associated patterns are explicitly reported as unavailable.
+
+**Verified:** 29 API tests, including exact elapsed-time, early/overrun,
+active-session exclusion, invalid timestamp/duration, minimum-evidence,
+repeated-pattern, task-duration context, and non-persistence behavior; full
+workspace typecheck; API typecheck/build; web production build; OpenAPI
+codegen; clean API/web workflow restarts; and `git diff --check`.
