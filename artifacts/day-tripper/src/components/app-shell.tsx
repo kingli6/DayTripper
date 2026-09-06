@@ -17,7 +17,7 @@ function isActivePath(href: string, location: string) {
     : location === href;
 }
 
-function ShellBrand({ expanded }: { expanded: boolean }) {
+function ShellBrand({ expanded, compactMobile = false }: { expanded: boolean; compactMobile?: boolean }) {
   return (
     <Link
       href="/today"
@@ -30,7 +30,7 @@ function ShellBrand({ expanded }: { expanded: boolean }) {
         <span className="absolute bottom-[5px] right-[5px] size-1.5 rounded-full bg-sidebar-primary" />
       </span>
       {expanded && (
-        <span className="min-w-0">
+        <span className={`min-w-0 ${compactMobile ? 'hidden min-[360px]:block' : ''}`}>
           <span className="block truncate font-display text-[19px] leading-none tracking-[-0.03em]">Day Tripper</span>
           <span className="mt-1 block truncate font-mono-ui text-[8px] uppercase tracking-[0.16em] text-sidebar-foreground/50">a softer daily practice</span>
         </span>
@@ -81,12 +81,12 @@ function AccountControl({ compact = false }: { compact?: boolean }) {
         <summary
           aria-label="Open account menu"
           title="Account"
-          className="flex size-10 cursor-pointer list-none items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring [&::-webkit-details-marker]:hidden"
+          className="flex size-10 shrink-0 cursor-pointer list-none items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring min-[360px]:size-11 [&::-webkit-details-marker]:hidden"
           data-testid="button-mobile-account"
         >
           <UserRound className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </summary>
-        <div className="absolute right-0 top-12 z-40 min-w-48 rounded-xl border border-border bg-card p-2 text-foreground shadow-[0_18px_50px_hsl(205_32%_20%/0.18)]">
+        <div className="absolute right-0 top-12 z-40 max-h-[calc(100dvh-5rem)] w-48 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-border bg-card p-2 text-foreground shadow-[0_18px_50px_hsl(205_32%_20%/0.18)] lg:bottom-full lg:left-0 lg:right-auto lg:top-auto lg:mb-2">
           <p className="truncate px-3 py-2 text-xs font-semibold">{label}</p>
           <div className="my-1 border-t border-border/70" />
           <Link href="/admin" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground" data-testid="link-mobile-account-operations">
@@ -121,10 +121,12 @@ function AccountControl({ compact = false }: { compact?: boolean }) {
 
 function MobileShellHeader({ location }: { location: string }) {
   return (
-    <header className="flex items-center justify-between border-b border-border/70 bg-sidebar px-4 py-3 text-sidebar-foreground lg:hidden">
-      <ShellBrand expanded />
-      <div className="flex items-center gap-1.5">
-        <nav className="flex items-center gap-1" aria-label="Primary navigation">
+    <header className="flex items-center justify-between gap-2 border-b border-border/70 bg-sidebar px-4 py-3 text-sidebar-foreground lg:hidden">
+      <div className="min-w-0 flex-1">
+        <ShellBrand expanded compactMobile />
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5 max-[359px]:gap-1">
+        <nav className="flex items-center gap-1 max-[359px]:gap-0.5" aria-label="Primary navigation">
           {PRIMARY_NAVIGATION.map(({ href, label, icon: Icon, testId }) => {
             const active = isActivePath(href, location);
             return (
@@ -135,7 +137,7 @@ function MobileShellHeader({ location }: { location: string }) {
                 aria-label={label}
                 title={label}
                 data-testid={`${testId}-mobile`}
-                className={`flex size-9 items-center justify-center rounded-lg transition-colors ${
+                className={`flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors min-[360px]:size-11 ${
                   active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                 }`}
               >

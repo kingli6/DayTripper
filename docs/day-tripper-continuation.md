@@ -132,6 +132,35 @@ available preview session is signed out.
 Matrix row redesign, Practices functionality changes, new Settings feature, or
 new Plan today task-selection behavior as part of this shell slice.
 
+## Responsive shell audit
+
+**Status:** Implemented and locally verified on 2026-09-06.
+
+**Issues found and fixed:**
+
+- The collapsed desktop rail account popover used a downward position from a
+  bottom-anchored trigger, placing its actions below the viewport. It now opens
+  upward while keeping its horizontal position inside the rail boundary.
+- The mobile account popover had no viewport-height guard. It now stays within
+  the available viewport height and scrolls internally if the viewport is too
+  short.
+- Mobile navigation and account controls were 36–40px targets. They now use
+  larger responsive targets, with a narrow-width fallback and compact branding
+  so the controls remain usable on very small screens.
+- Mobile popover width is capped to the viewport to prevent horizontal overflow.
+
+**Verified:** Typecheck, web production build, clean workflow restart,
+`git diff --check`, HMR/browser logs without new application errors, and
+signed-out preview rendering at 320×568 and 1440×900.
+
+**Not available in the current preview session:** Direct authenticated
+interaction with the desktop account popover, expanded/collapsed rail, active
+route states, and mobile account menu. The code paths remain unchanged apart
+from the responsive positioning and sizing corrections above.
+
+**Preserved:** Tasks, Today, Practices, Tasks Matrix, planning/replanning,
+account functionality, Operations, authentication, APIs, and database behavior.
+
 ## Tasks MVP foundation
 
 **Status:** Implemented and locally verified on 2026-09-05.
