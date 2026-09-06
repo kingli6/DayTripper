@@ -7,6 +7,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { z } from "zod/v4";
 
 export const executionObservationsTable = pgTable("execution_observations", {
@@ -18,6 +19,7 @@ export const executionObservationsTable = pgTable("execution_observations", {
   confidence: real("confidence").notNull(),
   evidenceCount: integer("evidence_count").notNull().default(0),
   source: text("source").notNull(),
+  capabilities: text("capabilities").array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

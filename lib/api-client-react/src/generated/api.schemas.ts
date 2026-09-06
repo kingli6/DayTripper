@@ -924,6 +924,16 @@ export const ExecutionStateLevel = {
   high: 'high',
 } as const;
 
+export type ExecutionCapability = typeof ExecutionCapability[keyof typeof ExecutionCapability];
+
+
+export const ExecutionCapability = {
+  task_recommendation: 'task_recommendation',
+  eisenhower_matrix: 'eisenhower_matrix',
+  plan_today: 'plan_today',
+  replan_today: 'replan_today',
+} as const;
+
 /**
  * @nullable
  */
@@ -965,6 +975,8 @@ export interface ExecutionObservation {
      * @maxLength 120
      */
   source: string;
+  /** @maxItems 4 */
+  capabilities: ExecutionCapability[];
   createdAt: string;
   updatedAt: string;
 }
@@ -1008,6 +1020,8 @@ export interface ExecutionObservationInput {
      * @maxLength 120
      */
   source: string;
+  /** @maxItems 4 */
+  capabilities?: ExecutionCapability[];
 }
 
 /**
@@ -1049,6 +1063,8 @@ export interface ExecutionObservationUpdate {
      * @maxLength 120
      */
   source?: string;
+  /** @maxItems 4 */
+  capabilities?: ExecutionCapability[];
 }
 
 /**
@@ -1124,144 +1140,6 @@ export interface ExecutionStateInput {
      * @nullable
      */
   availableMinutes?: number | null;
-}
-
-export type ExecutionInterviewMessageRole = typeof ExecutionInterviewMessageRole[keyof typeof ExecutionInterviewMessageRole];
-
-
-export const ExecutionInterviewMessageRole = {
-  user: 'user',
-  assistant: 'assistant',
-} as const;
-
-export interface ExecutionInterviewMessage {
-  role: ExecutionInterviewMessageRole;
-  /**
-     * @minLength 1
-     * @maxLength 2000
-     */
-  content: string;
-}
-
-/**
- * @nullable
- */
-export type ExecutionInterviewCandidateObservationStateContext = typeof ExecutionInterviewCandidateObservationStateContext[keyof typeof ExecutionInterviewCandidateObservationStateContext] | null;
-
-
-export const ExecutionInterviewCandidateObservationStateContext = {
-  baseline: 'baseline',
-  relaxed: 'relaxed',
-  normal: 'normal',
-  stressed: 'stressed',
-  overloaded: 'overloaded',
-} as const;
-
-export type ExecutionInterviewCandidateObservationEvidenceType = typeof ExecutionInterviewCandidateObservationEvidenceType[keyof typeof ExecutionInterviewCandidateObservationEvidenceType];
-
-
-export const ExecutionInterviewCandidateObservationEvidenceType = {
-  explicit: 'explicit',
-  inferred: 'inferred',
-} as const;
-
-export interface ExecutionInterviewCandidateObservation {
-  /**
-     * @minLength 1
-     * @maxLength 120
-     */
-  dimension: string;
-  /**
-     * @minLength 1
-     * @maxLength 1000
-     */
-  finding: string;
-  /** @nullable */
-  stateContext: ExecutionInterviewCandidateObservationStateContext;
-  /**
-     * @minimum 0
-     * @maximum 1
-     */
-  confidence: number;
-  evidenceType: ExecutionInterviewCandidateObservationEvidenceType;
-}
-
-export interface ExecutionInterviewAiResponse {
-  /** @maxItems 3 */
-  observations: ExecutionInterviewCandidateObservation[];
-  /**
-     * @maxLength 240
-     * @nullable
-     */
-  question: string | null;
-  shouldFinish: boolean;
-}
-
-export type ExecutionInterviewStartResponseStatus = typeof ExecutionInterviewStartResponseStatus[keyof typeof ExecutionInterviewStartResponseStatus];
-
-
-export const ExecutionInterviewStartResponseStatus = {
-  active: 'active',
-} as const;
-
-export interface ExecutionInterviewStartResponse {
-  interviewId: number;
-  status: ExecutionInterviewStartResponseStatus;
-  /**
-     * @minLength 1
-     * @maxLength 240
-     */
-  question: string;
-  /**
-     * @minimum 1
-     * @maximum 4
-     */
-  questionNumber: number;
-}
-
-export interface ExecutionInterviewAnswerInput {
-  /**
-     * @minLength 1
-     * @maxLength 2000
-     */
-  answer: string;
-}
-
-export type ExecutionInterviewAnswerResponseStatus = typeof ExecutionInterviewAnswerResponseStatus[keyof typeof ExecutionInterviewAnswerResponseStatus];
-
-
-export const ExecutionInterviewAnswerResponseStatus = {
-  active: 'active',
-  finished: 'finished',
-} as const;
-
-export interface ExecutionInterviewAnswerResponse {
-  status: ExecutionInterviewAnswerResponseStatus;
-  /**
-     * @maxLength 240
-     * @nullable
-     */
-  question: string | null;
-  /**
-     * @minimum 1
-     * @maximum 4
-     * @nullable
-     */
-  questionNumber: number | null;
-  observations: ExecutionObservation[];
-}
-
-export type ExecutionInterviewFinishResponseStatus = typeof ExecutionInterviewFinishResponseStatus[keyof typeof ExecutionInterviewFinishResponseStatus];
-
-
-export const ExecutionInterviewFinishResponseStatus = {
-  finished: 'finished',
-  stopped: 'stopped',
-} as const;
-
-export interface ExecutionInterviewFinishResponse {
-  status: ExecutionInterviewFinishResponseStatus;
-  summary: string;
 }
 
 export interface AdminTableMetric {

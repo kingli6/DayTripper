@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ExecutionCapability } from './executionCapability';
 import type { ExecutionObservationInputStateContext } from './executionObservationInputStateContext';
 
 export interface ExecutionObservationInput {
@@ -32,4 +33,6 @@ export interface ExecutionObservationInput {
      * @maxLength 120
      */
   source: string;
+  /** @maxItems 4 */
+  capabilities?: ExecutionCapability[];
 }

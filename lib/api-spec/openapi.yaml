@@ -652,6 +652,27 @@ paths:
           description: Authentication required
         "404":
           description: Execution observation not found
+    delete:
+      operationId: deleteExecutionObservation
+      tags: [execution]
+      summary: Delete an execution observation
+      description: Deletes an execution observation owned by the authenticated user
+      parameters:
+        - name: observationId
+          in: path
+          required: true
+          schema:
+            type: number
+            minimum: 1
+      responses:
+        "204":
+          description: Execution observation deleted
+        "400":
+          description: Invalid execution observation identifier
+        "401":
+          description: Authentication required
+        "404":
+          description: Execution observation not found
   /execution/state:
     get:
       operationId: getExecutionState
@@ -690,85 +711,6 @@ paths:
           description: Invalid execution state
         "401":
           description: Authentication required
-  /execution/interview:
-    post:
-      operationId: startExecutionInterview
-      tags: [execution]
-      summary: Start a private execution interview
-      description: Starts a short behavioral interview owned by the authenticated user
-      responses:
-        "201":
-          description: Interview started
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ExecutionInterviewStartResponse"
-        "401":
-          description: Authentication required
-  /execution/interview/{interviewId}/answer:
-    post:
-      operationId: answerExecutionInterview
-      tags: [execution]
-      summary: Answer the current execution interview question
-      description: Records one answer and returns an adapted next question or a finished interview
-      parameters:
-        - name: interviewId
-          in: path
-          required: true
-          schema:
-            type: number
-            minimum: 1
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ExecutionInterviewAnswerInput"
-      responses:
-        "200":
-          description: Interview answer accepted
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ExecutionInterviewAnswerResponse"
-        "400":
-          description: Invalid interview answer
-        "401":
-          description: Authentication required
-        "404":
-          description: Interview not found
-        "409":
-          description: Interview is no longer active
-        "502":
-          description: Interview response was invalid
-        "503":
-          description: Interview service unavailable
-  /execution/interview/{interviewId}/finish:
-    post:
-      operationId: finishExecutionInterview
-      tags: [execution]
-      summary: Finish a private execution interview
-      description: Stops an active execution interview without changing saved activities
-      parameters:
-        - name: interviewId
-          in: path
-          required: true
-          schema:
-            type: number
-            minimum: 1
-      responses:
-        "200":
-          description: Interview finished
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ExecutionInterviewFinishResponse"
-        "401":
-          description: Authentication required
-        "404":
-          description: Interview not found
-        "409":
-          description: Interview is no longer active
   /admin/overview:
     get:
       operationId: getAdminOverview
@@ -1780,6 +1722,9 @@ components:
     ExecutionStateLevel:
       type: string
       enum: [low, normal, high]
+    ExecutionCapability:
+      type: string
+      enum: [task_recommendation, eisenhower_matrix, plan_today, replan_today]
     ExecutionObservation:
       type: object
       properties:
@@ -1808,6 +1753,12 @@ components:
           type: string
           minLength: 1
           maxLength: 120
+        capabilities:
+          type: array
+          maxItems: 4
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExecutionCapability"
         createdAt:
           type: string
         updatedAt:
@@ -1820,6 +1771,7 @@ components:
         - confidence
         - evidenceCount
         - source
+        - capabilities
         - createdAt
         - updatedAt
     ExecutionObservationInput:
@@ -1847,6 +1799,12 @@ components:
           type: string
           minLength: 1
           maxLength: 120
+        capabilities:
+          type: array
+          maxItems: 4
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExecutionCapability"
       required:
         - dimension
         - finding
@@ -1879,6 +1837,12 @@ components:
           type: string
           minLength: 1
           maxLength: 120
+        capabilities:
+          type: array
+          maxItems: 4
+          uniqueItems: true
+          items:
+            $ref: "#/components/schemas/ExecutionCapability"
     ExecutionState:
       type: object
       properties:
@@ -1912,129 +1876,6 @@ components:
           type: ["number", "null"]
           minimum: 0
           maximum: 1440
-    ExecutionInterviewMessage:
-      type: object
-      properties:
-        role:
-          type: string
-          enum: [user, assistant]
-        content:
-          type: string
-          minLength: 1
-          maxLength: 2000
-      required:
-        - role
-        - content
-    ExecutionInterviewCandidateObservation:
-      type: object
-      additionalProperties: false
-      properties:
-        dimension:
-          type: string
-          minLength: 1
-          maxLength: 120
-        finding:
-          type: string
-          minLength: 1
-          maxLength: 1000
-        stateContext:
-          type: ["string", "null"]
-          enum: [baseline, relaxed, normal, stressed, overloaded, null]
-        confidence:
-          type: number
-          minimum: 0
-          maximum: 1
-        evidenceType:
-          type: string
-          enum: [explicit, inferred]
-      required:
-        - dimension
-        - finding
-        - stateContext
-        - confidence
-        - evidenceType
-    ExecutionInterviewAiResponse:
-      type: object
-      additionalProperties: false
-      properties:
-        observations:
-          type: array
-          maxItems: 3
-          items:
-            $ref: "#/components/schemas/ExecutionInterviewCandidateObservation"
-        question:
-          type: ["string", "null"]
-          maxLength: 240
-        shouldFinish:
-          type: boolean
-      required:
-        - observations
-        - question
-        - shouldFinish
-    ExecutionInterviewStartResponse:
-      type: object
-      properties:
-        interviewId:
-          type: number
-        status:
-          type: string
-          enum: [active]
-        question:
-          type: string
-          minLength: 1
-          maxLength: 240
-        questionNumber:
-          type: number
-          minimum: 1
-          maximum: 4
-      required:
-        - interviewId
-        - status
-        - question
-        - questionNumber
-    ExecutionInterviewAnswerInput:
-      type: object
-      additionalProperties: false
-      properties:
-        answer:
-          type: string
-          minLength: 1
-          maxLength: 2000
-      required:
-        - answer
-    ExecutionInterviewAnswerResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [active, finished]
-        question:
-          type: ["string", "null"]
-          maxLength: 240
-        questionNumber:
-          type: ["number", "null"]
-          minimum: 1
-          maximum: 4
-        observations:
-          type: array
-          items:
-            $ref: "#/components/schemas/ExecutionObservation"
-      required:
-        - status
-        - question
-        - questionNumber
-        - observations
-    ExecutionInterviewFinishResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          enum: [finished, stopped]
-        summary:
-          type: string
-      required:
-        - status
-        - summary
     AdminTableMetric:
       type: object
       properties:

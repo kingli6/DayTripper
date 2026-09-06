@@ -1043,6 +1043,8 @@ export const listExecutionObservationsResponseEvidenceCountMin = 0;
 
 export const listExecutionObservationsResponseSourceMax = 120;
 
+export const listExecutionObservationsResponseCapabilitiesMax = 4;
+
 
 
 export const ListExecutionObservationsResponseItem = zod.object({
@@ -1053,6 +1055,7 @@ export const ListExecutionObservationsResponseItem = zod.object({
   "confidence": zod.number().min(listExecutionObservationsResponseConfidenceMin).max(listExecutionObservationsResponseConfidenceMax),
   "evidenceCount": zod.number().min(listExecutionObservationsResponseEvidenceCountMin),
   "source": zod.string().min(1).max(listExecutionObservationsResponseSourceMax),
+  "capabilities": zod.array(zod.enum(['task_recommendation', 'eisenhower_matrix', 'plan_today', 'replan_today'])).max(listExecutionObservationsResponseCapabilitiesMax),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -1074,6 +1077,8 @@ export const createExecutionObservationBodyEvidenceCountMin = 0;
 
 export const createExecutionObservationBodySourceMax = 120;
 
+export const createExecutionObservationBodyCapabilitiesMax = 4;
+
 
 
 export const CreateExecutionObservationBody = zod.object({
@@ -1082,7 +1087,8 @@ export const CreateExecutionObservationBody = zod.object({
   "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullable(),
   "confidence": zod.number().min(createExecutionObservationBodyConfidenceMin).max(createExecutionObservationBodyConfidenceMax),
   "evidenceCount": zod.number().min(createExecutionObservationBodyEvidenceCountMin),
-  "source": zod.string().min(1).max(createExecutionObservationBodySourceMax)
+  "source": zod.string().min(1).max(createExecutionObservationBodySourceMax),
+  "capabilities": zod.array(zod.enum(['task_recommendation', 'eisenhower_matrix', 'plan_today', 'replan_today'])).max(createExecutionObservationBodyCapabilitiesMax).optional()
 })
 
 
@@ -1097,6 +1103,8 @@ export const createExecutionObservationResponseEvidenceCountMin = 0;
 
 export const createExecutionObservationResponseSourceMax = 120;
 
+export const createExecutionObservationResponseCapabilitiesMax = 4;
+
 
 
 export const CreateExecutionObservationResponse = zod.object({
@@ -1107,6 +1115,7 @@ export const CreateExecutionObservationResponse = zod.object({
   "confidence": zod.number().min(createExecutionObservationResponseConfidenceMin).max(createExecutionObservationResponseConfidenceMax),
   "evidenceCount": zod.number().min(createExecutionObservationResponseEvidenceCountMin),
   "source": zod.string().min(1).max(createExecutionObservationResponseSourceMax),
+  "capabilities": zod.array(zod.enum(['task_recommendation', 'eisenhower_matrix', 'plan_today', 'replan_today'])).max(createExecutionObservationResponseCapabilitiesMax),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -1133,6 +1142,8 @@ export const updateExecutionObservationBodyEvidenceCountMin = 0;
 
 export const updateExecutionObservationBodySourceMax = 120;
 
+export const updateExecutionObservationBodyCapabilitiesMax = 4;
+
 
 
 export const UpdateExecutionObservationBody = zod.object({
@@ -1141,7 +1152,8 @@ export const UpdateExecutionObservationBody = zod.object({
   "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullish(),
   "confidence": zod.number().min(updateExecutionObservationBodyConfidenceMin).max(updateExecutionObservationBodyConfidenceMax).optional(),
   "evidenceCount": zod.number().min(updateExecutionObservationBodyEvidenceCountMin).optional(),
-  "source": zod.string().min(1).max(updateExecutionObservationBodySourceMax).optional()
+  "source": zod.string().min(1).max(updateExecutionObservationBodySourceMax).optional(),
+  "capabilities": zod.array(zod.enum(['task_recommendation', 'eisenhower_matrix', 'plan_today', 'replan_today'])).max(updateExecutionObservationBodyCapabilitiesMax).optional()
 })
 
 
@@ -1156,6 +1168,8 @@ export const updateExecutionObservationResponseEvidenceCountMin = 0;
 
 export const updateExecutionObservationResponseSourceMax = 120;
 
+export const updateExecutionObservationResponseCapabilitiesMax = 4;
+
 
 
 export const UpdateExecutionObservationResponse = zod.object({
@@ -1166,9 +1180,24 @@ export const UpdateExecutionObservationResponse = zod.object({
   "confidence": zod.number().min(updateExecutionObservationResponseConfidenceMin).max(updateExecutionObservationResponseConfidenceMax),
   "evidenceCount": zod.number().min(updateExecutionObservationResponseEvidenceCountMin),
   "source": zod.string().min(1).max(updateExecutionObservationResponseSourceMax),
+  "capabilities": zod.array(zod.enum(['task_recommendation', 'eisenhower_matrix', 'plan_today', 'replan_today'])).max(updateExecutionObservationResponseCapabilitiesMax),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
+
+
+/**
+ * Deletes an execution observation owned by the authenticated user
+ * @summary Delete an execution observation
+ */
+
+
+
+export const DeleteExecutionObservationParams = zod.object({
+  "observationId": zod.coerce.number().min(1)
+})
+
+export const DeleteExecutionObservationResponse = zod.void()
 
 
 /**
@@ -1212,96 +1241,6 @@ export const SetExecutionStateResponse = zod.object({
   "stress": zod.union([zod.literal('low'),zod.literal('normal'),zod.literal('high'),zod.literal(null)]).nullable(),
   "availableMinutes": zod.number().min(setExecutionStateResponseAvailableMinutesMin).max(setExecutionStateResponseAvailableMinutesMax).nullable(),
   "capturedAt": zod.string()
-})
-
-
-/**
- * Starts a short behavioral interview owned by the authenticated user
- * @summary Start a private execution interview
- */
-export const startExecutionInterviewResponseQuestionMax = 240;
-
-export const startExecutionInterviewResponseQuestionNumberMax = 4;
-
-
-
-export const StartExecutionInterviewResponse = zod.object({
-  "interviewId": zod.number(),
-  "status": zod.enum(['active']),
-  "question": zod.string().min(1).max(startExecutionInterviewResponseQuestionMax),
-  "questionNumber": zod.number().min(1).max(startExecutionInterviewResponseQuestionNumberMax)
-})
-
-
-/**
- * Records one answer and returns an adapted next question or a finished interview
- * @summary Answer the current execution interview question
- */
-
-
-
-export const AnswerExecutionInterviewParams = zod.object({
-  "interviewId": zod.coerce.number().min(1)
-})
-
-export const answerExecutionInterviewBodyAnswerMax = 2000;
-
-
-
-export const AnswerExecutionInterviewBody = zod.object({
-  "answer": zod.string().min(1).max(answerExecutionInterviewBodyAnswerMax)
-})
-
-export const answerExecutionInterviewResponseQuestionMax = 240;
-
-export const answerExecutionInterviewResponseQuestionNumberMax = 4;
-
-
-export const answerExecutionInterviewResponseObservationsItemDimensionMax = 120;
-
-export const answerExecutionInterviewResponseObservationsItemFindingMax = 1000;
-
-export const answerExecutionInterviewResponseObservationsItemConfidenceMin = 0;
-export const answerExecutionInterviewResponseObservationsItemConfidenceMax = 1;
-
-export const answerExecutionInterviewResponseObservationsItemEvidenceCountMin = 0;
-
-export const answerExecutionInterviewResponseObservationsItemSourceMax = 120;
-
-
-
-export const AnswerExecutionInterviewResponse = zod.object({
-  "status": zod.enum(['active', 'finished']),
-  "question": zod.string().max(answerExecutionInterviewResponseQuestionMax).nullable(),
-  "questionNumber": zod.number().min(1).max(answerExecutionInterviewResponseQuestionNumberMax).nullable(),
-  "observations": zod.array(zod.object({
-  "id": zod.number().min(1),
-  "dimension": zod.string().min(1).max(answerExecutionInterviewResponseObservationsItemDimensionMax),
-  "finding": zod.string().min(1).max(answerExecutionInterviewResponseObservationsItemFindingMax),
-  "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullable(),
-  "confidence": zod.number().min(answerExecutionInterviewResponseObservationsItemConfidenceMin).max(answerExecutionInterviewResponseObservationsItemConfidenceMax),
-  "evidenceCount": zod.number().min(answerExecutionInterviewResponseObservationsItemEvidenceCountMin),
-  "source": zod.string().min(1).max(answerExecutionInterviewResponseObservationsItemSourceMax),
-  "createdAt": zod.string(),
-  "updatedAt": zod.string()
-}))
-})
-
-
-/**
- * Stops an active execution interview without changing saved activities
- * @summary Finish a private execution interview
- */
-
-
-
-export const FinishExecutionInterviewParams = zod.object({
-  "interviewId": zod.coerce.number().min(1)
-})
-
-export const FinishExecutionInterviewResponse = zod.object({
-  "status": zod.enum(['finished', 'stopped']),
-  "summary": zod.string()
 })
 
 

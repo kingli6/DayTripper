@@ -39,6 +39,7 @@ function serializeObservation(observation: typeof executionObservationsTable.$in
     confidence: observation.confidence,
     evidenceCount: observation.evidenceCount,
     source: observation.source,
+    capabilities: observation.capabilities,
     createdAt: observation.createdAt.toISOString(),
     updatedAt: observation.updatedAt.toISOString(),
   };
@@ -116,6 +117,7 @@ router.post("/execution/observations", async (req, res): Promise<void> => {
       confidence: parsed.data.confidence,
       evidenceCount: parsed.data.evidenceCount,
       source,
+      capabilities: parsed.data.capabilities ?? [],
     })
     .returning();
 
@@ -182,6 +184,9 @@ router.patch("/execution/observations/:observationId", async (req, res): Promise
     }
     updateValues.source = source;
   }
+  if (parsed.data.capabilities !== undefined) {
+    updateValues.capabilities = parsed.data.capabilities;
+  }
 
   if (Object.keys(updateValues).length === 0) {
     res.status(400).json({ error: "No execution observation changes were provided." });
@@ -204,6 +209,35 @@ router.patch("/execution/observations/:observationId", async (req, res): Promise
 
   res
     .json(UpdateExecutionObservationResponse.parse(serializeObservation(observation)));
+});
+
+router.delete("/execution/observations/:observationId", async (req, res): Promise<void> => {
+  const ownerId = ownerIdFromRequest(res);
+  if (!ownerId) {
+    res.status(401).json({ error: "Authentication is required." });
+    return;
+  }
+
+  const params = UpdateExecutionObservationParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "A valid execution observation is required." });
+    return;
+  }
+
+  const [deleted] = await db
+    .delete(executionObservationsTable)
+    .where(and(
+      eq(executionObservationsTable.id, params.data.observationId),
+      eq(executionObservationsTable.ownerId, ownerId),
+    ))
+    .returning({ id: executionObservationsTable.id });
+
+  if (!deleted) {
+    res.status(404).json({ error: "Execution observation not found." });
+    return;
+  }
+
+  res.status(204).send();
 });
 
 router.get("/execution/state", async (_req, res): Promise<void> => {

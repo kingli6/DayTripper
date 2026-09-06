@@ -203,49 +203,6 @@ cross-account isolation through a signed-in browser/API session.
 surfaces, Tasks/Today/Practices changes, recommendation changes, or Gemini
 integration as part of this backend-only step.
 
-## Personalized execution system — Step 2
-
-**Status:** Implemented and locally verified on 2026-09-06.
-
-**Completed:**
-
-- Added a bounded, user-owned `execution_interviews` session record with a
-  short transcript, current question, status, and finish timestamp.
-- Added authenticated start, answer, and stop endpoints. The interview asks
-  one conversational behavioral question at a time, adapts through the
-  server-only Gemini integration, and stops after at most four questions.
-- Added strict server-side validation for the model response, including
-  bounded findings, allowed state contexts, cautious confidence, explicit or
-  inferred evidence type, and at most three observations per answer.
-- Merged similar observations by dimension, state context, and finding
-  similarity. Repeated evidence increases confidence gradually instead of
-  creating duplicates or jumping to certainty.
-- Added a compact Today entry point and accessible modal with skip, stop,
-  loading, retry/error, keyboard escape, focus return, and completion states.
-  The UI does not expose scores, progress gamification, personality labels, or
-  a separate profile/settings area.
-- Kept Tasks, Today planning, Practices, scheduling, and recommendations
-  unchanged apart from the compact interview entry point.
-
-**Verified:** OpenAPI codegen, full workspace typecheck, API and web
-production builds with workflow `PORT`/`BASE_PATH`, additive development table
-application and column inspection, API workflow restart, signed-out 401
-responses for all three interview endpoints, signed-out preview rendering,
-clean browser logs after restart, and `git diff --check`.
-
-**Database note:** The development database has an empty historical Drizzle
-ledger and unrelated pre-existing `journal_entries` drift. The new interview
-table was applied directly after inspection; schema push was not forced and
-historical migrations remain unchanged.
-
-**Not yet verified:** Authenticated end-to-end interview completion and
-Gemini-backed observation persistence because the available preview session is
-signed out. The server route and UI are ready for that signed-in check.
-
-**Do not start:** Recommendation changes, automatic schedule edits, scores,
-personality tests, a large execution profile/settings area, or open-ended chat
-as part of this interview slice.
-
 ## Tasks MVP foundation
 
 **Status:** Implemented and locally verified on 2026-09-05.
@@ -539,40 +496,6 @@ or broader AI expansion until the product behavior and release boundary are
 explicit. Do not treat database reminder columns as an implemented alarm
 feature.
 
-## Adaptive interview transition diagnosis
-
-**Status:** Provider failure diagnosed and handled without changing interview
-state logic or product scope.
-
-The reported Q2 → Q3 failure is not caused by the stored transcript,
-second-answer persistence, observation merging, or the four-question boundary.
-A neutral three-turn reproduction reached Gemini successfully for Q1, then the
-provider returned HTTP 429 `RESOURCE_EXHAUSTED` with a retry delay on the next
-request. The route was already leaving the interview active and unmodified
-when provider requests failed, so retrying remains safe.
-
-The answer route now records only bounded diagnostics for rejected provider
-responses and invalid model shapes: interview/question identifiers, HTTP
-status, provider status/code, retry delay, finish reason, and response shape.
-It never logs answer text or the provider payload. Gemini rate limits now
-return a safe, specific retry message and `Retry-After` header; the modal
-displays the server's safe error rather than replacing it with a generic
-message. Existing four-question completion logic remains unchanged.
-
-**Verified:** workspace typecheck, API build, web production build with
-workflow variables, API/web workflow restarts, health 200, signed-out 401
-responses for start/answer/finish, clean browser preview, and `git diff
---check`.
-
-**Not verified:** authenticated Q1 → Q2 → Q3 → Q4 → completion, observation
-persistence, and stressed/relaxed state observations. The available preview
-session is signed out and the configured Gemini provider is currently
-quota-exhausted, so those checks require a signed-in session after quota
-recovery.
-
-**Do not start:** Step 4, interview redesign, alternate AI providers, or
-changes to Tasks, Today planning, Practices, or retention behavior.
-
 ## Personalized execution system — Step 3
 
 **Status:** Complete for the internal deterministic execution-policy slice.
@@ -608,6 +531,24 @@ High energy plus low stress produces `deep_work`, a 45-minute
 `self_directed_progress` session, no required stopping point, and no scope
 reduction.
 
-**Do not start:** Step 4, UI exposure, task-recommender integration, Gemini
-policy calls, personality classifications, or changes to Tasks, Today,
-Practices, or scheduling.
+## Personalized execution system — Step 4
+
+**Status:** Complete for the user-controlled guidance foundation.
+
+- Preserved user-owned execution observations, execution state, and the
+  deterministic execution-policy module.
+- Added optional capability scopes to observations. An empty scope is general
+  guidance; selected scopes attach it to task recommendations, the task matrix,
+  planning today, or re-planning.
+- Added authenticated delete support alongside the existing list/create/update
+  observation API, with generated OpenAPI Zod and React contracts.
+- Replaced the former Today entry point with a compact Today-side guidance panel
+  and editor supporting list, add, edit, remove, general guidance, and
+  capability-specific guidance.
+- Removed the retired route, UI, generated contracts, schema export,
+  test, and current documentation. Historical migrations remain unchanged,
+  with one append-only migration for removing the retired table and adding guidance
+  column.
+
+**Deliberately not included:** AI calls, recommendation changes, automatic
+schedule edits, autonomous agents, or a large profile/settings area.

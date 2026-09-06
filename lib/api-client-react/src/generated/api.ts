@@ -31,10 +31,6 @@ import type {
   AiStatus,
   ApplyReplanningProposalRequest,
   ApplyReplanningResult,
-  ExecutionInterviewAnswerInput,
-  ExecutionInterviewAnswerResponse,
-  ExecutionInterviewFinishResponse,
-  ExecutionInterviewStartResponse,
   ExecutionObservation,
   ExecutionObservationInput,
   ExecutionObservationUpdate,
@@ -2241,6 +2237,78 @@ export const useUpdateExecutionObservation = <TError = ErrorType<void>,
       return useMutation(getUpdateExecutionObservationMutationOptions(options));
     }
 
+export const getDeleteExecutionObservationUrl = (observationId: number,) => {
+
+
+
+
+  return `/api/execution/observations/${observationId}`
+}
+
+/**
+ * Deletes an execution observation owned by the authenticated user
+ * @summary Delete an execution observation
+ */
+export const deleteExecutionObservation = async (observationId: number, options?: Parameters<typeof customFetch>[1]): Promise<void> => {
+
+  return customFetch<void>(getDeleteExecutionObservationUrl(observationId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteExecutionObservationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteExecutionObservation>>, TError,{observationId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteExecutionObservation>>, TError,{observationId: number}, TContext> => {
+
+const mutationKey = ['deleteExecutionObservation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteExecutionObservation>>, {observationId: number}> = (props) => {
+          const {observationId} = props ?? {};
+
+          return  deleteExecutionObservation(observationId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteExecutionObservationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteExecutionObservation>>>
+
+    export type DeleteExecutionObservationMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete an execution observation
+ */
+export const useDeleteExecutionObservation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteExecutionObservation>>, TError,{observationId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteExecutionObservation>>,
+        TError,
+        {observationId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteExecutionObservationMutationOptions(options));
+    }
+
 export const getGetExecutionStateUrl = () => {
 
 
@@ -2388,223 +2456,6 @@ export const useSetExecutionState = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSetExecutionStateMutationOptions(options));
-    }
-
-export const getStartExecutionInterviewUrl = () => {
-
-
-
-
-  return `/api/execution/interview`
-}
-
-/**
- * Starts a short behavioral interview owned by the authenticated user
- * @summary Start a private execution interview
- */
-export const startExecutionInterview = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExecutionInterviewStartResponse> => {
-
-  return customFetch<ExecutionInterviewStartResponse>(getStartExecutionInterviewUrl(),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getStartExecutionInterviewMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startExecutionInterview>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof startExecutionInterview>>, TError,void, TContext> => {
-
-const mutationKey = ['startExecutionInterview'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startExecutionInterview>>, void> = () => {
-
-
-          return  startExecutionInterview(requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type StartExecutionInterviewMutationResult = NonNullable<Awaited<ReturnType<typeof startExecutionInterview>>>
-
-    export type StartExecutionInterviewMutationError = ErrorType<void>
-
-    /**
- * @summary Start a private execution interview
- */
-export const useStartExecutionInterview = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startExecutionInterview>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof startExecutionInterview>>,
-        TError,
-        void,
-        TContext
-      > => {
-      return useMutation(getStartExecutionInterviewMutationOptions(options));
-    }
-
-export const getAnswerExecutionInterviewUrl = (interviewId: number,) => {
-
-
-
-
-  return `/api/execution/interview/${interviewId}/answer`
-}
-
-/**
- * Records one answer and returns an adapted next question or a finished interview
- * @summary Answer the current execution interview question
- */
-export const answerExecutionInterview = async (interviewId: number,
-    executionInterviewAnswerInput: ExecutionInterviewAnswerInput, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionInterviewAnswerResponse> => {
-
-  return customFetch<ExecutionInterviewAnswerResponse>(getAnswerExecutionInterviewUrl(interviewId),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(executionInterviewAnswerInput)
-  }
-);}
-
-
-
-
-
-export const getAnswerExecutionInterviewMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerExecutionInterview>>, TError,{interviewId: number;data: BodyType<ExecutionInterviewAnswerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof answerExecutionInterview>>, TError,{interviewId: number;data: BodyType<ExecutionInterviewAnswerInput>}, TContext> => {
-
-const mutationKey = ['answerExecutionInterview'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof answerExecutionInterview>>, {interviewId: number;data: BodyType<ExecutionInterviewAnswerInput>}> = (props) => {
-          const {interviewId,data} = props ?? {};
-
-          return  answerExecutionInterview(interviewId,data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type AnswerExecutionInterviewMutationResult = NonNullable<Awaited<ReturnType<typeof answerExecutionInterview>>>
-    export type AnswerExecutionInterviewMutationBody = BodyType<ExecutionInterviewAnswerInput>
-    export type AnswerExecutionInterviewMutationError = ErrorType<void>
-
-    /**
- * @summary Answer the current execution interview question
- */
-export const useAnswerExecutionInterview = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof answerExecutionInterview>>, TError,{interviewId: number;data: BodyType<ExecutionInterviewAnswerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof answerExecutionInterview>>,
-        TError,
-        {interviewId: number;data: BodyType<ExecutionInterviewAnswerInput>},
-        TContext
-      > => {
-      return useMutation(getAnswerExecutionInterviewMutationOptions(options));
-    }
-
-export const getFinishExecutionInterviewUrl = (interviewId: number,) => {
-
-
-
-
-  return `/api/execution/interview/${interviewId}/finish`
-}
-
-/**
- * Stops an active execution interview without changing saved activities
- * @summary Finish a private execution interview
- */
-export const finishExecutionInterview = async (interviewId: number, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionInterviewFinishResponse> => {
-
-  return customFetch<ExecutionInterviewFinishResponse>(getFinishExecutionInterviewUrl(interviewId),
-  {
-    ...options,
-    method: 'POST'
-
-
-  }
-);}
-
-
-
-
-
-export const getFinishExecutionInterviewMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finishExecutionInterview>>, TError,{interviewId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof finishExecutionInterview>>, TError,{interviewId: number}, TContext> => {
-
-const mutationKey = ['finishExecutionInterview'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof finishExecutionInterview>>, {interviewId: number}> = (props) => {
-          const {interviewId} = props ?? {};
-
-          return  finishExecutionInterview(interviewId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type FinishExecutionInterviewMutationResult = NonNullable<Awaited<ReturnType<typeof finishExecutionInterview>>>
-
-    export type FinishExecutionInterviewMutationError = ErrorType<void>
-
-    /**
- * @summary Finish a private execution interview
- */
-export const useFinishExecutionInterview = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finishExecutionInterview>>, TError,{interviewId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof finishExecutionInterview>>,
-        TError,
-        {interviewId: number},
-        TContext
-      > => {
-      return useMutation(getFinishExecutionInterviewMutationOptions(options));
     }
 
 export const getGetAdminOverviewUrl = () => {
