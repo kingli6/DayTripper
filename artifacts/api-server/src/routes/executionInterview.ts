@@ -394,117 +394,161 @@ router.post("/execution/interview/:interviewId/answer", async (req, res): Promis
   }
 
   const config = getGeminiConfig();
-  const priorMessages = interview.messages ?? [];
-  const prompt = buildInterviewPrompt(
-    interview.currentQuestion,
-    priorMessages,
-    answer,
-    interview.questionIndex,
-  );
+  const result = await db.transaction(async (tx) => {
+    // Keep the row lock until the provider request and the normal state
+    // transition finish. A concurrent request waits here, then rechecks the
+    // question snapshot before it can call Gemini.
+    const [claimedInterview] = await tx
+      .select()
+      .from(executionInterviewsTable)
+      .where(and(
+        eq(executionInterviewsTable.id, interview.id),
+        eq(executionInterviewsTable.ownerId, ownerId),
+      ))
+      .for("update")
+      .limit(1);
 
-  let candidate: unknown;
-  let providerPayload: unknown = null;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
-
-  try {
-    const response = await fetch(`${config.baseUrl}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          maxOutputTokens: 1800,
-          temperature: 0.35,
-        },
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      const providerErrorPayload = await response.json().catch(() => null);
-      const providerError = geminiProviderError(providerErrorPayload);
-      const retryAfter = retryDelaySeconds(providerErrorPayload);
-      req.log.warn({
-        interviewId: interview.id,
-        questionNumber: interview.questionIndex,
-        status: response.status,
-        ...providerError,
-      }, "Execution interview provider request was rejected");
-      if (retryAfter) {
-        res.setHeader("Retry-After", String(retryAfter));
-      }
-      res.status(503).json({
-        error: response.status === 429
-          ? "The check-in is temporarily rate limited. Please try again shortly."
-          : "The interview is not available right now.",
-      });
-      return;
+    if (!claimedInterview || claimedInterview.status !== "active" || !claimedInterview.currentQuestion) {
+      return { kind: "conflict" as const };
+    }
+    if (
+      claimedInterview.questionIndex !== interview.questionIndex
+      || claimedInterview.currentQuestion !== interview.currentQuestion
+    ) {
+      return { kind: "conflict" as const };
     }
 
-    providerPayload = await response.json();
-    const text = extractGeminiText(providerPayload);
-    if (!text) {
-      req.log.warn({
-        interviewId: interview.id,
-        questionNumber: interview.questionIndex,
-        finishReason: geminiFinishReason(providerPayload),
-        responseShape: geminiResponseShape(providerPayload),
-      }, "Execution interview provider returned no text");
-      res.status(502).json({ error: "The interview returned an invalid response." });
-      return;
-    }
+    const priorMessages = claimedInterview.messages ?? [];
+    const prompt = buildInterviewPrompt(
+      claimedInterview.currentQuestion,
+      priorMessages,
+      answer,
+      claimedInterview.questionIndex,
+    );
+
+    let candidate: unknown;
+    let providerPayload: unknown = null;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8_000);
 
     try {
-      candidate = parseGeminiJson(text);
-    } catch {
-      req.log.warn({
-        interviewId: interview.id,
-        questionNumber: interview.questionIndex,
-        finishReason: geminiFinishReason(providerPayload),
-        responseShape: geminiResponseShape(providerPayload),
-        textLength: text.length,
-      }, "Execution interview provider returned invalid JSON");
-      res.status(502).json({ error: "The interview returned an invalid response. Please try again." });
-      return;
+      const response = await fetch(`${config.baseUrl}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            maxOutputTokens: 1800,
+            temperature: 0.35,
+          },
+        }),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const providerErrorPayload = await response.json().catch(() => null);
+        const providerError = geminiProviderError(providerErrorPayload);
+        const retryAfter = retryDelaySeconds(providerErrorPayload);
+        req.log.warn({
+          interviewId: claimedInterview.id,
+          questionNumber: claimedInterview.questionIndex,
+          status: response.status,
+          ...providerError,
+        }, "Execution interview provider request was rejected");
+        return {
+          kind: "provider-error" as const,
+          status: 503 as const,
+          retryAfter,
+          error: response.status === 429
+            ? "The check-in is temporarily rate limited. Please try again shortly."
+            : "The interview is not available right now.",
+        };
+      }
+
+      providerPayload = await response.json();
+      const text = extractGeminiText(providerPayload);
+      if (!text) {
+        req.log.warn({
+          interviewId: claimedInterview.id,
+          questionNumber: claimedInterview.questionIndex,
+          finishReason: geminiFinishReason(providerPayload),
+          responseShape: geminiResponseShape(providerPayload),
+        }, "Execution interview provider returned no text");
+        return {
+          kind: "provider-error" as const,
+          status: 502 as const,
+          retryAfter: null,
+          error: "The interview returned an invalid response.",
+        };
+      }
+
+      try {
+        candidate = parseGeminiJson(text);
+      } catch {
+        req.log.warn({
+          interviewId: claimedInterview.id,
+          questionNumber: claimedInterview.questionIndex,
+          finishReason: geminiFinishReason(providerPayload),
+          responseShape: geminiResponseShape(providerPayload),
+          textLength: text.length,
+        }, "Execution interview provider returned invalid JSON");
+        return {
+          kind: "provider-error" as const,
+          status: 502 as const,
+          retryAfter: null,
+          error: "The interview returned an invalid response. Please try again.",
+        };
+      }
+    } catch (error) {
+      req.log.error({
+        interviewId: claimedInterview.id,
+        questionNumber: claimedInterview.questionIndex,
+        errorName: error instanceof Error ? error.name : typeof error,
+        timeout: error instanceof Error && error.name === "AbortError",
+      }, "Execution interview provider request failed");
+      return {
+        kind: "provider-error" as const,
+        status: 503 as const,
+        retryAfter: null,
+        error: "The interview is not available right now.",
+      };
+    } finally {
+      clearTimeout(timeout);
     }
-  } catch (error) {
-    req.log.error({
-      errorName: error instanceof Error ? error.name : typeof error,
-      timeout: error instanceof Error && error.name === "AbortError",
-    }, "Execution interview provider request failed");
-    res.status(503).json({ error: "The interview is not available right now." });
-    return;
-  } finally {
-    clearTimeout(timeout);
-  }
 
-  if (!isInterviewModelResponse(candidate)) {
-    req.log.warn({
-      interviewId: interview.id,
-      questionNumber: interview.questionIndex,
-      responseShape: interviewResponseShape(candidate),
-    }, "Execution interview provider returned an invalid response shape");
-    res.status(502).json({ error: "The interview returned an invalid response." });
-    return;
-  }
+    if (!isInterviewModelResponse(candidate)) {
+      req.log.warn({
+        interviewId: claimedInterview.id,
+        questionNumber: claimedInterview.questionIndex,
+        responseShape: interviewResponseShape(candidate),
+      }, "Execution interview provider returned an invalid response shape");
+      return {
+        kind: "provider-error" as const,
+        status: 502 as const,
+        retryAfter: null,
+        error: "The interview returned an invalid response.",
+      };
+    }
 
-  const modelResponse = candidate;
-  const shouldFinish = modelResponse.shouldFinish
-    || interview.questionIndex >= MAX_QUESTIONS
-    || !modelResponse.question;
-  const nextQuestion = shouldFinish
-    ? null
-    : typeof modelResponse.question === "string"
-      ? modelResponse.question.trim()
-      : null;
-  if (!shouldFinish && !nextQuestion) {
-    res.status(502).json({ error: "The interview returned an invalid next question." });
-    return;
-  }
+    const modelResponse = candidate;
+    const shouldFinish = modelResponse.shouldFinish
+      || claimedInterview.questionIndex >= MAX_QUESTIONS
+      || !modelResponse.question;
+    const nextQuestion = shouldFinish
+      ? null
+      : typeof modelResponse.question === "string"
+        ? modelResponse.question.trim()
+        : null;
+    if (!shouldFinish && !nextQuestion) {
+      return {
+        kind: "provider-error" as const,
+        status: 502 as const,
+        retryAfter: null,
+        error: "The interview returned an invalid next question.",
+      };
+    }
 
-  const savedObservations = await db.transaction(async (tx) => {
     const existing = await tx
       .select()
       .from(executionObservationsTable)
@@ -574,24 +618,42 @@ router.post("/execution/interview/:interviewId/answer", async (req, res): Promis
       .update(executionInterviewsTable)
       .set({
         status: shouldFinish ? "finished" : "active",
-        questionIndex: shouldFinish ? interview.questionIndex : interview.questionIndex + 1,
+        questionIndex: shouldFinish ? claimedInterview.questionIndex : claimedInterview.questionIndex + 1,
         currentQuestion: nextQuestion,
         messages,
         finishedAt: shouldFinish ? new Date() : null,
       })
       .where(and(
-        eq(executionInterviewsTable.id, interview.id),
+        eq(executionInterviewsTable.id, claimedInterview.id),
         eq(executionInterviewsTable.ownerId, ownerId),
       ));
 
-    return saved;
+    return {
+      kind: "success" as const,
+      shouldFinish,
+      nextQuestion,
+      questionNumber: claimedInterview.questionIndex,
+      savedObservations: saved,
+    };
   });
 
+  if (result.kind === "conflict") {
+    res.status(409).json({ error: "This interview question is already being processed or has been answered." });
+    return;
+  }
+  if (result.kind === "provider-error") {
+    if (result.retryAfter) {
+      res.setHeader("Retry-After", String(result.retryAfter));
+    }
+    res.status(result.status).json({ error: result.error });
+    return;
+  }
+
   res.json(AnswerExecutionInterviewResponse.parse({
-    status: shouldFinish ? "finished" : "active",
-    question: nextQuestion,
-    questionNumber: shouldFinish ? null : interview.questionIndex + 1,
-    observations: savedObservations.map(serializeObservation),
+    status: result.shouldFinish ? "finished" : "active",
+    question: result.nextQuestion,
+    questionNumber: result.shouldFinish ? null : result.questionNumber + 1,
+    observations: result.savedObservations.map(serializeObservation),
   }));
 });
 
