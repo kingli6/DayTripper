@@ -32,7 +32,6 @@ function ShellBrand({ expanded, compactMobile = false }: { expanded: boolean; co
       {expanded && (
         <span className={`min-w-0 ${compactMobile ? 'hidden min-[360px]:block' : ''}`}>
           <span className="block truncate font-display text-[19px] leading-none tracking-[-0.03em]">Day Tripper</span>
-          <span className="mt-1 block truncate font-mono-ui text-[8px] uppercase tracking-[0.16em] text-sidebar-foreground/50">a softer daily practice</span>
         </span>
       )}
     </Link>
@@ -52,7 +51,7 @@ function PrimaryNavigation({ expanded, location }: { expanded: boolean; location
             aria-label={label}
             title={expanded ? undefined : label}
             data-testid={testId}
-            className={`group flex min-h-11 items-center rounded-xl text-sm transition-colors ${
+            className={`group flex min-h-10 items-center rounded-md text-sm transition-colors ${
               expanded ? 'gap-3 px-3' : 'justify-center px-2'
             } ${
               active
@@ -173,7 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <PanelLeft className="size-4" strokeWidth={1.8} />
           </button>
         </div>
-        <div className={`mt-10 ${expanded ? 'px-1' : ''}`}>
+        <div className={`mt-8 ${expanded ? 'px-1' : ''}`}>
           <PrimaryNavigation expanded={expanded} location={location} />
         </div>
         <div className={`mt-auto border-t border-sidebar-border/80 pt-4 ${expanded ? 'px-1' : ''}`}>

@@ -138,13 +138,12 @@ function PracticeList({
   }
 
   return (
-    <div className="space-y-8" data-testid="list-retention-practices">
+    <div className="space-y-6" data-testid="list-retention-practices">
       {readyPractices.length > 0 && (
         <section aria-labelledby="ready-practices-title">
           <div className="mb-3 flex items-end justify-between gap-3">
             <div>
-              <h3 id="ready-practices-title" className="font-display text-[28px] tracking-[-0.04em]">Ready now</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Available to work on today.</p>
+              <h3 id="ready-practices-title" className="font-display text-[22px] font-semibold tracking-[-0.03em]">Ready now</h3>
             </div>
             <span className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">{readyPractices.length} {readyPractices.length === 1 ? 'practice' : 'practices'}</span>
           </div>
@@ -154,8 +153,7 @@ function PracticeList({
       {comingUpGroups.length > 0 && (
         <section aria-labelledby="coming-up-practices-title">
           <div className="mb-3">
-            <h3 id="coming-up-practices-title" className="font-display text-[28px] tracking-[-0.04em]">Coming up</h3>
-            <p className="mt-1 text-xs text-muted-foreground">A gentle view of what becomes available next. You can always practice early.</p>
+            <h3 id="coming-up-practices-title" className="font-display text-[22px] font-semibold tracking-[-0.03em]">Coming up</h3>
           </div>
           <div className="space-y-6">
             {comingUpGroups.map((group) => (
@@ -526,29 +524,27 @@ function RetentionWorkspace() {
     });
   }
 
-  const pageTitle = selectedPractice ? selectedPractice.name : 'Practices';
   return (
     <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
       <AppShell>
-        <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
+        <main className="mx-auto w-full max-w-[1180px] px-5 pb-10 pt-5 sm:px-8 sm:pt-7 lg:px-12 lg:pb-12 lg:pt-8">
             <header className="flex items-center justify-between border-b border-border/60 pb-5">
               <div className="flex items-center gap-2"><Circle className="size-2.5 fill-accent text-accent" strokeWidth={0} /><span className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A private record of capability</span></div>
               <Link href="/today" className="hidden text-xs font-semibold text-muted-foreground hover:text-primary sm:inline-flex" data-testid="link-retention-return-today">Back to today</Link>
             </header>
             {!selectedId && params.id !== 'new' ? (
               <>
-                <div className="mt-10 flex flex-col gap-5 border-b border-border/60 pb-8 sm:mt-12 sm:flex-row sm:items-end sm:justify-between">
-                  <div><p className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">Retention</p><h1 className="mt-3 font-display text-[clamp(3.2rem,7vw,6rem)] leading-[0.88] tracking-[-0.07em]" data-testid="text-retention-title">Practices</h1><p className="mt-5 max-w-[500px] text-[15px] leading-7 text-muted-foreground">Keep a clear record of what you can do, and notice how it remains available over time.</p></div>
+                <div className="mt-5 flex flex-col gap-4 border-b border-border/60 pb-6 sm:mt-7 sm:flex-row sm:items-end sm:justify-between">
+                  <div><p className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">Practices</p><h1 className="mt-2 font-display text-[clamp(2.7rem,6vw,5rem)] font-semibold leading-[0.92] tracking-[-0.055em]" data-testid="text-retention-title">Practices</h1></div>
                   <button type="button" onClick={openCreate} data-testid="button-add-retention-practice" className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full bg-primary px-5 py-3 text-xs font-semibold text-primary-foreground hover:-translate-y-0.5 sm:self-auto"><Plus className="size-3.5" strokeWidth={2.2} /> Add a practice</button>
                 </div>
-                <section className="mt-8 max-w-[760px]" aria-labelledby="practice-list-title"><div className="mb-4 flex items-center justify-between"><h2 id="practice-list-title" className="font-display text-[28px] tracking-[-0.04em]">Your practices</h2>{list.isError ? <button type="button" onClick={() => void list.refetch()} className="text-xs font-semibold text-primary underline underline-offset-4" data-testid="button-retry-retention-list">Try again</button> : null}</div>{list.isLoading ? <PracticesLoading /> : list.isError ? <p className="rounded-[20px] border border-destructive/25 bg-destructive/[0.06] p-5 text-sm text-destructive" role="alert" data-testid="status-retention-list-error">Your practices could not be loaded.</p> : <PracticeList practices={practices} onNew={openCreate} />}</section>
+                <section className="mt-6 max-w-[760px]" aria-labelledby="practice-list-title"><div className="mb-3 flex items-center justify-between"><h2 id="practice-list-title" className="font-display text-[22px] font-semibold tracking-[-0.03em]">Your practices</h2>{list.isError ? <button type="button" onClick={() => void list.refetch()} className="text-xs font-semibold text-primary underline underline-offset-4" data-testid="button-retry-retention-list">Try again</button> : null}</div>{list.isLoading ? <PracticesLoading /> : list.isError ? <p className="rounded-md border border-destructive/25 bg-destructive/[0.06] p-5 text-sm text-destructive" role="alert" data-testid="status-retention-list-error">Your practices could not be loaded.</p> : <PracticeList practices={practices} onNew={openCreate} />}</section>
               </>
             ) : selectedId && selectedPractice ? (
               <div className="mt-9 sm:mt-12"><PracticeDetail practiceId={selectedId} onEdit={openEdit} onDelete={deleteSelected} /></div>
             ) : (
               <div className="mt-9 sm:mt-12"><p className="text-xs text-muted-foreground">Starting a new practice…</p></div>
             )}
-            <footer className="mt-12 border-t border-border/60 pt-5 text-[11px] text-muted-foreground/75"><p>{pageTitle === 'Practices' ? 'No scores, streaks, or performance signals here.' : 'Your observations stay grounded in what you actually noticed.'}</p></footer>
         </main>
       </AppShell>
       {formOpen && <RetentionPracticeForm practice={editing} pending={createPractice.isPending || updatePractice.isPending} error={mutationError} onClose={() => { setFormOpen(false); setEditing(null); setMutationError(''); setLocation(editing ? `/retention/${editing.id}` : '/retention'); }} onSubmit={savePractice} />}

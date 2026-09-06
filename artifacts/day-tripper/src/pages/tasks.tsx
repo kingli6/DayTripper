@@ -672,18 +672,18 @@ export default function TasksPage() {
   const pending = createTask.isPending || updateTask.isPending || completeTask.isPending || archiveTask.isPending || scheduleTask.isPending;
 
   return (
-    <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
+     <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
       <AppShell>
-        <main className="min-w-0 px-5 pb-12 pt-5 sm:px-8 sm:pt-7 lg:px-10 lg:pb-14 lg:pt-8">
+         <main className="min-w-0 px-5 pb-10 pt-5 sm:px-8 sm:pt-7 lg:px-10 lg:pb-12 lg:pt-8">
           <header className="flex items-center justify-between border-b border-border/60 pb-3">
             <div className="flex items-center gap-2"><ListTodo className="size-4 text-primary" /><span className="text-sm font-semibold text-foreground">Tasks</span></div>
             <Link href="/today" data-testid="link-tasks-back-today" className="hidden items-center rounded-full border border-border bg-card px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:border-primary/45 hover:text-primary sm:inline-flex">Today</Link>
           </header>
-          <div className="mt-5 max-w-[920px] space-y-5">
+           <div className="mt-4 max-w-[920px] space-y-4">
             <section className="border-b border-border/60 pb-5" data-testid="section-add-task">
               <TaskForm compactCreate pending={createTask.isPending} onSubmit={(values) => void create(values)} />
             </section>
-            <section className="rounded-xl border border-border/70 bg-card/55 p-4" data-testid="section-recommendations">
+             <section className="rounded-md border border-border/70 bg-card/55 p-3.5" data-testid="section-recommendations">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <h2 className="text-base font-semibold text-foreground">What should I work on?</h2>
                 <div className="grid grid-cols-2 gap-2 sm:w-[220px]">
@@ -722,7 +722,7 @@ export default function TasksPage() {
                   <div className="border-y border-dashed border-border/70 px-1 py-5 text-xs text-muted-foreground" data-testid="status-tasks-empty">No active tasks.</div>
                 ) : <div>{activeTasks.map((task) => <TaskItem key={task.id} task={task} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
               </section>
-              <section className="border-t border-border/60 pt-5" data-testid="section-eisenhower">
+               <section className="border-t border-border/60 pt-4" data-testid="section-eisenhower">
                 <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-foreground">Priority matrix</h2><span className="text-[10px] text-muted-foreground">Importance + urgency</span></div>
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                   {QUADRANTS.map((quadrant) => (

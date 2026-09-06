@@ -552,3 +552,28 @@ reduction.
 
 **Deliberately not included:** AI calls, recommendation changes, automatic
 schedule edits, autonomous agents, or a large profile/settings area.
+
+## Focused UI cleanup and visual direction pass
+
+**Status:** Implemented and locally verified on 2026-09-06.
+
+**Completed:**
+
+- Removed the non-actionable Today sidebar copy “Plans are a place to return to, not a test to pass.”, the visible `Held lightly` wrapper, the “planning services ready/quiet” status block, the shell subtitle “a softer daily practice”, and redundant Today/Practices orientation/footer copy.
+- Reframed the existing shell and pages with a near-black foundation, electric cyan primary, restrained magenta secondary, subtle borders, compact controls, sharper corners, and selective monospace metadata.
+- Reduced unnecessary Today, Tasks, and Practices spacing and removed decorative Today glows without changing navigation, routes, APIs, data, authentication, scheduling, planning, execution, or recommendation behavior.
+- Kept useful offline, sync, wake, authentication, loading, and error states intact.
+
+**Verified:** Full workspace typecheck, API build, web production build with
+workflow `PORT`/`BASE_PATH`, clean web workflow restart, desktop and narrow
+signed-out preview rendering, browser logs without new application errors, and
+`git diff --check`.
+
+**Not yet verified:** Authenticated visual checks for populated Tasks, Today,
+Practices, the expanded rail, and page-specific dialogs remain unavailable
+because the current preview session is signed out.
+
+**Next safe action:** When an authenticated preview is available, check the
+three primary routes at desktop and narrow widths, especially populated rows,
+dialogs, and the mobile account menu. Do not add new navigation or widen this
+into a feature redesign.

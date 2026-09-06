@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap');
 @layer theme, base, clerk, components, utilities;
 @import 'tailwindcss';
 @import '@clerk/themes/shadcn.css';
@@ -69,7 +69,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* LIGHT MODE */
+/* DAY TRIPPER / EXECUTION CONSOLE */
 :root {
   --button-outline: rgba(0, 0, 0, 0.1);
   --badge-outline: rgba(0, 0, 0, 0.05);
@@ -81,69 +81,69 @@
   --elevate-1: rgba(0, 0, 0, 0.03);
   --elevate-2: rgba(0, 0, 0, 0.08);
 
-  --background: 42 35% 93%;
+  --background: 210 32% 8%;
 
-  --foreground: 203 29% 21%;
+  --foreground: 195 28% 92%;
 
-  --border: 38 24% 82%;
+  --border: 204 22% 22%;
 
-  --card: 43 43% 97%;
-  --card-foreground: 203 29% 21%;
-  --card-border: 38 27% 85%;
+  --card: 210 28% 12%;
+  --card-foreground: 195 28% 92%;
+  --card-border: 204 22% 24%;
 
-  --sidebar: 198 31% 24%;
+  --sidebar: 212 38% 7%;
 
-  --sidebar-foreground: 43 37% 91%;
+  --sidebar-foreground: 195 28% 92%;
 
-  --sidebar-border: 198 25% 31%;
+  --sidebar-border: 204 22% 18%;
 
-  --sidebar-primary: 34 88% 73%;
+  --sidebar-primary: 183 100% 58%;
 
-  --sidebar-primary-foreground: 205 32% 20%;
+  --sidebar-primary-foreground: 212 38% 7%;
 
-  --sidebar-accent: 198 26% 31%;
+  --sidebar-accent: 204 28% 16%;
 
-  --sidebar-accent-foreground: 43 37% 91%;
+  --sidebar-accent-foreground: 195 28% 96%;
 
-  --sidebar-ring: 34 88% 73%;
+  --sidebar-ring: 183 100% 58%;
 
-  --popover: 43 40% 97%;
+  --popover: 210 28% 14%;
 
-  --popover-foreground: 205 32% 20%;
+  --popover-foreground: 195 28% 92%;
 
-  --popover-border: 39 25% 86%;
+  --popover-border: 204 22% 26%;
 
-  --primary: 176 31% 37%;
-  --primary-foreground: 43 43% 97%;
+  --primary: 183 100% 58%;
+  --primary-foreground: 212 38% 7%;
 
-  --secondary: 38 56% 85%;
+  --secondary: 271 36% 24%;
 
-  --secondary-foreground: 205 32% 20%;
+  --secondary-foreground: 280 55% 86%;
 
-  --muted: 42 29% 89%;
+  --muted: 204 24% 17%;
 
-  --muted-foreground: 201 15% 47%;
+  --muted-foreground: 204 15% 64%;
 
-  --accent: 15 66% 71%;
+  --accent: 294 75% 68%;
 
-  --accent-foreground: 205 32% 20%;
+  --accent-foreground: 210 30% 8%;
 
-  --destructive: 8 62% 54%;
+  --destructive: 354 80% 66%;
 
-  --destructive-foreground: 43 40% 97%;
+  --destructive-foreground: 210 30% 8%;
 
-  --input: 39 22% 78%;
-  --ring: 176 31% 37%;
-  --chart-1: 177 28% 39%;
-  --chart-2: 34 88% 73%;
-  --chart-3: 15 66% 71%;
-  --chart-4: 198 31% 24%;
-  --chart-5: 42 29% 62%;
+  --input: 204 22% 31%;
+  --ring: 183 100% 58%;
+  --chart-1: 183 100% 58%;
+  --chart-2: 294 75% 68%;
+  --chart-3: 45 95% 64%;
+  --chart-4: 204 25% 48%;
+  --chart-5: 204 15% 64%;
 
   --app-font-sans: 'DM Sans', sans-serif;
-  --app-font-serif: 'Fraunces', Georgia, serif;
+  --app-font-serif: 'DM Sans', sans-serif;
   --app-font-mono: 'DM Mono', monospace;
-  --radius: 0.8rem;
+  --radius: 0.45rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
   --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
   --shadow-sm:
@@ -494,9 +494,9 @@
     inset: 0;
     pointer-events: none;
     content: '';
-    opacity: 0.16;
+    opacity: 0.035;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
-    mix-blend-mode: multiply;
+    mix-blend-mode: screen;
   }
 
   .delay-1 {

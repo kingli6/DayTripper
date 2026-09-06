@@ -26,7 +26,6 @@ import {
 import {
   getListActivitiesQueryKey,
   useCreateActivity,
-  useGetAiStatus,
   useListActivities,
   useCreatePlanningProposal,
 } from '@workspace/api-client-react';
@@ -326,17 +325,6 @@ function AuthenticatedAppShell({ children }: { children: ReactNode }) {
       <GlobalServerAvailabilityIndicator />
       {children}
     </ServerAvailabilityProvider>
-  );
-}
-
-function ApiStatus() {
-  const ai = useGetAiStatus();
-  const aiCopy = ai.isLoading ? 'checking services' : ai.data?.configured ? 'planning services ready' : 'planning services quiet';
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border/60 pt-4 text-[11px] text-muted-foreground" data-testid="status-service">
-      <span>{aiCopy}</span>
-    </div>
   );
 }
 
@@ -1434,26 +1422,23 @@ function Today() {
 
   return (
     <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
-      <div className="pointer-events-none absolute -right-24 -top-28 size-[430px] rounded-full bg-accent/10 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-[-180px] left-[25%] size-[420px] rounded-full bg-secondary/35 blur-3xl" />
       <AppShell>
-        <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
-            <div className="mt-9 flex flex-col gap-6 border-b border-border/60 pb-8 sm:mt-12 sm:flex-row sm:items-end sm:justify-between">
+        <main className="mx-auto w-full max-w-[1180px] px-5 pb-10 pt-5 sm:px-8 sm:pt-7 lg:px-12 lg:pb-12 lg:pt-8">
+            <div className="mt-5 flex flex-col gap-5 border-b border-border/60 pb-6 sm:mt-7 sm:flex-row sm:items-end sm:justify-between">
               <div className="animate-rise min-w-0">
-                <p className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">{date === today ? 'Today' : 'Looking back'}</p>
-                <h1 className="mt-3 font-display text-[clamp(3rem,7vw,5.8rem)] leading-[0.9] tracking-[-0.065em]" data-testid="text-current-date">{formatDate(date)}</h1>
-                <p className="mt-5 max-w-[480px] text-[15px] leading-7 text-muted-foreground">{date === today ? 'See what is next, leave room for what is not planned, and let the day be a day.' : `A quiet view of ${formatShortDate(date)}. Plans can be revisited without catching up.`}</p>
+                <p className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">{date === today ? 'Today' : `Log / ${formatShortDate(date)}`}</p>
+                <h1 className="mt-2 font-display text-[clamp(2.7rem,6vw,5rem)] font-semibold leading-[0.92] tracking-[-0.055em]" data-testid="text-current-date">{formatDate(date)}</h1>
               </div>
               <div className="animate-rise delay-1 shrink-0">
                 <DateNavigator date={date} today={today} onChange={setDate} />
               </div>
             </div>
-            <div className="grid gap-10 pt-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-16 lg:pt-10">
+            <div className="grid gap-8 pt-7 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-12 lg:pt-8">
               <section aria-labelledby="timeline-title" className="animate-rise delay-1 min-w-0">
-                <div className="mb-6 flex items-center justify-between gap-4">
+                <div className="mb-4 flex items-center justify-between gap-4">
                   <div>
-                    <h2 id="timeline-title" className="font-display text-[27px] tracking-[-0.035em]">The shape of things</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">{completedCount ? `${completedCount} already held` : 'Nothing needs to be finished to make this day count.'}</p>
+                    <h2 id="timeline-title" className="font-display text-[22px] font-semibold tracking-[-0.03em]">Timeline</h2>
+                    {completedCount > 0 && <p className="mt-1 font-mono-ui text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{completedCount} complete</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={openPlanToday} data-testid="button-open-plan-today" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.06] px-4 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
@@ -1496,29 +1481,17 @@ function Today() {
                 ) : activities.length === 0 ? <EmptyDay onAdd={openCreate} /> : <Timeline activities={activities} now={now} onEdit={openEdit} onToggle={(activity) => void toggle(activity)} />}
               </section>
                 <aside className="animate-rise delay-2 space-y-4 lg:pt-1">
-                <div className="rounded-[24px] border border-primary/15 bg-primary p-5 text-primary-foreground shadow-[0_20px_50px_hsl(177_28%_39%/0.14)]">
+                <div className="rounded-md border border-primary/25 bg-primary/[0.08] p-4">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary-foreground/65">A little orientation</span>
-                    <ActivityIcon className="size-4 text-secondary" strokeWidth={1.7} />
+                    <span className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Next up</span>
+                    <ActivityIcon className="size-4 text-primary" strokeWidth={1.7} />
                   </div>
-                  <p className="mt-8 font-display text-[27px] leading-[1.04] tracking-[-0.035em]">{nextActivity ? `Next: ${nextActivity.title}` : activities.length ? 'You have reached the edge of the plan.' : 'There is nothing to catch up on.'}</p>
-                  <p className="mt-4 text-sm leading-6 text-primary-foreground/70">{nextActivity ? `${timeLabel(nextActivity.startTime)}${nextActivity.endTime ? ` · until ${timeLabel(nextActivity.endTime)}` : ' · ongoing'}` : 'Open time is not an empty result. It is time you can use, share, or simply leave alone.'}</p>
-                </div>
-                <div className="rounded-[22px] border border-border/75 bg-card/65 p-5">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Cloud className="size-4 text-primary" strokeWidth={1.7} />
-                    <span className="font-mono-ui text-[10px] uppercase tracking-[0.15em]">Held lightly</span>
-                  </div>
-                  <p className="mt-4 font-display text-[21px] leading-[1.15] tracking-[-0.025em]">Plans are a place to return to, not a test to pass.</p>
-                   <ApiStatus />
+                   <p className="mt-5 font-display text-[21px] font-semibold leading-[1.08] tracking-[-0.03em] text-foreground">{nextActivity ? nextActivity.title : activities.length ? 'No more scheduled items.' : 'No scheduled items.'}</p>
+                   <p className="mt-3 font-mono-ui text-[11px] text-muted-foreground">{nextActivity ? `${timeLabel(nextActivity.startTime)}${nextActivity.endTime ? ` · ${timeLabel(nextActivity.endTime)}` : ' · ongoing'}` : 'Open time'}</p>
                 </div>
                   <ExecutionGuidancePanel />
               </aside>
             </div>
-            <footer className="mt-10 flex flex-col gap-2 border-t border-border/60 pt-5 text-[11px] text-muted-foreground/75 sm:flex-row sm:items-center sm:justify-between">
-              <p data-testid="text-privacy-note">Your day stays yours. No scores, streaks, or performance signals here.</p>
-              <span className="font-mono-ui text-[9px] uppercase tracking-[0.15em]">Day Tripper / Today</span>
-            </footer>
         </main>
       </AppShell>
       {acceptedNotice && (
@@ -1583,16 +1556,15 @@ function Landing() {
   return (
     <main className="paper-grain flex min-h-[100dvh] items-center justify-center bg-background px-6 py-12 text-foreground">
       <div className="w-full max-w-[720px]">
-        <div className="rounded-[32px] border border-border/75 bg-card/75 p-7 shadow-[0_24px_80px_hsl(205_32%_20%/0.08)] sm:p-12">
+        <div className="rounded-md border border-border/75 bg-card/75 p-7 shadow-[0_24px_80px_hsl(205_32%_2%/0.35)] sm:p-10">
           <div className="flex items-center gap-3">
             <BrandMark />
             <div>
-              <p className="font-display text-[22px] leading-none tracking-[-0.03em]">Day Tripper</p>
-              <p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.2em] text-muted-foreground">a softer daily practice</p>
+              <p className="font-display text-[22px] font-semibold leading-none tracking-[-0.03em]">Day Tripper</p>
             </div>
           </div>
-          <p className="mt-16 font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">A private day planner</p>
-          <h1 className="mt-4 max-w-[620px] font-display text-[clamp(3rem,8vw,6.4rem)] leading-[0.9] tracking-[-0.065em]">
+          <p className="mt-14 font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">Private day planner</p>
+          <h1 className="mt-4 max-w-[620px] font-display text-[clamp(2.8rem,7vw,5.6rem)] font-semibold leading-[0.92] tracking-[-0.055em]">
             Make room for the day you actually have.
           </h1>
           <p className="mt-7 max-w-[540px] text-[15px] leading-7 text-muted-foreground">
