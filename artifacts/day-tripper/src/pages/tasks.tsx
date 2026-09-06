@@ -11,7 +11,7 @@ import {
   useUpdateTask,
 } from '@workspace/api-client-react';
 import type { Task, TaskInput, TaskScheduleInput, TaskUpdate } from '@workspace/api-client-react';
-import { Check, Clock3, Flag, Gauge, ListTodo, Pencil, Plus, RotateCcw, ShieldCheck, Sparkles, X } from 'lucide-react';
+import { Archive, Check, Clock3, ListTodo, RotateCcw, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation } from 'wouter';
@@ -58,6 +58,10 @@ function errorMessage(error: unknown) {
 
 function formatDeadline(deadline: string) {
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(deadline));
+}
+
+function formatCompactDeadline(deadline: string) {
+  return new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' }).format(new Date(deadline));
 }
 
 function focusScore(task: Task) {
@@ -169,52 +173,37 @@ function defaultScheduleStart(estimatedMinutes: number) {
 
 function TaskRail() {
   return (
-    <aside className="hidden w-[264px] shrink-0 flex-col justify-between bg-sidebar px-5 py-6 text-sidebar-foreground lg:flex">
+    <aside className="hidden w-[220px] shrink-0 bg-sidebar px-3 py-5 text-sidebar-foreground lg:block">
       <div>
-        <Link href="/today" className="flex items-center gap-3 px-2" data-testid="link-tasks-brand">
-          <div aria-hidden="true" className="relative flex size-10 shrink-0 items-center justify-center rounded-[14px] border border-sidebar-primary/40 bg-sidebar-primary/15 text-lg font-semibold text-sidebar-primary">
+        <Link href="/today" className="flex items-center gap-2.5 px-2" data-testid="link-tasks-brand">
+          <div aria-hidden="true" className="relative flex size-8 shrink-0 items-center justify-center rounded-xl border border-sidebar-primary/40 bg-sidebar-primary/15 text-base font-semibold text-sidebar-primary">
             <span className="font-display -mt-0.5">d</span>
-            <span className="absolute bottom-[7px] right-[7px] size-1.5 rounded-full bg-sidebar-primary" />
+            <span className="absolute bottom-[5px] right-[5px] size-1.5 rounded-full bg-sidebar-primary" />
           </div>
           <div>
-            <p className="font-display text-[22px] leading-none tracking-[-0.03em]">Day Tripper</p>
-            <p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.2em] text-sidebar-foreground/55">a softer daily practice</p>
+            <p className="font-display text-[19px] leading-none tracking-[-0.03em]">Day Tripper</p>
           </div>
         </Link>
-        <nav className="mt-16" aria-label="Private space">
+        <nav className="mt-10" aria-label="Private space">
           <p className="px-3 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/45">Your space</p>
-          <Link href="/today" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-today">
+          <Link href="/today" className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-today">
             <span className="size-3.5 rounded-full border border-sidebar-primary" />
             Today
           </Link>
-          <Link href="/tasks" className="mt-1 flex items-center gap-3 rounded-xl bg-sidebar-accent px-3 py-3 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-tasks-tasks">
+          <Link href="/tasks" className="mt-1 flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-tasks-tasks">
             <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
             Tasks
             <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
           </Link>
-          <Link href="/board" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-board">
+          <Link href="/board" className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-board">
             <span className="size-3.5 rounded border border-sidebar-primary" />
             Board
           </Link>
-          <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-practices">
+          <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-practices">
             <span className="size-3.5 rounded-full border border-sidebar-primary" />
             Practices
           </Link>
         </nav>
-        <div className="mt-14 px-3">
-          <div className="mb-4 flex size-8 items-center justify-center rounded-full border border-sidebar-primary/35 bg-sidebar-primary/10 text-sidebar-primary">
-            <Sparkles className="size-3.5" strokeWidth={1.7} />
-          </div>
-          <p className="font-display text-[20px] leading-[1.15] text-sidebar-foreground/90">Choose what fits now.</p>
-          <p className="mt-3 text-[12px] leading-5 text-sidebar-foreground/55">Use the signals as a guide, not a rule.</p>
-        </div>
-      </div>
-      <div className="border-t border-sidebar-border/80 px-3 pt-5">
-        <div className="flex items-center gap-2 text-[11px] text-sidebar-foreground/55">
-          <ShieldCheck className="size-3.5 text-sidebar-primary/80" strokeWidth={1.8} />
-          <span>Private by design</span>
-        </div>
-        <p className="mt-2 font-mono-ui text-[9px] uppercase tracking-[0.16em] text-sidebar-foreground/35">Tasks / MVP</p>
       </div>
     </aside>
   );
@@ -225,11 +214,13 @@ function TaskForm({
   pending,
   onSubmit,
   onCancel,
+  compactCreate = false,
 }: {
   task?: Task;
   pending: boolean;
   onSubmit: (values: TaskFormValues) => void;
   onCancel?: () => void;
+  compactCreate?: boolean;
 }) {
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
@@ -245,56 +236,86 @@ function TaskForm({
     },
   });
 
+  const [showDetails, setShowDetails] = useState(Boolean(task));
+  const titleField = (
+    <FormField control={form.control} name="title" render={({ field }) => (
+      <FormItem className={compactCreate ? 'min-w-0 flex-1' : undefined}>
+        <FormLabel className={compactCreate ? 'sr-only' : 'text-xs font-semibold text-foreground'}>{compactCreate ? 'Task title' : 'What do you want to work on?'}</FormLabel>
+        <FormControl><input {...field} autoFocus={!task} maxLength={200} placeholder={compactCreate ? 'What needs to be done?' : 'A clear next action'} data-testid="input-task-title" className={`flex w-full border border-input bg-background/70 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/15 ${compactCreate ? 'h-11 rounded-lg px-3.5' : 'h-12 rounded-xl px-4'}`} /></FormControl>
+        <FormMessage />
+      </FormItem>
+    )} />
+  );
+  const detailFields = (
+    <>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {([
+          ['importance', 'Importance', 'How much does it matter?'],
+          ['urgency', 'Urgency', 'How soon does it matter?'],
+          ['energyRequired', 'Energy needed', 'How demanding will it feel?'],
+          ['interest', 'Interest', 'How much do you want to do it?'],
+        ] as const).map(([name, label, description]) => (
+          <FormField key={name} control={form.control} name={name} render={({ field }) => (
+            <FormItem>
+              <FormLabel className="text-xs font-semibold text-foreground">{label}</FormLabel>
+              <FormControl><input {...field} type="number" min={1} max={5} step={1} inputMode="numeric" data-testid={`input-task-${name}`} className="flex h-10 w-full rounded-lg border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+              {!compactCreate && <FormDescription className="text-[11px] leading-4">{description} 1–5.</FormDescription>}
+              <FormMessage />
+            </FormItem>
+          )} />
+        ))}
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <FormField control={form.control} name="estimatedMinutes" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs font-semibold text-foreground">Estimated minutes</FormLabel>
+            <FormControl><input {...field} type="number" min={1} max={1440} step={1} inputMode="numeric" data-testid="input-task-estimated-minutes" className="flex h-10 w-full rounded-lg border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        <FormField control={form.control} name="deadline" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs font-semibold text-foreground">Deadline <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
+            <FormControl><input {...field} type="datetime-local" data-testid="input-task-deadline" className="flex h-10 w-full rounded-lg border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+      </div>
+      <FormField control={form.control} name="notes" render={({ field }) => (
+        <FormItem>
+          <FormLabel className="text-xs font-semibold text-foreground">Notes <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
+          <FormControl><textarea {...field} maxLength={2000} rows={2} placeholder="Anything that helps you start." data-testid="textarea-task-notes" className="w-full resize-none rounded-lg border border-input bg-background/70 px-3 py-2.5 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+          <FormMessage />
+        </FormItem>
+      )} />
+    </>
+  );
+
+  if (compactCreate) {
+    return (
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit((values) => onSubmit({ ...values, title: values.title.trim(), notes: values.notes.trim() }))} className="space-y-3" data-testid="form-create-task">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+            {titleField}
+            <button type="submit" disabled={pending} data-testid="button-save-task" className="min-h-11 rounded-lg bg-primary px-5 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60">
+              {pending ? 'Adding…' : 'Add'}
+            </button>
+          </div>
+          <button type="button" onClick={() => setShowDetails((open) => !open)} aria-expanded={showDetails} data-testid="button-toggle-task-details" className="text-[11px] font-semibold text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground">
+            {showDetails ? 'Hide details' : 'More details'}
+          </button>
+          {showDetails && <div className="rounded-lg border border-border/60 bg-background/35 p-3">{detailFields}</div>}
+          {form.formState.errors.root?.message && <p className="rounded-lg bg-destructive/[0.07] px-3 py-2.5 text-xs text-destructive" role="alert" data-testid="status-task-form-error">{form.formState.errors.root.message}</p>}
+        </form>
+      </Form>
+    );
+  }
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit((values) => onSubmit({ ...values, title: values.title.trim(), notes: values.notes.trim() }))} className="space-y-5" data-testid={task ? `form-edit-task-${task.id}` : 'form-create-task'}>
-        <FormField control={form.control} name="title" render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs font-semibold text-foreground">What do you want to work on?</FormLabel>
-            <FormControl><input {...field} autoFocus={!task} maxLength={200} placeholder="A clear next action" data-testid="input-task-title" className="flex h-12 w-full rounded-xl border border-input bg-background/70 px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
-        <div className="grid gap-4 sm:grid-cols-2">
-          {([
-            ['importance', 'Importance', 'How much does it matter?'],
-            ['urgency', 'Urgency', 'How soon does it matter?'],
-            ['energyRequired', 'Energy needed', 'How demanding will it feel?'],
-            ['interest', 'Interest', 'How much do you want to do it?'],
-          ] as const).map(([name, label, description]) => (
-            <FormField key={name} control={form.control} name={name} render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs font-semibold text-foreground">{label}</FormLabel>
-                <FormControl><input {...field} type="number" min={1} max={5} step={1} inputMode="numeric" data-testid={`input-task-${name}`} className="flex h-11 w-full rounded-xl border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
-                <FormDescription className="text-[11px] leading-4">{description} 1–5.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )} />
-          ))}
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField control={form.control} name="estimatedMinutes" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs font-semibold text-foreground">Estimated minutes</FormLabel>
-              <FormControl><input {...field} type="number" min={1} max={1440} step={1} inputMode="numeric" data-testid="input-task-estimated-minutes" className="flex h-11 w-full rounded-xl border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-          <FormField control={form.control} name="deadline" render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-xs font-semibold text-foreground">Deadline <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
-              <FormControl><input {...field} type="datetime-local" data-testid="input-task-deadline" className="flex h-11 w-full rounded-xl border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
-              <FormMessage />
-            </FormItem>
-          )} />
-        </div>
-        <FormField control={form.control} name="notes" render={({ field }) => (
-          <FormItem>
-            <FormLabel className="text-xs font-semibold text-foreground">Notes <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
-            <FormControl><textarea {...field} maxLength={2000} rows={3} placeholder="Anything that helps you start." data-testid="textarea-task-notes" className="w-full resize-none rounded-xl border border-input bg-background/70 px-4 py-3 text-sm leading-6 text-foreground outline-none placeholder:text-muted-foreground/65 focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
-            <FormMessage />
-          </FormItem>
-        )} />
+        {titleField}
+        {detailFields}
         {form.formState.errors.root?.message && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs text-destructive" role="alert" data-testid="status-task-form-error">{form.formState.errors.root.message}</p>}
         <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-5 sm:flex-row sm:justify-end">
           {onCancel && <button type="button" onClick={onCancel} disabled={pending} data-testid="button-cancel-task" className="min-h-11 rounded-full border border-border px-5 py-2 text-xs font-semibold text-muted-foreground hover:border-primary/45 hover:text-foreground disabled:opacity-50">Cancel</button>}
@@ -352,8 +373,8 @@ function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task
   };
 
   return (
-    <article className="group rounded-[20px] border border-border/70 bg-card/75 p-4 transition-transform hover:-translate-y-0.5 hover:border-primary/35" data-testid={`card-task-${task.id}`}>
-      <div className="flex items-start gap-3">
+    <article className="group border-b border-border/65 py-3 first:border-t" data-testid={`card-task-${task.id}`}>
+      <div className="flex min-w-0 items-center gap-2.5">
         <button
           type="button"
           onPointerDown={(event) => { event.preventDefault(); startHold(); }}
@@ -366,30 +387,26 @@ function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task
           aria-label={`Hold for 3 seconds to complete ${task.title}`}
           title={isHolding ? 'Keep holding to complete' : 'Hold for 3 seconds to complete'}
           data-testid={`button-complete-task-${task.id}`}
-          className={`relative mt-0.5 flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 text-transparent transition-colors disabled:opacity-40 ${isHolding ? 'border-primary bg-primary/10 text-primary' : 'border-primary/45 hover:bg-primary hover:text-primary-foreground'}`}
+          className={`relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 text-transparent transition-colors disabled:opacity-40 ${isHolding ? 'border-primary bg-primary/10 text-primary' : 'border-primary/45 hover:bg-primary hover:text-primary-foreground'}`}
         >
           <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-primary/80" style={{ width: `${holdProgress}%` }} />
-          <Check className="relative size-3.5" strokeWidth={2.4} />
+          <Check className="relative size-3" strokeWidth={2.4} />
         </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="text-[15px] font-semibold leading-5 text-foreground" data-testid={`text-task-title-${task.id}`}>{task.title}</h3>
-            <button type="button" onClick={onEdit} aria-label={`Edit ${task.title}`} data-testid={`button-edit-task-${task.id}`} className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-primary">
-              <Pencil className="size-3.5" strokeWidth={1.8} />
-            </button>
-          </div>
-          {task.notes && <p className="mt-1.5 text-xs leading-5 text-muted-foreground" data-testid={`text-task-notes-${task.id}`}>{task.notes}</p>}
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[11px] text-muted-foreground" data-testid={`meta-task-${task.id}`}>
-            <span className="inline-flex items-center gap-1.5 font-semibold text-foreground/75"><Flag className="size-3.5 text-primary" strokeWidth={1.8} />{task.importance + task.urgency}/10 priority</span>
-            <span className="inline-flex items-center gap-1.5"><Gauge className="size-3.5" strokeWidth={1.8} />Energy {task.energyRequired}/5</span>
-            <span>Interest {task.interest}/5</span>
-            <span className="inline-flex items-center gap-1.5"><Clock3 className="size-3.5" strokeWidth={1.8} />{task.estimatedMinutes} min</span>
-            {task.deadline && <span>Due {formatDeadline(task.deadline)}</span>}
+        <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+          <button type="button" onClick={onEdit} aria-label={`Edit ${task.title}`} data-testid={`button-edit-task-${task.id}`} className="min-w-0 truncate text-left text-sm font-semibold text-foreground hover:text-primary">
+            <span data-testid={`text-task-title-${task.id}`}>{task.title}</span>
+          </button>
+          <div className="flex min-w-0 shrink-0 items-center gap-2 overflow-hidden text-[10px] text-muted-foreground" data-testid={`meta-task-${task.id}`}>
+            <span title={`Estimated ${task.estimatedMinutes} minutes`}>{task.estimatedMinutes}m</span>
+            <span title={`Energy required ${task.energyRequired} out of 5`}>E{task.energyRequired}</span>
+            <span title={`Interest ${task.interest} out of 5`}>I{task.interest}</span>
+            <span title={`Priority ${task.importance + task.urgency} out of 10`}>P{task.importance + task.urgency}</span>
+            {task.deadline && <span title={`Deadline ${formatDeadline(task.deadline)}`}>Due {formatCompactDeadline(task.deadline)}</span>}
           </div>
         </div>
-      </div>
-      <div className="mt-4 flex justify-end border-t border-border/55 pt-3">
-        <button type="button" onClick={onArchive} disabled={pending} data-testid={`button-archive-task-${task.id}`} className="rounded-lg px-2 py-1.5 text-[10px] font-semibold text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:opacity-40">Archive</button>
+        <button type="button" onClick={onArchive} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-task-${task.id}`} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40">
+          <Archive className="size-3.5" strokeWidth={1.8} />
+        </button>
       </div>
     </article>
   );
@@ -397,38 +414,28 @@ function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task
 
 function MatrixTaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   return (
-    <button type="button" onClick={onEdit} className="w-full rounded-2xl border border-border/65 bg-background/60 p-3 text-left transition-transform hover:-translate-y-0.5 hover:border-primary/45" data-testid={`card-matrix-task-${task.id}`}>
-      <p className="truncate text-[13px] font-semibold text-foreground">{task.title}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
-        <span>{task.estimatedMinutes} min</span>
-        <span>Energy {task.energyRequired}/5</span>
-        <span>Interest {task.interest}/5</span>
-        {task.deadline && <span>Due {formatDeadline(task.deadline)}</span>}
-      </div>
+    <button type="button" onClick={onEdit} className="flex w-full items-center justify-between gap-3 border-b border-border/55 px-1 py-2 text-left text-xs transition-colors last:border-0 hover:text-primary" data-testid={`card-matrix-task-${task.id}`}>
+      <p className="min-w-0 truncate font-medium text-foreground">{task.title}</p>
+      <span className="shrink-0 text-[10px] text-muted-foreground" title={`Estimated ${task.estimatedMinutes} minutes, priority ${task.importance + task.urgency} out of 10`}>{task.estimatedMinutes}m · P{task.importance + task.urgency}</span>
     </button>
   );
 }
 
 function RecommendationCard({ rank, task, explanation, onEdit, onSchedule }: { rank: number; task: Task; explanation: string; onEdit: () => void; onSchedule: () => void }) {
   return (
-    <article className="w-full rounded-2xl border border-primary/20 bg-background/70 p-4 text-left transition-transform hover:-translate-y-0.5 hover:border-primary/45" data-testid={`card-recommendation-${task.id}`}>
-      <button type="button" onClick={onEdit} className="w-full text-left" data-testid={`button-edit-recommendation-${task.id}`}>
-        <div className="flex items-start gap-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">{rank}</span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-foreground">{task.title}</p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-muted-foreground">
-              <span>{task.estimatedMinutes} min</span>
-              <span>{quadrantTitle(task)}</span>
-            </div>
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">{explanation}</p>
+    <article className="border-b border-border/55 py-2.5 last:border-0" data-testid={`card-recommendation-${task.id}`}>
+      <div className="flex items-center gap-2.5">
+        <span className="w-4 shrink-0 text-sm font-semibold text-primary">{rank}</span>
+        <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left" data-testid={`button-edit-recommendation-${task.id}`}>
+          <div className="flex min-w-0 items-center gap-3">
+            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{task.title}</p>
+            <span className="shrink-0 text-[10px] text-muted-foreground">{task.estimatedMinutes}m · {quadrantTitle(task)}</span>
           </div>
-        </div>
-      </button>
-      <div className="mt-4 flex justify-end border-t border-border/55 pt-3">
-        <button type="button" onClick={onSchedule} data-testid={`button-schedule-task-${task.id}`} className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-[11px] font-bold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <Clock3 className="size-3.5" strokeWidth={1.9} />
-          Work on this
+          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{explanation}</p>
+        </button>
+        <button type="button" onClick={onSchedule} data-testid={`button-schedule-task-${task.id}`} className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-[10px] font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          <span className="hidden sm:inline">Work on this</span>
+          <span className="sm:hidden">Work</span>
         </button>
       </div>
     </article>
@@ -701,90 +708,76 @@ export default function TasksPage() {
 
   return (
     <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
-      <div className="pointer-events-none absolute -right-24 -top-28 size-[430px] rounded-full bg-accent/10 blur-3xl" />
       <div className="relative flex min-h-[100dvh]">
         <TaskRail />
-        <main className="min-w-0 flex-1 px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
-          <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
-            <div className="flex items-center gap-2"><ListTodo className="size-3.5 text-primary" /><span className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A short list for right now</span></div>
+        <main className="min-w-0 flex-1 px-5 pb-12 pt-5 sm:px-8 sm:pt-7 lg:px-10 lg:pb-14 lg:pt-8">
+          <header className="flex items-center justify-between border-b border-border/60 pb-3">
+            <div className="flex items-center gap-2"><ListTodo className="size-4 text-primary" /><span className="text-sm font-semibold text-foreground">Tasks</span></div>
             <Link href="/today" data-testid="link-tasks-back-today" className="hidden items-center rounded-full border border-border bg-card px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:border-primary/45 hover:text-primary sm:inline-flex">Today</Link>
           </header>
-          <div className="mt-9 max-w-[980px]">
-            <p className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">Tasks</p>
-            <h1 className="mt-3 max-w-[680px] font-display text-[clamp(2.7rem,6vw,5.4rem)] leading-[0.91] tracking-[-0.06em]">Choose what fits your energy.</h1>
-            <p className="mt-5 max-w-[620px] text-[15px] leading-7 text-muted-foreground">Keep the important things visible, then use interest and energy to choose a next step that feels possible.</p>
-          </div>
-          <div className="mt-8 grid max-w-[980px] gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <section className="rounded-[26px] border border-primary/20 bg-primary/[0.045] p-5 sm:p-7" data-testid="section-add-task">
-              <div className="mb-6 flex items-start gap-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Plus className="size-4" /></span>
-                <div><h2 className="font-display text-[26px] leading-none tracking-[-0.035em]">Add a task</h2><p className="mt-2 text-xs leading-5 text-muted-foreground">A few quick signals are enough for the first pass.</p></div>
-              </div>
-              <TaskForm pending={createTask.isPending} onSubmit={(values) => void create(values)} />
+          <div className="mt-5 max-w-[920px] space-y-5">
+            <section className="border-b border-border/60 pb-5" data-testid="section-add-task">
+              <TaskForm compactCreate pending={createTask.isPending} onSubmit={(values) => void create(values)} />
             </section>
-            <aside className="rounded-[26px] border border-border/70 bg-card/70 p-5 sm:p-6" data-testid="section-recommendations">
-              <div className="flex items-center gap-2"><Sparkles className="size-4 text-primary" /><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">A little direction</p></div>
-              <p className="mt-4 font-display text-[25px] leading-tight tracking-[-0.035em]">What should I work on?</p>
-              <p className="mt-3 text-xs leading-5 text-muted-foreground">Tell the list what fits right now. Gemini can help weigh the tradeoffs without changing your tasks.</p>
-              <div className="mt-5 grid grid-cols-2 gap-2">
-                <label className="text-[10px] font-semibold text-muted-foreground">
-                  <span className="mb-1.5 block">Minutes</span>
-                  <input type="number" min={1} max={1440} value={recommendationInputs.availableMinutes} onChange={(event) => setRecommendationInputs((current) => ({ ...current, availableMinutes: Math.max(1, Number(event.target.value) || 1) }))} data-testid="input-recommendation-minutes" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                </label>
-                <label className="text-[10px] font-semibold text-muted-foreground">
-                  <span className="mb-1.5 block">Energy</span>
-                  <input type="number" min={1} max={5} value={recommendationInputs.energy} onChange={(event) => setRecommendationInputs((current) => ({ ...current, energy: Math.min(5, Math.max(1, Number(event.target.value) || 1)) }))} data-testid="input-recommendation-energy" className="h-10 w-full rounded-xl border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                </label>
-              </div>
-              <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || recommendTask.isPending} data-testid="button-recommend-tasks" className="mt-4 min-h-11 w-full rounded-full bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45">{recommendTask.isPending ? 'Finding a good fit…' : 'WHAT SHOULD I WORK ON?'}</button>
-              {recommendTask.isPending ? (
-                 <p className="mt-4 rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground" role="status" data-testid="status-recommendations-loading">Comparing your active tasks with the time and energy you have right now…</p>
-              ) : recommendationRun ? (
-                <div className="mt-5 space-y-2" data-testid="list-recommendations">
-                   <div className="flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Your next three</p><span className="text-[10px] text-muted-foreground">{recommendationSource === 'gemini' ? 'AI-assisted' : 'Local ranking'} · {recommendationRun.availableMinutes} min / energy {recommendationRun.energy}</span></div>
-                   {recommendations.length ? recommendations.map((recommendation, index) => <RecommendationCard key={recommendation.task.id} rank={index + 1} task={recommendation.task} explanation={recommendation.explanation} onEdit={() => setEditingTask(recommendation.task)} onSchedule={() => setSchedulingTask(recommendation.task)} />) : <p className="rounded-2xl bg-secondary/65 px-4 py-4 text-xs leading-5 text-muted-foreground">Add an active task and I’ll help you choose a next step.</p>}
+            <section className="rounded-xl border border-border/70 bg-card/55 p-4" data-testid="section-recommendations">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <h2 className="text-base font-semibold text-foreground">What should I work on?</h2>
+                <div className="grid grid-cols-2 gap-2 sm:w-[220px]">
+                  <label className="text-[10px] font-semibold text-muted-foreground">
+                    <span className="mb-1 block">Available</span>
+                    <input type="number" min={1} max={1440} value={recommendationInputs.availableMinutes} onChange={(event) => setRecommendationInputs((current) => ({ ...current, availableMinutes: Math.max(1, Number(event.target.value) || 1) }))} data-testid="input-recommendation-minutes" className="h-9 w-full rounded-lg border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                  </label>
+                  <label className="text-[10px] font-semibold text-muted-foreground">
+                    <span className="mb-1 block">Energy</span>
+                    <input type="number" min={1} max={5} value={recommendationInputs.energy} onChange={(event) => setRecommendationInputs((current) => ({ ...current, energy: Math.min(5, Math.max(1, Number(event.target.value) || 1)) }))} data-testid="input-recommendation-energy" className="h-9 w-full rounded-lg border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                  </label>
                 </div>
-              ) : (
-                 <p className="mt-4 text-[11px] leading-5 text-muted-foreground">The top three will balance priority with time, energy, and deadline proximity.</p>
-              )}
-              <div className="mt-6 grid grid-cols-2 gap-2 text-center">
-                <div className="rounded-2xl bg-secondary/65 px-3 py-3"><p className="font-display text-2xl">{activeTasks.length}</p><p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-muted-foreground">to choose from</p></div>
-                <div className="rounded-2xl bg-secondary/65 px-3 py-3"><p className="font-display text-2xl">{completedTasks.length}</p><p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-muted-foreground">completed</p></div>
               </div>
-            </aside>
-          </div>
-          {list.isLoading ? (
-            <div className="mt-10 max-w-[980px] space-y-3" aria-label="Loading tasks" data-testid="status-tasks-loading">{[1, 2, 3].map((item) => <div key={item} className="h-28 animate-pulse rounded-[20px] bg-muted/70" />)}</div>
+              <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || recommendTask.isPending} data-testid="button-recommend-tasks" className="mt-3 min-h-10 w-full rounded-lg bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">{recommendTask.isPending ? 'Finding a good fit…' : 'WHAT SHOULD I WORK ON?'}</button>
+              {recommendTask.isPending ? (
+                <p className="mt-3 text-[11px] text-muted-foreground" role="status" data-testid="status-recommendations-loading">Comparing active tasks with your time and energy…</p>
+              ) : recommendationRun ? (
+                <div className="mt-3" data-testid="list-recommendations">
+                  <div className="mb-1 flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">Next three</p><span className="text-[10px] text-muted-foreground">{recommendationSource === 'gemini' ? 'AI-assisted' : 'Local ranking'} · {recommendationRun.availableMinutes}m / E{recommendationRun.energy}</span></div>
+                  {recommendations.length ? recommendations.map((recommendation, index) => <RecommendationCard key={recommendation.task.id} rank={index + 1} task={recommendation.task} explanation={recommendation.explanation} onEdit={() => setEditingTask(recommendation.task)} onSchedule={() => setSchedulingTask(recommendation.task)} />) : <p className="py-2 text-[11px] text-muted-foreground">No active task recommendations yet.</p>}
+                </div>
+              ) : null}
+            </section>
+            {list.isLoading ? (
+              <div className="space-y-2" aria-label="Loading tasks" data-testid="status-tasks-loading">{[1, 2, 3].map((item) => <div key={item} className="h-11 animate-pulse rounded-lg bg-muted/70" />)}</div>
           ) : list.isError ? (
-            <div className="mt-10 max-w-[980px] rounded-[24px] border border-destructive/25 bg-destructive/[0.06] px-6 py-12 text-center" role="alert" data-testid="status-tasks-error">
-              <p className="font-display text-[28px]">Tasks are tucked away.</p><p className="mt-2 text-sm text-muted-foreground">{errorMessage(list.error)}</p>
-              <button type="button" onClick={() => void list.refetch()} data-testid="button-retry-tasks" className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full border border-destructive/30 px-4 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10"><RotateCcw className="size-3.5" /> Try again</button>
+            <div className="rounded-xl border border-destructive/25 bg-destructive/[0.06] px-4 py-6" role="alert" data-testid="status-tasks-error">
+              <p className="text-sm font-semibold">Tasks are unavailable.</p><p className="mt-1 text-xs text-muted-foreground">{errorMessage(list.error)}</p>
+              <button type="button" onClick={() => void list.refetch()} data-testid="button-retry-tasks" className="mt-4 inline-flex items-center gap-2 rounded-lg border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10"><RotateCcw className="size-3.5" /> Try again</button>
             </div>
           ) : (
-            <div className="mt-10 max-w-[980px]">
-              <section data-testid="section-eisenhower">
-                <div className="mb-4 flex items-end justify-between gap-3"><div><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">See the shape of your list</p><h2 className="mt-2 font-display text-[30px] leading-none tracking-[-0.04em]">Eisenhower matrix</h2></div><span className="text-xs text-muted-foreground">Importance and urgency, 1–5</span></div>
-                <div className="grid gap-3 md:grid-cols-2">
+            <>
+              <section data-testid="section-active-tasks">
+                <div className="mb-2 flex items-center justify-between gap-3"><h2 className="text-base font-semibold text-foreground">Active tasks</h2><span className="text-[11px] text-muted-foreground">{activeTasks.length}</span></div>
+                {activeTasks.length === 0 ? (
+                  <div className="border-y border-dashed border-border/70 px-1 py-5 text-xs text-muted-foreground" data-testid="status-tasks-empty">No active tasks.</div>
+                ) : <div>{activeTasks.map((task) => <TaskItem key={task.id} task={task} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
+              </section>
+              <section className="border-t border-border/60 pt-5" data-testid="section-eisenhower">
+                <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-foreground">Priority matrix</h2><span className="text-[10px] text-muted-foreground">Importance + urgency</span></div>
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                   {QUADRANTS.map((quadrant) => (
-                    <div key={quadrant.key} className={`rounded-[22px] border p-4 ${quadrant.tone}`} data-testid={`quadrant-${quadrant.key}`}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div><h3 className="text-sm font-semibold text-foreground">{quadrant.title}</h3><p className="mt-1 font-mono-ui text-[9px] uppercase tracking-[0.15em] text-muted-foreground">{quadrant.description}</p></div>
-                        <span className="flex size-7 items-center justify-center rounded-full bg-background/75 text-xs font-semibold text-foreground">{matrixTasks[quadrant.key].length}</span>
+                    <div key={quadrant.key} className={`rounded-lg border p-2.5 ${quadrant.tone}`} data-testid={`quadrant-${quadrant.key}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="truncate text-xs font-semibold text-foreground" title={quadrant.description}>{quadrant.title}</h3>
+                        <span className="text-[10px] font-semibold text-muted-foreground">{matrixTasks[quadrant.key].length}</span>
                       </div>
-                      <div className="mt-4 space-y-2">
-                        {matrixTasks[quadrant.key].length ? matrixTasks[quadrant.key].map((task) => <MatrixTaskCard key={task.id} task={task} onEdit={() => setEditingTask(task)} />) : <p className="rounded-2xl border border-dashed border-border/60 px-3 py-4 text-xs text-muted-foreground">No active tasks here yet.</p>}
+                      <div className="mt-1">
+                        {matrixTasks[quadrant.key].length ? matrixTasks[quadrant.key].map((task) => <MatrixTaskCard key={task.id} task={task} onEdit={() => setEditingTask(task)} />) : <p className="py-2 text-[10px] text-muted-foreground">Empty</p>}
                       </div>
                     </div>
                   ))}
                 </div>
               </section>
-              <div className="mb-4 mt-12 flex items-end justify-between gap-3"><div><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">Active and inbox</p><h2 className="mt-2 font-display text-[30px] leading-none tracking-[-0.04em]">{activeTasks.length ? 'What could fit next?' : 'Your list is clear.'}</h2></div><span className="text-xs text-muted-foreground">{activeTasks.length} {activeTasks.length === 1 ? 'task' : 'tasks'}</span></div>
-              {activeTasks.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-primary/30 bg-primary/[0.045] px-6 py-14 text-center" data-testid="status-tasks-empty"><div className="mx-auto flex size-14 items-center justify-center rounded-full bg-secondary text-primary"><Check className="size-6" /></div><p className="mt-5 font-display text-[29px]">Nothing asking for you yet.</p><p className="mx-auto mt-2 max-w-[360px] text-sm leading-6 text-muted-foreground">Add one task above, or let this be enough for now.</p></div>
-              ) : <div className="space-y-3">{activeTasks.map((task) => <TaskItem key={task.id} task={task} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
-              {completedTasks.length > 0 && <div className="mt-10 border-t border-border/60 pt-7"><p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Completed</p><div className="mt-3 space-y-2">{completedTasks.map((task) => <div key={task.id} className="flex items-center gap-3 rounded-2xl border border-border/60 bg-card/50 px-4 py-3" data-testid={`row-completed-task-${task.id}`}><button type="button" onClick={() => void restore(task)} disabled={pending} aria-label={`Restore ${task.title}`} data-testid={`button-restore-task-${task.id}`} className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-40"><Check className="size-3.5" /></button><p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{task.title}</p><button type="button" onClick={() => void archive(task)} disabled={pending} data-testid={`button-archive-completed-task-${task.id}`} className="text-[10px] font-semibold text-muted-foreground hover:text-destructive disabled:opacity-40">Archive</button></div>)}</div></div>}
-            </div>
+              {completedTasks.length > 0 && <section className="border-t border-border/60 pt-5" data-testid="section-completed-tasks"><div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-semibold text-muted-foreground">Completed</h2><span className="text-[10px] text-muted-foreground">{completedTasks.length}</span></div><div>{completedTasks.map((task) => <div key={task.id} className="flex items-center gap-2.5 border-b border-border/55 py-2.5 last:border-0" data-testid={`row-completed-task-${task.id}`}><button type="button" onClick={() => void restore(task)} disabled={pending} aria-label={`Restore ${task.title}`} data-testid={`button-restore-task-${task.id}`} className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-40"><Check className="size-3" /></button><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{task.title}</p><button type="button" onClick={() => void archive(task)} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-completed-task-${task.id}`} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"><Archive className="size-3.5" /></button></div>)}</div></section>}
+            </>
           )}
+          </div>
         </main>
       </div>
       {notice && <div className={`fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)] ${notice.tone === 'error' ? 'border-destructive/25' : 'border-primary/25'}`} role="status" data-testid="status-tasks-notice"><span className={`flex size-7 shrink-0 items-center justify-center rounded-full ${notice.tone === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>{notice.tone === 'error' ? <X className="size-3.5" /> : <Check className="size-3.5" />}</span><p className="min-w-0 flex-1 text-xs font-semibold text-foreground">{notice.text}</p><button type="button" onClick={() => setNotice(null)} aria-label="Dismiss task message" data-testid="button-dismiss-tasks-notice" className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="size-3.5" /></button></div>}
