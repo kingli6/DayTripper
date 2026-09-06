@@ -21,6 +21,7 @@ export * from "./activities";
 export * from "./activityChanges";
 export * from "./adminActions";
 export * from "./appMetadata";
+export * from "./execution";
 export * from "./pushSubscriptions";
 export * from "./reminderDeliveries";
 export * from "./retention";

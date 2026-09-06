@@ -161,6 +161,48 @@ from the responsive positioning and sizing corrections above.
 **Preserved:** Tasks, Today, Practices, Tasks Matrix, planning/replanning,
 account functionality, Operations, authentication, APIs, and database behavior.
 
+## Personalized execution system — Step 1
+
+**Status:** Backend foundation implemented and locally verified on 2026-09-06.
+
+**Completed:**
+
+- Added user-owned `execution_observations` records for evidence-based findings,
+  including dimension, finding, optional state context, confidence, evidence
+  count, source, and timestamps.
+- Added one user-owned `execution_state` record for temporary low/normal/high
+  energy and stress, optional available minutes, and capture time. Temporary
+  state is separate from observations.
+- Added authenticated owner-scoped endpoints:
+  - `GET/POST /api/execution/observations`
+  - `PATCH /api/execution/observations/:observationId`
+  - `GET/PUT /api/execution/state`
+- Added validation for state contexts, low/normal/high state levels,
+  confidence range, required strings, non-negative whole-number evidence counts,
+  and non-negative whole-number available minutes up to 1440.
+- Added append-only migration `0017_even_colossus` and applied only its two new
+  table definitions to development. Historical migrations remain unchanged.
+- Regenerated OpenAPI Zod schemas and React client contracts.
+
+**Verified:** Full workspace typecheck, API build, web production build,
+OpenAPI codegen, development database table/column inspection, migration
+history entry, API health 200, signed-out execution endpoint 401 responses,
+workflow restarts, and `git diff --check`. No automated test script is
+configured in the workspace.
+
+**Database note:** The development database has an empty historical Drizzle
+ledger because it was created by schema push. The normal migration runner would
+replay old migrations and fail, so the new migration was applied transactionally
+by itself and its hash was recorded. This follows the existing safe migration
+boundary; no force push was used.
+
+**Not yet verified:** Authenticated create/update/list persistence and
+cross-account isolation through a signed-in browser/API session.
+
+**Do not start:** UI, settings, profile, onboarding, dashboard, personality
+surfaces, Tasks/Today/Practices changes, recommendation changes, or Gemini
+integration as part of this backend-only step.
+
 ## Tasks MVP foundation
 
 **Status:** Implemented and locally verified on 2026-09-05.

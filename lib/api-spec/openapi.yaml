@@ -20,6 +20,8 @@ tags:
     description: Private task operations
   - name: retention
     description: Private practice retention tracking operations
+  - name: execution
+    description: Private execution observation and current-state operations
   - name: admin
     description: Protected development and operations diagnostics
 paths:
@@ -580,6 +582,114 @@ paths:
           description: Invalid retention observation
         "404":
           description: Retention practice not found
+  /execution/observations:
+    get:
+      operationId: listExecutionObservations
+      tags: [execution]
+      summary: List the user's execution observations
+      description: Returns evidence-based observations owned by the authenticated user
+      responses:
+        "200":
+          description: Execution observations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExecutionObservation"
+        "401":
+          description: Authentication required
+    post:
+      operationId: createExecutionObservation
+      tags: [execution]
+      summary: Create an execution observation
+      description: Records an evidence-based observation about how the authenticated user tends to work
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutionObservationInput"
+      responses:
+        "201":
+          description: Execution observation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionObservation"
+        "400":
+          description: Invalid execution observation
+        "401":
+          description: Authentication required
+  /execution/observations/{observationId}:
+    patch:
+      operationId: updateExecutionObservation
+      tags: [execution]
+      summary: Update an execution observation
+      parameters:
+        - name: observationId
+          in: path
+          required: true
+          schema:
+            type: number
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutionObservationUpdate"
+      responses:
+        "200":
+          description: Execution observation updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionObservation"
+        "400":
+          description: Invalid execution observation
+        "401":
+          description: Authentication required
+        "404":
+          description: Execution observation not found
+  /execution/state:
+    get:
+      operationId: getExecutionState
+      tags: [execution]
+      summary: Get the user's current execution state
+      responses:
+        "200":
+          description: Current execution state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionState"
+        "401":
+          description: Authentication required
+        "404":
+          description: Current execution state has not been captured
+    put:
+      operationId: setExecutionState
+      tags: [execution]
+      summary: Set or update the user's current execution state
+      description: Replaces only the supplied temporary state values and refreshes the capture time
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutionStateInput"
+      responses:
+        "200":
+          description: Current execution state saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionState"
+        "400":
+          description: Invalid execution state
+        "401":
+          description: Authentication required
   /admin/overview:
     get:
       operationId: getAdminOverview
@@ -1585,6 +1695,144 @@ components:
       required:
         - recordedDate
         - value
+    ExecutionStateContext:
+      type: string
+      enum: [baseline, relaxed, normal, stressed, overloaded]
+    ExecutionStateLevel:
+      type: string
+      enum: [low, normal, high]
+    ExecutionObservation:
+      type: object
+      properties:
+        id:
+          type: number
+          minimum: 1
+        dimension:
+          type: string
+          minLength: 1
+          maxLength: 120
+        finding:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        stateContext:
+          type: ["string", "null"]
+          enum: [baseline, relaxed, normal, stressed, overloaded, null]
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        evidenceCount:
+          type: number
+          minimum: 0
+        source:
+          type: string
+          minLength: 1
+          maxLength: 120
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - dimension
+        - finding
+        - stateContext
+        - confidence
+        - evidenceCount
+        - source
+        - createdAt
+        - updatedAt
+    ExecutionObservationInput:
+      type: object
+      properties:
+        dimension:
+          type: string
+          minLength: 1
+          maxLength: 120
+        finding:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        stateContext:
+          type: ["string", "null"]
+          enum: [baseline, relaxed, normal, stressed, overloaded, null]
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        evidenceCount:
+          type: number
+          minimum: 0
+        source:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required:
+        - dimension
+        - finding
+        - stateContext
+        - confidence
+        - evidenceCount
+        - source
+    ExecutionObservationUpdate:
+      type: object
+      properties:
+        dimension:
+          type: string
+          minLength: 1
+          maxLength: 120
+        finding:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        stateContext:
+          type: ["string", "null"]
+          enum: [baseline, relaxed, normal, stressed, overloaded, null]
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        evidenceCount:
+          type: number
+          minimum: 0
+        source:
+          type: string
+          minLength: 1
+          maxLength: 120
+    ExecutionState:
+      type: object
+      properties:
+        energy:
+          type: ["string", "null"]
+          enum: [low, normal, high, null]
+        stress:
+          type: ["string", "null"]
+          enum: [low, normal, high, null]
+        availableMinutes:
+          type: ["number", "null"]
+          minimum: 0
+          maximum: 1440
+        capturedAt:
+          type: string
+      required:
+        - energy
+        - stress
+        - availableMinutes
+        - capturedAt
+    ExecutionStateInput:
+      type: object
+      properties:
+        energy:
+          type: ["string", "null"]
+          enum: [low, normal, high, null]
+        stress:
+          type: ["string", "null"]
+          enum: [low, normal, high, null]
+        availableMinutes:
+          type: ["number", "null"]
+          minimum: 0
+          maximum: 1440
     AdminTableMetric:
       type: object
       properties:

@@ -31,6 +31,11 @@ import type {
   AiStatus,
   ApplyReplanningProposalRequest,
   ApplyReplanningResult,
+  ExecutionObservation,
+  ExecutionObservationInput,
+  ExecutionObservationUpdate,
+  ExecutionState,
+  ExecutionStateInput,
   HealthStatus,
   ListActivitiesParams,
   ListActivityChangesParams,
@@ -2008,6 +2013,377 @@ export const useCreateRetentionObservation = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateRetentionObservationMutationOptions(options));
+    }
+
+export const getListExecutionObservationsUrl = () => {
+
+
+
+
+  return `/api/execution/observations`
+}
+
+/**
+ * Returns evidence-based observations owned by the authenticated user
+ * @summary List the user's execution observations
+ */
+export const listExecutionObservations = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExecutionObservation[]> => {
+
+  return customFetch<ExecutionObservation[]>(getListExecutionObservationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListExecutionObservationsQueryKey = () => {
+    return [
+    `/api/execution/observations`
+    ] as const;
+    }
+
+
+export const getListExecutionObservationsQueryOptions = <TData = Awaited<ReturnType<typeof listExecutionObservations>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExecutionObservations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListExecutionObservationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listExecutionObservations>>> = ({ signal }) => listExecutionObservations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listExecutionObservations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListExecutionObservationsQueryResult = NonNullable<Awaited<ReturnType<typeof listExecutionObservations>>>
+export type ListExecutionObservationsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List the user's execution observations
+ */
+
+export function useListExecutionObservations<TData = Awaited<ReturnType<typeof listExecutionObservations>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listExecutionObservations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListExecutionObservationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateExecutionObservationUrl = () => {
+
+
+
+
+  return `/api/execution/observations`
+}
+
+/**
+ * Records an evidence-based observation about how the authenticated user tends to work
+ * @summary Create an execution observation
+ */
+export const createExecutionObservation = async (executionObservationInput: ExecutionObservationInput, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionObservation> => {
+
+  return customFetch<ExecutionObservation>(getCreateExecutionObservationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(executionObservationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateExecutionObservationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExecutionObservation>>, TError,{data: BodyType<ExecutionObservationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createExecutionObservation>>, TError,{data: BodyType<ExecutionObservationInput>}, TContext> => {
+
+const mutationKey = ['createExecutionObservation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createExecutionObservation>>, {data: BodyType<ExecutionObservationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createExecutionObservation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateExecutionObservationMutationResult = NonNullable<Awaited<ReturnType<typeof createExecutionObservation>>>
+    export type CreateExecutionObservationMutationBody = BodyType<ExecutionObservationInput>
+    export type CreateExecutionObservationMutationError = ErrorType<void>
+
+    /**
+ * @summary Create an execution observation
+ */
+export const useCreateExecutionObservation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExecutionObservation>>, TError,{data: BodyType<ExecutionObservationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createExecutionObservation>>,
+        TError,
+        {data: BodyType<ExecutionObservationInput>},
+        TContext
+      > => {
+      return useMutation(getCreateExecutionObservationMutationOptions(options));
+    }
+
+export const getUpdateExecutionObservationUrl = (observationId: number,) => {
+
+
+
+
+  return `/api/execution/observations/${observationId}`
+}
+
+/**
+ * @summary Update an execution observation
+ */
+export const updateExecutionObservation = async (observationId: number,
+    executionObservationUpdate: ExecutionObservationUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionObservation> => {
+
+  return customFetch<ExecutionObservation>(getUpdateExecutionObservationUrl(observationId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(executionObservationUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateExecutionObservationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExecutionObservation>>, TError,{observationId: number;data: BodyType<ExecutionObservationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateExecutionObservation>>, TError,{observationId: number;data: BodyType<ExecutionObservationUpdate>}, TContext> => {
+
+const mutationKey = ['updateExecutionObservation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateExecutionObservation>>, {observationId: number;data: BodyType<ExecutionObservationUpdate>}> = (props) => {
+          const {observationId,data} = props ?? {};
+
+          return  updateExecutionObservation(observationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateExecutionObservationMutationResult = NonNullable<Awaited<ReturnType<typeof updateExecutionObservation>>>
+    export type UpdateExecutionObservationMutationBody = BodyType<ExecutionObservationUpdate>
+    export type UpdateExecutionObservationMutationError = ErrorType<void>
+
+    /**
+ * @summary Update an execution observation
+ */
+export const useUpdateExecutionObservation = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateExecutionObservation>>, TError,{observationId: number;data: BodyType<ExecutionObservationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateExecutionObservation>>,
+        TError,
+        {observationId: number;data: BodyType<ExecutionObservationUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateExecutionObservationMutationOptions(options));
+    }
+
+export const getGetExecutionStateUrl = () => {
+
+
+
+
+  return `/api/execution/state`
+}
+
+/**
+ * @summary Get the user's current execution state
+ */
+export const getExecutionState = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExecutionState> => {
+
+  return customFetch<ExecutionState>(getGetExecutionStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExecutionStateQueryKey = () => {
+    return [
+    `/api/execution/state`
+    ] as const;
+    }
+
+
+export const getGetExecutionStateQueryOptions = <TData = Awaited<ReturnType<typeof getExecutionState>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExecutionState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExecutionStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExecutionState>>> = ({ signal }) => getExecutionState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExecutionState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExecutionStateQueryResult = NonNullable<Awaited<ReturnType<typeof getExecutionState>>>
+export type GetExecutionStateQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the user's current execution state
+ */
+
+export function useGetExecutionState<TData = Awaited<ReturnType<typeof getExecutionState>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExecutionState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExecutionStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSetExecutionStateUrl = () => {
+
+
+
+
+  return `/api/execution/state`
+}
+
+/**
+ * Replaces only the supplied temporary state values and refreshes the capture time
+ * @summary Set or update the user's current execution state
+ */
+export const setExecutionState = async (executionStateInput: ExecutionStateInput, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionState> => {
+
+  return customFetch<ExecutionState>(getSetExecutionStateUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(executionStateInput)
+  }
+);}
+
+
+
+
+
+export const getSetExecutionStateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setExecutionState>>, TError,{data: BodyType<ExecutionStateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setExecutionState>>, TError,{data: BodyType<ExecutionStateInput>}, TContext> => {
+
+const mutationKey = ['setExecutionState'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setExecutionState>>, {data: BodyType<ExecutionStateInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setExecutionState(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetExecutionStateMutationResult = NonNullable<Awaited<ReturnType<typeof setExecutionState>>>
+    export type SetExecutionStateMutationBody = BodyType<ExecutionStateInput>
+    export type SetExecutionStateMutationError = ErrorType<void>
+
+    /**
+ * @summary Set or update the user's current execution state
+ */
+export const useSetExecutionState = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setExecutionState>>, TError,{data: BodyType<ExecutionStateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setExecutionState>>,
+        TError,
+        {data: BodyType<ExecutionStateInput>},
+        TContext
+      > => {
+      return useMutation(getSetExecutionStateMutationOptions(options));
     }
 
 export const getGetAdminOverviewUrl = () => {

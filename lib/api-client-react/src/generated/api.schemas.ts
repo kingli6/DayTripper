@@ -904,6 +904,228 @@ export interface RetentionObservationInput {
   context?: string | null;
 }
 
+export type ExecutionStateContext = typeof ExecutionStateContext[keyof typeof ExecutionStateContext];
+
+
+export const ExecutionStateContext = {
+  baseline: 'baseline',
+  relaxed: 'relaxed',
+  normal: 'normal',
+  stressed: 'stressed',
+  overloaded: 'overloaded',
+} as const;
+
+export type ExecutionStateLevel = typeof ExecutionStateLevel[keyof typeof ExecutionStateLevel];
+
+
+export const ExecutionStateLevel = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ExecutionObservationStateContext = typeof ExecutionObservationStateContext[keyof typeof ExecutionObservationStateContext] | null;
+
+
+export const ExecutionObservationStateContext = {
+  baseline: 'baseline',
+  relaxed: 'relaxed',
+  normal: 'normal',
+  stressed: 'stressed',
+  overloaded: 'overloaded',
+} as const;
+
+export interface ExecutionObservation {
+  /** @minimum 1 */
+  id: number;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  dimension: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  finding: string;
+  /** @nullable */
+  stateContext: ExecutionObservationStateContext;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  confidence: number;
+  /** @minimum 0 */
+  evidenceCount: number;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  source: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * @nullable
+ */
+export type ExecutionObservationInputStateContext = typeof ExecutionObservationInputStateContext[keyof typeof ExecutionObservationInputStateContext] | null;
+
+
+export const ExecutionObservationInputStateContext = {
+  baseline: 'baseline',
+  relaxed: 'relaxed',
+  normal: 'normal',
+  stressed: 'stressed',
+  overloaded: 'overloaded',
+} as const;
+
+export interface ExecutionObservationInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  dimension: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  finding: string;
+  /** @nullable */
+  stateContext: ExecutionObservationInputStateContext;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  confidence: number;
+  /** @minimum 0 */
+  evidenceCount: number;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  source: string;
+}
+
+/**
+ * @nullable
+ */
+export type ExecutionObservationUpdateStateContext = typeof ExecutionObservationUpdateStateContext[keyof typeof ExecutionObservationUpdateStateContext] | null;
+
+
+export const ExecutionObservationUpdateStateContext = {
+  baseline: 'baseline',
+  relaxed: 'relaxed',
+  normal: 'normal',
+  stressed: 'stressed',
+  overloaded: 'overloaded',
+} as const;
+
+export interface ExecutionObservationUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  dimension?: string;
+  /**
+     * @minLength 1
+     * @maxLength 1000
+     */
+  finding?: string;
+  /** @nullable */
+  stateContext?: ExecutionObservationUpdateStateContext;
+  /**
+     * @minimum 0
+     * @maximum 1
+     */
+  confidence?: number;
+  /** @minimum 0 */
+  evidenceCount?: number;
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  source?: string;
+}
+
+/**
+ * @nullable
+ */
+export type ExecutionStateEnergy = typeof ExecutionStateEnergy[keyof typeof ExecutionStateEnergy] | null;
+
+
+export const ExecutionStateEnergy = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ExecutionStateStress = typeof ExecutionStateStress[keyof typeof ExecutionStateStress] | null;
+
+
+export const ExecutionStateStress = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+} as const;
+
+export interface ExecutionState {
+  /** @nullable */
+  energy: ExecutionStateEnergy;
+  /** @nullable */
+  stress: ExecutionStateStress;
+  /**
+     * @minimum 0
+     * @maximum 1440
+     * @nullable
+     */
+  availableMinutes: number | null;
+  capturedAt: string;
+}
+
+/**
+ * @nullable
+ */
+export type ExecutionStateInputEnergy = typeof ExecutionStateInputEnergy[keyof typeof ExecutionStateInputEnergy] | null;
+
+
+export const ExecutionStateInputEnergy = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ExecutionStateInputStress = typeof ExecutionStateInputStress[keyof typeof ExecutionStateInputStress] | null;
+
+
+export const ExecutionStateInputStress = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+} as const;
+
+export interface ExecutionStateInput {
+  /** @nullable */
+  energy?: ExecutionStateInputEnergy;
+  /** @nullable */
+  stress?: ExecutionStateInputStress;
+  /**
+     * @minimum 0
+     * @maximum 1440
+     * @nullable
+     */
+  availableMinutes?: number | null;
+}
+
 export interface AdminTableMetric {
   tableName: string;
   rowCount: number;

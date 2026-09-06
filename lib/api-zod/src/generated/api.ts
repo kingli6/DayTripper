@@ -1028,6 +1028,194 @@ export const CreateRetentionObservationResponse = zod.object({
 
 
 /**
+ * Returns evidence-based observations owned by the authenticated user
+ * @summary List the user's execution observations
+ */
+
+export const listExecutionObservationsResponseDimensionMax = 120;
+
+export const listExecutionObservationsResponseFindingMax = 1000;
+
+export const listExecutionObservationsResponseConfidenceMin = 0;
+export const listExecutionObservationsResponseConfidenceMax = 1;
+
+export const listExecutionObservationsResponseEvidenceCountMin = 0;
+
+export const listExecutionObservationsResponseSourceMax = 120;
+
+
+
+export const ListExecutionObservationsResponseItem = zod.object({
+  "id": zod.number().min(1),
+  "dimension": zod.string().min(1).max(listExecutionObservationsResponseDimensionMax),
+  "finding": zod.string().min(1).max(listExecutionObservationsResponseFindingMax),
+  "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullable(),
+  "confidence": zod.number().min(listExecutionObservationsResponseConfidenceMin).max(listExecutionObservationsResponseConfidenceMax),
+  "evidenceCount": zod.number().min(listExecutionObservationsResponseEvidenceCountMin),
+  "source": zod.string().min(1).max(listExecutionObservationsResponseSourceMax),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListExecutionObservationsResponse = zod.array(ListExecutionObservationsResponseItem)
+
+
+/**
+ * Records an evidence-based observation about how the authenticated user tends to work
+ * @summary Create an execution observation
+ */
+export const createExecutionObservationBodyDimensionMax = 120;
+
+export const createExecutionObservationBodyFindingMax = 1000;
+
+export const createExecutionObservationBodyConfidenceMin = 0;
+export const createExecutionObservationBodyConfidenceMax = 1;
+
+export const createExecutionObservationBodyEvidenceCountMin = 0;
+
+export const createExecutionObservationBodySourceMax = 120;
+
+
+
+export const CreateExecutionObservationBody = zod.object({
+  "dimension": zod.string().min(1).max(createExecutionObservationBodyDimensionMax),
+  "finding": zod.string().min(1).max(createExecutionObservationBodyFindingMax),
+  "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullable(),
+  "confidence": zod.number().min(createExecutionObservationBodyConfidenceMin).max(createExecutionObservationBodyConfidenceMax),
+  "evidenceCount": zod.number().min(createExecutionObservationBodyEvidenceCountMin),
+  "source": zod.string().min(1).max(createExecutionObservationBodySourceMax)
+})
+
+
+export const createExecutionObservationResponseDimensionMax = 120;
+
+export const createExecutionObservationResponseFindingMax = 1000;
+
+export const createExecutionObservationResponseConfidenceMin = 0;
+export const createExecutionObservationResponseConfidenceMax = 1;
+
+export const createExecutionObservationResponseEvidenceCountMin = 0;
+
+export const createExecutionObservationResponseSourceMax = 120;
+
+
+
+export const CreateExecutionObservationResponse = zod.object({
+  "id": zod.number().min(1),
+  "dimension": zod.string().min(1).max(createExecutionObservationResponseDimensionMax),
+  "finding": zod.string().min(1).max(createExecutionObservationResponseFindingMax),
+  "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullable(),
+  "confidence": zod.number().min(createExecutionObservationResponseConfidenceMin).max(createExecutionObservationResponseConfidenceMax),
+  "evidenceCount": zod.number().min(createExecutionObservationResponseEvidenceCountMin),
+  "source": zod.string().min(1).max(createExecutionObservationResponseSourceMax),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update an execution observation
+ */
+
+
+
+export const UpdateExecutionObservationParams = zod.object({
+  "observationId": zod.coerce.number().min(1)
+})
+
+export const updateExecutionObservationBodyDimensionMax = 120;
+
+export const updateExecutionObservationBodyFindingMax = 1000;
+
+export const updateExecutionObservationBodyConfidenceMin = 0;
+export const updateExecutionObservationBodyConfidenceMax = 1;
+
+export const updateExecutionObservationBodyEvidenceCountMin = 0;
+
+export const updateExecutionObservationBodySourceMax = 120;
+
+
+
+export const UpdateExecutionObservationBody = zod.object({
+  "dimension": zod.string().min(1).max(updateExecutionObservationBodyDimensionMax).optional(),
+  "finding": zod.string().min(1).max(updateExecutionObservationBodyFindingMax).optional(),
+  "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullish(),
+  "confidence": zod.number().min(updateExecutionObservationBodyConfidenceMin).max(updateExecutionObservationBodyConfidenceMax).optional(),
+  "evidenceCount": zod.number().min(updateExecutionObservationBodyEvidenceCountMin).optional(),
+  "source": zod.string().min(1).max(updateExecutionObservationBodySourceMax).optional()
+})
+
+
+export const updateExecutionObservationResponseDimensionMax = 120;
+
+export const updateExecutionObservationResponseFindingMax = 1000;
+
+export const updateExecutionObservationResponseConfidenceMin = 0;
+export const updateExecutionObservationResponseConfidenceMax = 1;
+
+export const updateExecutionObservationResponseEvidenceCountMin = 0;
+
+export const updateExecutionObservationResponseSourceMax = 120;
+
+
+
+export const UpdateExecutionObservationResponse = zod.object({
+  "id": zod.number().min(1),
+  "dimension": zod.string().min(1).max(updateExecutionObservationResponseDimensionMax),
+  "finding": zod.string().min(1).max(updateExecutionObservationResponseFindingMax),
+  "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullable(),
+  "confidence": zod.number().min(updateExecutionObservationResponseConfidenceMin).max(updateExecutionObservationResponseConfidenceMax),
+  "evidenceCount": zod.number().min(updateExecutionObservationResponseEvidenceCountMin),
+  "source": zod.string().min(1).max(updateExecutionObservationResponseSourceMax),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get the user's current execution state
+ */
+export const getExecutionStateResponseAvailableMinutesMin = 0;
+export const getExecutionStateResponseAvailableMinutesMax = 1440;
+
+
+
+export const GetExecutionStateResponse = zod.object({
+  "energy": zod.union([zod.literal('low'),zod.literal('normal'),zod.literal('high'),zod.literal(null)]).nullable(),
+  "stress": zod.union([zod.literal('low'),zod.literal('normal'),zod.literal('high'),zod.literal(null)]).nullable(),
+  "availableMinutes": zod.number().min(getExecutionStateResponseAvailableMinutesMin).max(getExecutionStateResponseAvailableMinutesMax).nullable(),
+  "capturedAt": zod.string()
+})
+
+
+/**
+ * Replaces only the supplied temporary state values and refreshes the capture time
+ * @summary Set or update the user's current execution state
+ */
+export const setExecutionStateBodyAvailableMinutesMin = 0;
+export const setExecutionStateBodyAvailableMinutesMax = 1440;
+
+
+
+export const SetExecutionStateBody = zod.object({
+  "energy": zod.union([zod.literal('low'),zod.literal('normal'),zod.literal('high'),zod.literal(null)]).nullish(),
+  "stress": zod.union([zod.literal('low'),zod.literal('normal'),zod.literal('high'),zod.literal(null)]).nullish(),
+  "availableMinutes": zod.number().min(setExecutionStateBodyAvailableMinutesMin).max(setExecutionStateBodyAvailableMinutesMax).nullish()
+})
+
+export const setExecutionStateResponseAvailableMinutesMin = 0;
+export const setExecutionStateResponseAvailableMinutesMax = 1440;
+
+
+
+export const SetExecutionStateResponse = zod.object({
+  "energy": zod.union([zod.literal('low'),zod.literal('normal'),zod.literal('high'),zod.literal(null)]).nullable(),
+  "stress": zod.union([zod.literal('low'),zod.literal('normal'),zod.literal('high'),zod.literal(null)]).nullable(),
+  "availableMinutes": zod.number().min(setExecutionStateResponseAvailableMinutesMin).max(setExecutionStateResponseAvailableMinutesMax).nullable(),
+  "capturedAt": zod.string()
+})
+
+
+/**
  * Returns protected aggregate account, table, database, and admin-action metrics without user-authored content
  * @summary Get protected database diagnostics
  */
