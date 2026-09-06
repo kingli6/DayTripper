@@ -570,5 +570,44 @@ session is signed out and the configured Gemini provider is currently
 quota-exhausted, so those checks require a signed-in session after quota
 recovery.
 
-**Do not start:** Step 3, interview redesign, alternate AI providers, or
+**Do not start:** Step 4, interview redesign, alternate AI providers, or
 changes to Tasks, Today planning, Practices, or retention behavior.
+
+## Personalized execution system — Step 3
+
+**Status:** Complete for the internal deterministic execution-policy slice.
+
+**Completed:**
+
+- Added a reusable server-side `deriveExecutionPolicy` module that accepts
+  task characteristics, current energy/stress/capacity, and stored
+  observations.
+- Added runtime validation for both policy input and output. The returned
+  strategy, action style, duration, stopping-point flag, scope flag, and
+  explanation are bounded and strictly checked.
+- Implemented deterministic rules for high-stress ambiguity, low energy,
+  limited time, high importance plus urgency, open-ended tasks, relaxed
+  capacity, and sufficiently supported repeated postponement evidence.
+- Kept state-dependent behavior separate and gradual: strong evidence can
+  influence policy, while one weak observation cannot override deterministic
+  state rules.
+- Added nine focused unit tests using Node's built-in test runner. Tests do not
+  use Gemini, the database, or the network.
+- Kept the policy engine internal. No UI, route, OpenAPI contract, task
+  recommender, Today flow, Practices flow, scheduling, or Gemini path changed.
+
+**Verification:** Focused policy tests pass 9/9, full workspace typecheck,
+API build, web production build with workflow variables, API workflow restart,
+health 200, signed-out execution endpoint 401 protection, and `git diff
+--check`.
+
+**Example:** For the same 60-minute “Work on project” task with 60 minutes
+available, high stress produces `bounded_focus`, a 15-minute
+`concrete_first_action`, an explicit stopping point, and reduced scope.
+High energy plus low stress produces `deep_work`, a 45-minute
+`self_directed_progress` session, no required stopping point, and no scope
+reduction.
+
+**Do not start:** Step 4, UI exposure, task-recommender integration, Gemini
+policy calls, personality classifications, or changes to Tasks, Today,
+Practices, or scheduling.
