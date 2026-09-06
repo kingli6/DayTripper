@@ -70,8 +70,6 @@ export function PlanningDiscussion({
   availableTime,
   planningStyle,
   fixedCommitments,
-  includeJournalEntryIds,
-  considerJournalEntryIds,
   onBack,
   onStartProposal,
 }: PlanningDiscussionProps) {
@@ -91,14 +89,9 @@ export function PlanningDiscussion({
     availableTime,
     planningStyle: planningStyle as PlanningDiscussionRequestPlanningStyle,
     fixedCommitments,
-    includeJournalEntryIds,
-    considerJournalEntryIds,
   };
-  const hasPlanningContext =
-    Boolean(intention?.trim()) ||
-    (includeJournalEntryIds?.length ?? 0) > 0 ||
-    (considerJournalEntryIds?.length ?? 0) > 0;
-  const planningContextMessage = 'Add an intention or choose at least one journal note before starting the conversation.';
+  const hasPlanningContext = Boolean(intention?.trim());
+  const planningContextMessage = 'Add an intention before starting the conversation.';
 
   useEffect(() => {
     if (startedRef.current) return;
@@ -165,8 +158,7 @@ export function PlanningDiscussion({
           </div>
         </div>
         <div className="mt-5 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
-          <span className="rounded-full border border-primary/20 bg-background/55 px-3 py-1.5" data-testid="status-planning-discussion-included">{includeJournalEntryIds?.length ?? 0} included notes</span>
-          <span className="rounded-full border border-accent/25 bg-background/55 px-3 py-1.5" data-testid="status-planning-discussion-considered">{considerJournalEntryIds?.length ?? 0} considered notes</span>
+          <span className="rounded-full border border-primary/20 bg-background/55 px-3 py-1.5">Planning details only</span>
           <span className="rounded-full border border-border/70 bg-background/55 px-3 py-1.5">Nothing saved yet</span>
         </div>
       </div>
@@ -245,7 +237,7 @@ export function PlanningDiscussion({
           </button>
         </div>
       </div>
-      <p className="text-center text-[11px] leading-5 text-muted-foreground" data-testid="text-planning-discussion-privacy">Only the journal notes you marked Include or Consider and this conversation are used for the next step.</p>
+      <p className="text-center text-[11px] leading-5 text-muted-foreground" data-testid="text-planning-discussion-privacy">Only the planning details and this conversation are used for the next step.</p>
     </div>
   );
 }

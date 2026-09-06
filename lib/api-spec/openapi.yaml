@@ -20,8 +20,6 @@ tags:
     description: Persistent Board card operations
   - name: tasks
     description: Private task operations
-  - name: journal
-    description: Private timestamped journal operations
   - name: retention
     description: Private practice retention tracking operations
   - name: admin
@@ -83,7 +81,7 @@ paths:
       operationId: createPlanningDiscussionReply
       tags: [planning]
       summary: Continue a private planning conversation
-      description: Returns one bounded AI reply using only explicitly selected journal context without changing saved activities
+      description: Returns one bounded AI reply using the user's explicit planning context without changing saved activities
       requestBody:
         required: true
         content:
@@ -498,109 +496,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActivityChange"
-  /journal-entries:
-    get:
-      operationId: listJournalEntries
-      tags: [journal]
-      summary: List the user's journal entries
-      parameters:
-        - name: date
-          in: query
-          required: false
-          schema:
-            type: string
-            pattern: '^\d{4}-\d{2}-\d{2}$'
-      responses:
-        "200":
-          description: The user's private and planning-available journal entries. When date is provided, only entries recorded on that day are returned; when omitted, the full journal is returned.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/JournalEntry"
-    post:
-      operationId: createJournalEntry
-      tags: [journal]
-      summary: Add a timestamped journal entry
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/JournalEntryInput"
-      responses:
-        "201":
-          description: Journal entry created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JournalEntry"
-        "404":
-          description: Linked activity not found
-  /journal-entries/{id}:
-    patch:
-      operationId: updateJournalEntry
-      tags: [journal]
-      summary: Update journal entry visibility
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: number
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/JournalEntryUpdate"
-      responses:
-        "200":
-          description: Journal entry updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/JournalEntry"
-        "404":
-          description: Journal entry not found
-    delete:
-      operationId: deleteJournalEntry
-      tags: [journal]
-      summary: Delete a journal entry
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: number
-      responses:
-        "204":
-          description: Journal entry deleted
-        "404":
-          description: Journal entry not found
-  /journal-entries/planning-candidates:
-    get:
-      operationId: listPlanningJournalCandidates
-      tags: [journal]
-      summary: List journal entries available for planning
-      description: Returns a bounded set of explicitly planning-available journal entries for the planning selection stage
-      parameters:
-        - name: currentDate
-          in: query
-          required: true
-          schema:
-            type: string
-            pattern: '^\d{4}-\d{2}-\d{2}$'
-      responses:
-        "200":
-          description: Journal entries available for planning
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/JournalEntry"
   /retention/practices:
     get:
       operationId: listRetentionPractices
@@ -858,16 +753,6 @@ components:
         fixedCommitments:
           type: ["string", "null"]
           maxLength: 2000
-        includeJournalEntryIds:
-          type: array
-          maxItems: 20
-          items:
-            type: number
-        considerJournalEntryIds:
-          type: array
-          maxItems: 20
-          items:
-            type: number
         discussionMessages:
           type: array
           maxItems: 8
@@ -913,16 +798,6 @@ components:
         fixedCommitments:
           type: ["string", "null"]
           maxLength: 2000
-        includeJournalEntryIds:
-          type: array
-          maxItems: 20
-          items:
-            type: number
-        considerJournalEntryIds:
-          type: array
-          maxItems: 20
-          items:
-            type: number
         messages:
           type: array
           maxItems: 8
@@ -1766,85 +1641,6 @@ components:
       required:
         - scheduledDate
         - note
-    JournalEntry:
-      type: object
-      properties:
-        id:
-          type: number
-        recordedDate:
-          type: string
-          pattern: '^\d{4}-\d{2}-\d{2}$'
-        content:
-          type: string
-        activityId:
-          type: ["number", "null"]
-        topic:
-          type: ["string", "null"]
-        tags:
-          type: array
-          maxItems: 5
-          items:
-            type: string
-            minLength: 1
-            maxLength: 40
-        privacy:
-          type: string
-          enum: [private, planning]
-        recordedAt:
-          type: string
-      required:
-        - id
-        - recordedDate
-        - content
-        - activityId
-        - topic
-        - tags
-        - privacy
-        - recordedAt
-    JournalEntryInput:
-      type: object
-      properties:
-        recordedDate:
-          type: string
-          pattern: '^\d{4}-\d{2}-\d{2}$'
-        content:
-          type: string
-          minLength: 1
-          maxLength: 5000
-        activityId:
-          type: ["number", "null"]
-        topic:
-          type: ["string", "null"]
-          maxLength: 120
-        tags:
-          type: array
-          maxItems: 5
-          items:
-            type: string
-            minLength: 1
-            maxLength: 40
-        privacy:
-          type: string
-          enum: [private, planning]
-          default: private
-      required:
-        - recordedDate
-        - content
-    JournalEntryUpdate:
-      type: object
-      properties:
-        privacy:
-          type: string
-          enum: [private, planning]
-        tags:
-          type: array
-          maxItems: 5
-          items:
-            type: string
-            minLength: 1
-            maxLength: 40
-      required:
-        - privacy
     RetentionSpeed:
       type: string
       enum: [slow, moderate, fast]
@@ -1981,8 +1777,6 @@ components:
           type: ["string", "null"]
         activityCount:
           type: number
-        journalEntryCount:
-          type: number
         changeCount:
           type: number
         firstActivityAt:
@@ -1994,7 +1788,6 @@ components:
         - email
         - displayName
         - activityCount
-        - journalEntryCount
         - changeCount
         - firstActivityAt
         - lastActivityAt

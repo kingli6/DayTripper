@@ -1,6 +1,6 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { activityChangesTable, db, activitiesTable, journalEntriesTable } from "@workspace/db";
+import { activityChangesTable, db, activitiesTable } from "@workspace/db";
 import {
   ApplyReplanningProposalBody,
   ApplyReplanningProposalResponse,
@@ -33,21 +33,10 @@ type PlanningRequest = {
   availableTime: Array<{ startTime: string; endTime: string }>;
   planningStyle?: "lighter" | "balanced" | "fuller" | null;
   fixedCommitments?: string | null;
-  includeJournalEntryIds?: number[];
-  considerJournalEntryIds?: number[];
   discussionMessages?: Array<{ role: "user" | "assistant"; content: string }>;
 };
 
 type PlanningDiscussionRequest = ApiPlanningDiscussionRequest;
-
-type PlanningJournalEntry = {
-  id: number;
-  recordedDate: string;
-  content: string;
-  topic: string | null;
-  tags: string[];
-  recordedAt: Date;
-};
 
 type ReplanningActivity = {
   id: number;
@@ -305,16 +294,8 @@ function validatePlanningRequest(request: PlanningRequest): string | null {
     return "The planning date or current time is invalid.";
   }
 
-  const includeIds = request.includeJournalEntryIds ?? [];
-  const considerIds = request.considerJournalEntryIds ?? [];
-  if (new Set(includeIds).size !== includeIds.length || new Set(considerIds).size !== considerIds.length) {
-    return "Choose each journal note only once.";
-  }
-  if (includeIds.some((id) => considerIds.includes(id))) {
-    return "A journal note cannot be both included and considered.";
-  }
-  if (!request.intention?.trim() && includeIds.length === 0 && considerIds.length === 0) {
-    return "Add a short intention or choose at least one journal note to shape the plan.";
+  if (!request.intention?.trim()) {
+    return "Add a short intention to shape the plan.";
   }
 
   if (request.availableTime.some((window) => !hasValidRange(window.startTime, window.endTime))) {
@@ -349,59 +330,14 @@ function validateDiscussionRequest(request: PlanningDiscussionRequest): string |
     }
   }
 
-  const includeIds = request.includeJournalEntryIds ?? [];
-  const considerIds = request.considerJournalEntryIds ?? [];
-  if (new Set(includeIds).size !== includeIds.length || new Set(considerIds).size !== considerIds.length) {
-    return "Choose each journal note only once.";
-  }
-  if (includeIds.some((id) => considerIds.includes(id))) {
-    return "A journal note cannot be both included and considered.";
-  }
-  if (!request.intention?.trim() && includeIds.length === 0 && considerIds.length === 0 && request.messages.length === 0) {
-    return "Add an intention or choose at least one journal note before starting the conversation.";
+  if (!request.intention?.trim()) {
+    return "Add an intention before starting the conversation.";
   }
 
   return null;
 }
 
-async function loadSelectedJournalNotes(
-  ownerId: string,
-  includeJournalEntryIds: number[] | undefined,
-  considerJournalEntryIds: number[] | undefined,
-) {
-  const includeIds = includeJournalEntryIds ?? [];
-  const considerIds = considerJournalEntryIds ?? [];
-  const journalEntryIds = [...new Set([...includeIds, ...considerIds])];
-  const journalEntries = journalEntryIds.length
-    ? await db
-      .select({
-        id: journalEntriesTable.id,
-        recordedDate: journalEntriesTable.recordedDate,
-        content: journalEntriesTable.content,
-        topic: journalEntriesTable.topic,
-        tags: journalEntriesTable.tags,
-        recordedAt: journalEntriesTable.recordedAt,
-      })
-      .from(journalEntriesTable)
-      .where(and(
-        eq(journalEntriesTable.ownerId, ownerId),
-        eq(journalEntriesTable.privacy, "planning"),
-        inArray(journalEntriesTable.id, journalEntryIds),
-      ))
-    : [];
-  const journalEntriesById = new Map(journalEntries.map((entry) => [entry.id, entry]));
-
-  return {
-    missing: journalEntryIds.some((id) => !journalEntriesById.has(id)),
-    include: includeIds.map((id) => journalEntriesById.get(id) as PlanningJournalEntry),
-    consider: considerIds.map((id) => journalEntriesById.get(id) as PlanningJournalEntry),
-  };
-}
-
-function buildPlanningDiscussionPrompt(
-  request: PlanningDiscussionRequest,
-  journalNotes: { include: PlanningJournalEntry[]; consider: PlanningJournalEntry[] },
-) {
+function buildPlanningDiscussionPrompt(request: PlanningDiscussionRequest) {
   return `You are Day Tripper's private planning conversation guide.
 
 Return JSON only in this exact shape:
@@ -410,12 +346,9 @@ Return JSON only in this exact shape:
   "suggestedNextStep": "reply|proposal"
 }
 
-This is a short clarification conversation before a schedule proposal. Do not create a schedule, propose time blocks, claim to have changed anything, or turn journal notes into activities.
+This is a short clarification conversation before a schedule proposal. Do not create a schedule, propose time blocks, or claim to have changed anything.
 
 Conversation rules:
-- Use only the journal notes in the provided include and consider lists. Notes marked leave out are not provided and must not be inferred.
-- Included notes are required context; consider notes are optional context.
-- Use tags as gentle attention cues, not commands.
 - Ask at most one clear, compassionate question when the user's intention or boundaries are unclear.
 - If the context is sufficient, briefly reflect what seems important and set suggestedNextStep to "proposal".
 - If the user has answered the important question, do not keep the conversation going just to be conversational.
@@ -429,22 +362,6 @@ ${JSON.stringify({
   intention: request.intention ?? null,
   planningStyle: request.planningStyle ?? "balanced",
   fixedCommitments: request.fixedCommitments ?? null,
-  journalNotes: {
-    include: journalNotes.include.map((entry) => ({
-      id: entry.id,
-      recordedDate: entry.recordedDate,
-      content: entry.content,
-      topic: entry.topic,
-      tags: entry.tags,
-    })),
-    consider: journalNotes.consider.map((entry) => ({
-      id: entry.id,
-      recordedDate: entry.recordedDate,
-      content: entry.content,
-      topic: entry.topic,
-      tags: entry.tags,
-    })),
-  },
   messages: request.messages,
 }, null, 2)}`;
 }
@@ -458,7 +375,7 @@ function buildPlanningPrompt(request: PlanningRequest, activities: Array<{
   completed: boolean;
   locked: boolean;
   note: string | null;
-}>, journalNotes: { include: PlanningJournalEntry[]; consider: PlanningJournalEntry[] }) {
+}>) {
   return `You are Day Tripper's bounded planning engine.
 
 Return JSON only. The response must exactly match the requested proposal shape:
@@ -508,10 +425,6 @@ Planning rules:
 - This is a suggestion only. Never claim to have changed the saved schedule.
 - Locked activities are protected. Do not move, delete, complete, or rename them.
 - Do not invent deadlines, commitments, or completed work.
-- Journal notes marked "include" are required context for this version of the plan, but they are not automatically activities. If an included note cannot fit, explain the conflict in didNotFit rather than silently dropping it.
-- Journal notes marked "consider" are optional context and may be left out when they do not fit.
-- Journal notes marked "leave out" are not provided and must not be inferred.
-- Use tags as attention cues, not as commands. Schedule means eligible for planning; Urgent and Important influence attention; Someday should remain optional.
 - Empty time is valid. Do not fill every available minute.
 - Proposed activities must be fixed-time blocks with valid 24-hour times and must not overlap each other.
 - Treat proposed activities, buffers, and rest periods as one shared timeline. No two blocks in any of those arrays may overlap.
@@ -530,24 +443,6 @@ ${JSON.stringify({
   planningStyle: request.planningStyle ?? "balanced",
   fixedCommitments: request.fixedCommitments ?? null,
   existingActivities: activities,
-  journalNotes: {
-    include: journalNotes.include.map((entry) => ({
-      id: entry.id,
-      recordedDate: entry.recordedDate,
-      content: entry.content,
-      topic: entry.topic,
-      tags: entry.tags,
-      recordedAt: entry.recordedAt.toISOString(),
-    })),
-    consider: journalNotes.consider.map((entry) => ({
-      id: entry.id,
-      recordedDate: entry.recordedDate,
-      content: entry.content,
-      topic: entry.topic,
-      tags: entry.tags,
-      recordedAt: entry.recordedAt.toISOString(),
-    })),
-  },
   discussionMessages: request.discussionMessages ?? [],
 }, null, 2)}`;
 }
@@ -700,17 +595,6 @@ router.post("/planning/discussion", async (req, res): Promise<void> => {
     return;
   }
 
-  const selectedNotes = await loadSelectedJournalNotes(
-    res.locals.userId as string,
-    request.includeJournalEntryIds,
-    request.considerJournalEntryIds,
-  );
-
-  if (selectedNotes.missing) {
-    res.status(400).json({ error: "One of the selected journal notes is no longer available for planning." });
-    return;
-  }
-
   if (!isGeminiConfigured()) {
     req.log.warn("Planning discussion requested while Gemini is not configured");
     res.status(503).json({ error: "The planning conversation is not available right now." });
@@ -721,7 +605,7 @@ router.post("/planning/discussion", async (req, res): Promise<void> => {
   let correction: string | null = null;
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    const prompt = buildPlanningDiscussionPrompt(request, selectedNotes)
+      const prompt = buildPlanningDiscussionPrompt(request)
       + (correction
         ? `\n\nCorrection required: the previous response was rejected because ${correction}. Return only the requested JSON shape.`
         : "");
@@ -1181,44 +1065,12 @@ router.post("/planning/proposals", async (req, res): Promise<void> => {
     note: null,
   }));
 
-  const includeJournalEntryIds = request.includeJournalEntryIds ?? [];
-  const considerJournalEntryIds = request.considerJournalEntryIds ?? [];
-  const journalEntryIds = [...new Set([...includeJournalEntryIds, ...considerJournalEntryIds])];
-  const journalEntries = journalEntryIds.length
-    ? await db
-      .select({
-        id: journalEntriesTable.id,
-        recordedDate: journalEntriesTable.recordedDate,
-        content: journalEntriesTable.content,
-        topic: journalEntriesTable.topic,
-        tags: journalEntriesTable.tags,
-        recordedAt: journalEntriesTable.recordedAt,
-      })
-      .from(journalEntriesTable)
-      .where(and(
-        eq(journalEntriesTable.ownerId, res.locals.userId as string),
-        eq(journalEntriesTable.privacy, "planning"),
-        inArray(journalEntriesTable.id, journalEntryIds),
-      ))
-    : [];
-  const journalEntriesById = new Map(journalEntries.map((entry) => [entry.id, entry]));
-
-  if (journalEntryIds.some((id) => !journalEntriesById.has(id))) {
-    res.status(400).json({ error: "One of the selected journal notes is no longer available for planning." });
-    return;
-  }
-
-  const journalNotes = {
-    include: includeJournalEntryIds.map((id) => journalEntriesById.get(id) as PlanningJournalEntry),
-    consider: considerJournalEntryIds.map((id) => journalEntriesById.get(id) as PlanningJournalEntry),
-  };
-
   try {
     const config = getGeminiConfig();
     let correction: string | null = null;
 
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const prompt = buildPlanningPrompt(request, promptActivities, journalNotes)
+      const prompt = buildPlanningPrompt(request, promptActivities)
         + (correction
           ? `\n\nCorrection required: the previous draft was rejected because ${correction} Return a new complete proposal. Treat every proposed activity, buffer, and rest period as one shared non-overlapping timeline, and return JSON only.`
           : "");

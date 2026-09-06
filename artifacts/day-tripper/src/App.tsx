@@ -7,7 +7,6 @@ import {
   Activity as ActivityIcon,
   ArrowLeft,
   ArrowRight,
-  BookOpen,
   CalendarDays,
   Check,
   ChevronDown,
@@ -40,8 +39,6 @@ import type { Activity, ActivityInput, PlanningDiscussionMessage, PlanningPropos
 import { ChangeReviewPanel } from '@/components/change-review-panel';
 import BoardPage from '@/pages/board';
 import TasksPage from '@/pages/tasks';
-import { JournalPanel } from '@/components/journal-panel';
-import { JournalPlanningSelector } from '@/components/journal-planning-selector';
 import { PlanningDiscussion } from '@/components/planning-discussion';
 import { ReplanningStudio } from '@/components/replanning-studio';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -274,7 +271,7 @@ function BrandMark() {
   );
 }
 
-function Sidebar({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => void; onOpenPlanning: () => void; onQuickJournal: () => void }) {
+function Sidebar({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning: () => void }) {
   return (
     <aside className="hidden w-[264px] shrink-0 flex-col justify-between bg-sidebar px-5 py-6 text-sidebar-foreground lg:flex">
       <div>
@@ -317,10 +314,6 @@ function Sidebar({ onAdd, onOpenPlanning, onQuickJournal }: { onAdd: () => void;
         <button type="button" onClick={onAdd} data-testid="button-sidebar-add" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl bg-sidebar-primary px-3 py-3 text-sm font-semibold text-sidebar-primary-foreground transition-transform hover:-translate-y-0.5 active:translate-y-0">
           <Plus className="size-4" strokeWidth={2.2} />
           Add to the day
-        </button>
-        <button type="button" onClick={onQuickJournal} data-testid="button-sidebar-quick-journal" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-primary/35 px-3 py-3 text-sm font-semibold text-sidebar-foreground transition-colors hover:border-sidebar-primary/70 hover:bg-sidebar-accent">
-          <BookOpen className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-          Quick note
         </button>
         <button type="button" onClick={onOpenPlanning} data-testid="button-sidebar-planning" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-primary/35 px-3 py-3 text-sm font-semibold text-sidebar-foreground transition-colors hover:border-sidebar-primary/70 hover:bg-sidebar-accent">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
@@ -417,11 +410,9 @@ function AuthenticatedAppShell({ children }: { children: ReactNode }) {
 function MobileHeader({
   onAdd,
   onOpenPlanning,
-  onQuickJournal,
 }: {
   onAdd: () => void;
   onOpenPlanning: () => void;
-  onQuickJournal: () => void;
 }) {
   return (
     <header className="flex items-center justify-between border-b border-border/70 bg-sidebar px-5 py-4 text-sidebar-foreground lg:hidden">
@@ -441,9 +432,6 @@ function MobileHeader({
         </Link>
         <button type="button" onClick={onOpenPlanning} aria-label="Shape the day with a suggestion" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-        </button>
-        <button type="button" onClick={onQuickJournal} aria-label="Write a quick journal note" data-testid="button-mobile-quick-journal" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
-          <BookOpen className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </button>
         <button type="button" onClick={onAdd} aria-label="Add an activity" data-testid="button-mobile-add" className="flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
           <Plus className="size-5" strokeWidth={2} />
@@ -793,7 +781,7 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   const createActivity = useCreateActivity();
   const queryClient = useQueryClient();
   const intentionRef = useRef<HTMLTextAreaElement>(null);
-  const [planningStage, setPlanningStage] = useState<'journal' | 'details' | 'discussion'>('journal');
+  const [planningStage, setPlanningStage] = useState<'details' | 'discussion'>('details');
   const [intention, setIntention] = useState('');
   const [currentTime, setCurrentTime] = useState(currentTimeValue());
   const [availableStart, setAvailableStart] = useState('09:00');
@@ -805,15 +793,10 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
   const [formError, setFormError] = useState('');
   const [reviewError, setReviewError] = useState('');
   const [accepting, setAccepting] = useState(false);
-  const [includeJournalEntryIds, setIncludeJournalEntryIds] = useState<number[]>([]);
-  const [considerJournalEntryIds, setConsiderJournalEntryIds] = useState<number[]>([]);
   const [discussionMessages, setDiscussionMessages] = useState<PlanningDiscussionMessage[]>([]);
   const lockedActivities = activities.filter((activity) => activity.locked);
   const pending = createPlanningProposal.isPending;
-  const hasPlanningContext =
-    intention.trim().length > 0 ||
-    includeJournalEntryIds.length > 0 ||
-    considerJournalEntryIds.length > 0;
+  const hasPlanningContext = intention.trim().length > 0;
 
   useEffect(() => {
     if (planningStage !== 'details') return;
@@ -831,7 +814,7 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
       return false;
     }
     if (!hasPlanningContext) {
-      setFormError('Add an intention or choose at least one journal note before starting the conversation.');
+      setFormError('Add a short intention before starting the conversation.');
       return false;
     }
     return true;
@@ -851,8 +834,6 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
           availableTime: [{ startTime: availableStart, endTime: availableEnd }],
           planningStyle,
           fixedCommitments: fixedCommitments.trim() || null,
-          includeJournalEntryIds: includeJournalEntryIds.length ? includeJournalEntryIds : undefined,
-          considerJournalEntryIds: considerJournalEntryIds.length ? considerJournalEntryIds : undefined,
           discussionMessages: messages,
         } as unknown as PlanningRequest,
       });
@@ -978,8 +959,8 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="flex items-center gap-2 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary"><Sparkles className="size-3.5" strokeWidth={1.8} /> AI Studio</p>
-            <h2 id="planning-studio-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">{proposal ? 'Look over the version.' : planningStage === 'journal' ? 'Choose what matters now.' : planningStage === 'discussion' ? 'Stay with the important part.' : 'Shape a possible day.'}</h2>
-            <p id="planning-studio-description" className="mt-2 max-w-[550px] text-sm leading-6 text-muted-foreground">{proposal ? 'This is a proposal, not a silent rewrite. Adjust what you want, then explicitly add only the suggestions that feel right.' : planningStage === 'journal' ? 'A quiet handoff from the journal to planning. Private notes never enter this room, and nothing is turned into an activity.' : planningStage === 'discussion' ? 'A short, user-controlled conversation before a proposal. You decide when it has done enough.' : 'Add an optional intention, set the open time, and ask for one workable version. Your saved timeline stays untouched.'}</p>
+            <h2 id="planning-studio-title" className="mt-2 font-display text-[30px] leading-tight tracking-[-0.035em]">{proposal ? 'Look over the version.' : planningStage === 'discussion' ? 'Stay with the important part.' : 'Shape a possible day.'}</h2>
+            <p id="planning-studio-description" className="mt-2 max-w-[550px] text-sm leading-6 text-muted-foreground">{proposal ? 'This is a proposal, not a silent rewrite. Adjust what you want, then explicitly add only the suggestions that feel right.' : planningStage === 'discussion' ? 'A short, user-controlled conversation before a proposal. You decide when it has done enough.' : 'Add a short intention, set the open time, and ask for one workable version. Your saved timeline stays untouched.'}</p>
           </div>
           <button type="button" onClick={onClose} disabled={pending || accepting} aria-label="Close AI Studio" data-testid="button-close-planning-studio" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40">
             <X className="size-4" strokeWidth={1.8} />
@@ -1133,17 +1114,6 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
               <p className="text-right text-[11px] leading-5 text-muted-foreground">Only the suggestions you accept become saved activities. Existing activities remain untouched.</p>
             </div>
           </div>
-        ) : planningStage === 'journal' ? (
-          <JournalPlanningSelector
-            date={date}
-            onClose={onClose}
-            onContinue={(includeIds, considerIds) => {
-              setIncludeJournalEntryIds(includeIds);
-              setConsiderJournalEntryIds(considerIds);
-              setFormError('');
-              setPlanningStage('details');
-            }}
-          />
         ) : planningStage === 'discussion' ? (
           <PlanningDiscussion
             currentDate={date}
@@ -1152,8 +1122,6 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
             availableTime={[{ startTime: availableStart, endTime: availableEnd }]}
             planningStyle={planningStyle}
             fixedCommitments={fixedCommitments.trim() || null}
-            includeJournalEntryIds={includeJournalEntryIds.length ? includeJournalEntryIds : undefined}
-            considerJournalEntryIds={considerJournalEntryIds.length ? considerJournalEntryIds : undefined}
             onBack={() => setPlanningStage('details')}
             onStartProposal={(messages) => void startProposal(messages)}
           />
@@ -1170,16 +1138,8 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
           </div>
         ) : (
           <form onSubmit={(event) => void submit(event)} className="mt-7 space-y-5">
-            <div className="flex items-start gap-3 rounded-[18px] border border-primary/20 bg-primary/[0.055] p-4" data-testid="status-planning-journal-context">
-              <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" strokeWidth={1.8} />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-foreground">Journal context is chosen</p>
-                <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{includeJournalEntryIds.length} included · {considerJournalEntryIds.length} to consider · everything else left out.</p>
-              </div>
-              <button type="button" onClick={() => setPlanningStage('journal')} data-testid="button-change-planning-journal-selection" className="shrink-0 text-[11px] font-semibold text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Change</button>
-            </div>
             <div>
-              <label htmlFor="planning-intention" className="text-xs font-semibold text-foreground">What would help today? <span className="font-normal text-muted-foreground">(optional)</span></label>
+              <label htmlFor="planning-intention" className="text-xs font-semibold text-foreground">What would help today?</label>
               <textarea ref={intentionRef} id="planning-intention" value={intention} onChange={(event) => setIntention(event.target.value)} placeholder="Finish the report, eat something proper, and leave a little room before dinner." rows={4} data-testid="input-planning-intention" className="mt-2 w-full resize-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -1221,7 +1181,7 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
             {formError && <p className="rounded-xl bg-destructive/[0.07] px-3 py-2.5 text-xs leading-5 text-destructive" role="alert" data-testid="status-planning-error">{formError}</p>}
             <div className="flex flex-col-reverse gap-3 border-t border-border/65 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-[330px] text-[11px] leading-5 text-muted-foreground">Planning needs an internet connection. It creates a proposal only; your saved schedule will not change automatically.</p>
-              {!hasPlanningContext && <p className="max-w-[330px] text-[11px] leading-5 text-muted-foreground">Add an intention or choose at least one journal note before starting the conversation.</p>}
+              {!hasPlanningContext && <p className="max-w-[330px] text-[11px] leading-5 text-muted-foreground">Add a short intention before starting the conversation.</p>}
               <button type="submit" disabled={pending || !hasPlanningContext} data-testid="button-create-planning-proposal" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-wait disabled:opacity-55">
                 {pending ? <LoaderCircle className="size-3.5 animate-spin" /> : <Sparkles className="size-3.5" strokeWidth={1.8} />}
                 {pending ? 'Preparing a proposal…' : 'Suggest a possible plan'}
@@ -1535,7 +1495,6 @@ function Today() {
   const [planningOpen, setPlanningOpen] = useState(false);
   const [replanningOpen, setReplanningOpen] = useState(false);
   const [changeReviewOpen, setChangeReviewOpen] = useState(false);
-  const [journalOpen, setJournalOpen] = useState(false);
   const [acceptedNotice, setAcceptedNotice] = useState('');
   const [deletedActivity, setDeletedActivity] = useState<Activity | null>(null);
   const [undoPending, setUndoPending] = useState(false);
@@ -1567,14 +1526,6 @@ function Today() {
   const hasCachedDay = offline.cachedActivities !== null;
   const timelineLoading = list.isLoading && !hasCachedDay;
   const timelineUnavailable = !list.data && !hasCachedDay && (!offline.isOnline || list.isError);
-
-  function openQuickJournal() {
-    setJournalOpen(true);
-    window.setTimeout(() => {
-      document.querySelector<HTMLElement>('[data-testid="section-journal"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      document.getElementById('journal-content')?.focus();
-    }, 50);
-  }
 
   useEffect(() => {
     if (list.data) offline.saveServerSnapshot(list.data);
@@ -1696,9 +1647,9 @@ function Today() {
       <div className="pointer-events-none absolute -right-24 -top-28 size-[430px] rounded-full bg-accent/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-[-180px] left-[25%] size-[420px] rounded-full bg-secondary/35 blur-3xl" />
       <div className="relative flex min-h-[100dvh]">
-        <Sidebar onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} onQuickJournal={openQuickJournal} />
+        <Sidebar onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} />
         <div className="min-w-0 flex-1">
-           <MobileHeader onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} onQuickJournal={openQuickJournal} />
+           <MobileHeader onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} />
           <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
             <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
               <div className="flex items-center gap-2">
@@ -1792,22 +1743,6 @@ function Today() {
                 </div>
               </aside>
             </div>
-             <div className="mt-10 border-t border-border/60 pt-8">
-               <div className="flex flex-col gap-4 rounded-[22px] border border-primary/15 bg-primary/[0.035] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                 <div className="flex items-start gap-3">
-                   <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><BookOpen className="size-4" strokeWidth={1.8} /></span>
-                   <div>
-                     <p className="font-display text-[22px] leading-tight tracking-[-0.03em]">Keep a little record</p>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">Capture what the timeline cannot. Choose whether it stays private or informs planning.</p>
-                   </div>
-                 </div>
-                 <button type="button" onClick={() => setJournalOpen((open) => !open)} aria-expanded={journalOpen} data-testid="button-open-journal" className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-full border border-primary/30 bg-background px-4 py-2.5 text-xs font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                   <BookOpen className="size-3.5" strokeWidth={1.8} />
-                   {journalOpen ? 'Close journal' : 'Open journal'}
-                 </button>
-               </div>
-               {journalOpen && <div className="mt-5 animate-rise"><JournalPanel date={date} activities={activities} /></div>}
-             </div>
             <footer className="mt-10 flex flex-col gap-2 border-t border-border/60 pt-5 text-[11px] text-muted-foreground/75 sm:flex-row sm:items-center sm:justify-between">
               <p data-testid="text-privacy-note">Your day stays yours. No scores, streaks, or performance signals here.</p>
               <span className="font-mono-ui text-[9px] uppercase tracking-[0.15em]">Day Tripper / Today</span>

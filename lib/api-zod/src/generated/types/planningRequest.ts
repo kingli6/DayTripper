@@ -28,10 +28,6 @@ export interface PlanningRequest {
      * @nullable
      */
   fixedCommitments?: string | null;
-  /** @maxItems 20 */
-  includeJournalEntryIds?: number[];
-  /** @maxItems 20 */
-  considerJournalEntryIds?: number[];
   /** @maxItems 8 */
   discussionMessages?: PlanningDiscussionMessage[];
 }

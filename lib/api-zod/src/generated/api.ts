@@ -43,10 +43,6 @@ export const createPlanningProposalBodyAvailableTimeMax = 12;
 
 export const createPlanningProposalBodyFixedCommitmentsMax = 2000;
 
-export const createPlanningProposalBodyIncludeJournalEntryIdsMax = 20;
-
-export const createPlanningProposalBodyConsiderJournalEntryIdsMax = 20;
-
 export const createPlanningProposalBodyDiscussionMessagesItemContentMax = 1200;
 
 export const createPlanningProposalBodyDiscussionMessagesMax = 8;
@@ -63,8 +59,6 @@ export const CreatePlanningProposalBody = zod.object({
 })).max(createPlanningProposalBodyAvailableTimeMax),
   "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish(),
   "fixedCommitments": zod.string().max(createPlanningProposalBodyFixedCommitmentsMax).nullish(),
-  "includeJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyIncludeJournalEntryIdsMax).optional(),
-  "considerJournalEntryIds": zod.array(zod.number()).max(createPlanningProposalBodyConsiderJournalEntryIdsMax).optional(),
   "discussionMessages": zod.array(zod.object({
   "role": zod.enum(['user', 'assistant']),
   "content": zod.string().min(1).max(createPlanningProposalBodyDiscussionMessagesItemContentMax)
@@ -148,7 +142,7 @@ export const CreatePlanningProposalResponse = zod.object({
 
 
 /**
- * Returns one bounded AI reply using only explicitly selected journal context without changing saved activities
+ * Returns one bounded AI reply using the user's explicit planning context without changing saved activities
  * @summary Continue a private planning conversation
  */
 export const createPlanningDiscussionReplyBodyCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
@@ -160,10 +154,6 @@ export const createPlanningDiscussionReplyBodyAvailableTimeItemEndTimeRegExp = n
 export const createPlanningDiscussionReplyBodyAvailableTimeMax = 12;
 
 export const createPlanningDiscussionReplyBodyFixedCommitmentsMax = 2000;
-
-export const createPlanningDiscussionReplyBodyIncludeJournalEntryIdsMax = 20;
-
-export const createPlanningDiscussionReplyBodyConsiderJournalEntryIdsMax = 20;
 
 export const createPlanningDiscussionReplyBodyMessagesItemContentMax = 1200;
 
@@ -181,8 +171,6 @@ export const CreatePlanningDiscussionReplyBody = zod.object({
 })).max(createPlanningDiscussionReplyBodyAvailableTimeMax),
   "planningStyle": zod.union([zod.literal('lighter'),zod.literal('balanced'),zod.literal('fuller'),zod.literal(null)]).nullish(),
   "fixedCommitments": zod.string().max(createPlanningDiscussionReplyBodyFixedCommitmentsMax).nullish(),
-  "includeJournalEntryIds": zod.array(zod.number()).max(createPlanningDiscussionReplyBodyIncludeJournalEntryIdsMax).optional(),
-  "considerJournalEntryIds": zod.array(zod.number()).max(createPlanningDiscussionReplyBodyConsiderJournalEntryIdsMax).optional(),
   "messages": zod.array(zod.object({
   "role": zod.enum(['user', 'assistant']),
   "content": zod.string().min(1).max(createPlanningDiscussionReplyBodyMessagesItemContentMax)
@@ -977,156 +965,6 @@ export const AddActivityChangeNoteResponse = zod.object({
 
 
 /**
- * @summary List the user's journal entries
- */
-export const listJournalEntriesQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-
-
-export const ListJournalEntriesQueryParams = zod.object({
-  "date": zod.coerce.string().regex(listJournalEntriesQueryDateRegExp).optional()
-})
-
-export const listJournalEntriesResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-export const listJournalEntriesResponseTagsItemMax = 40;
-
-export const listJournalEntriesResponseTagsMax = 5;
-
-
-
-export const ListJournalEntriesResponseItem = zod.object({
-  "id": zod.number(),
-  "recordedDate": zod.string().regex(listJournalEntriesResponseRecordedDateRegExp),
-  "content": zod.string(),
-  "activityId": zod.number().nullable(),
-  "topic": zod.string().nullable(),
-  "tags": zod.array(zod.string().min(1).max(listJournalEntriesResponseTagsItemMax)).max(listJournalEntriesResponseTagsMax),
-  "privacy": zod.enum(['private', 'planning']),
-  "recordedAt": zod.string()
-})
-export const ListJournalEntriesResponse = zod.array(ListJournalEntriesResponseItem)
-
-
-/**
- * @summary Add a timestamped journal entry
- */
-export const createJournalEntryBodyRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-export const createJournalEntryBodyContentMax = 5000;
-
-export const createJournalEntryBodyTopicMax = 120;
-
-export const createJournalEntryBodyTagsItemMax = 40;
-
-export const createJournalEntryBodyTagsMax = 5;
-
-export const createJournalEntryBodyPrivacyDefault = `private`;
-
-export const CreateJournalEntryBody = zod.object({
-  "recordedDate": zod.string().regex(createJournalEntryBodyRecordedDateRegExp),
-  "content": zod.string().min(1).max(createJournalEntryBodyContentMax),
-  "activityId": zod.number().nullish(),
-  "topic": zod.string().max(createJournalEntryBodyTopicMax).nullish(),
-  "tags": zod.array(zod.string().min(1).max(createJournalEntryBodyTagsItemMax)).max(createJournalEntryBodyTagsMax).optional(),
-  "privacy": zod.enum(['private', 'planning']).default(createJournalEntryBodyPrivacyDefault)
-})
-
-export const createJournalEntryResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-export const createJournalEntryResponseTagsItemMax = 40;
-
-export const createJournalEntryResponseTagsMax = 5;
-
-
-
-export const CreateJournalEntryResponse = zod.object({
-  "id": zod.number(),
-  "recordedDate": zod.string().regex(createJournalEntryResponseRecordedDateRegExp),
-  "content": zod.string(),
-  "activityId": zod.number().nullable(),
-  "topic": zod.string().nullable(),
-  "tags": zod.array(zod.string().min(1).max(createJournalEntryResponseTagsItemMax)).max(createJournalEntryResponseTagsMax),
-  "privacy": zod.enum(['private', 'planning']),
-  "recordedAt": zod.string()
-})
-
-
-/**
- * @summary Update journal entry visibility
- */
-export const UpdateJournalEntryParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const updateJournalEntryBodyTagsItemMax = 40;
-
-export const updateJournalEntryBodyTagsMax = 5;
-
-
-
-export const UpdateJournalEntryBody = zod.object({
-  "privacy": zod.enum(['private', 'planning']),
-  "tags": zod.array(zod.string().min(1).max(updateJournalEntryBodyTagsItemMax)).max(updateJournalEntryBodyTagsMax).optional()
-})
-
-export const updateJournalEntryResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-export const updateJournalEntryResponseTagsItemMax = 40;
-
-export const updateJournalEntryResponseTagsMax = 5;
-
-
-
-export const UpdateJournalEntryResponse = zod.object({
-  "id": zod.number(),
-  "recordedDate": zod.string().regex(updateJournalEntryResponseRecordedDateRegExp),
-  "content": zod.string(),
-  "activityId": zod.number().nullable(),
-  "topic": zod.string().nullable(),
-  "tags": zod.array(zod.string().min(1).max(updateJournalEntryResponseTagsItemMax)).max(updateJournalEntryResponseTagsMax),
-  "privacy": zod.enum(['private', 'planning']),
-  "recordedAt": zod.string()
-})
-
-
-/**
- * @summary Delete a journal entry
- */
-export const DeleteJournalEntryParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const DeleteJournalEntryResponse = zod.void()
-
-
-/**
- * Returns a bounded set of explicitly planning-available journal entries for the planning selection stage
- * @summary List journal entries available for planning
- */
-export const listPlanningJournalCandidatesQueryCurrentDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-
-
-export const ListPlanningJournalCandidatesQueryParams = zod.object({
-  "currentDate": zod.coerce.string().regex(listPlanningJournalCandidatesQueryCurrentDateRegExp)
-})
-
-export const listPlanningJournalCandidatesResponseRecordedDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
-export const listPlanningJournalCandidatesResponseTagsItemMax = 40;
-
-export const listPlanningJournalCandidatesResponseTagsMax = 5;
-
-
-
-export const ListPlanningJournalCandidatesResponseItem = zod.object({
-  "id": zod.number(),
-  "recordedDate": zod.string().regex(listPlanningJournalCandidatesResponseRecordedDateRegExp),
-  "content": zod.string(),
-  "activityId": zod.number().nullable(),
-  "topic": zod.string().nullable(),
-  "tags": zod.array(zod.string().min(1).max(listPlanningJournalCandidatesResponseTagsItemMax)).max(listPlanningJournalCandidatesResponseTagsMax),
-  "privacy": zod.enum(['private', 'planning']),
-  "recordedAt": zod.string()
-})
-export const ListPlanningJournalCandidatesResponse = zod.array(ListPlanningJournalCandidatesResponseItem)
-
-
-/**
  * Returns practices owned by the authenticated user
  * @summary List the user's retention practices
  */
@@ -1334,7 +1172,6 @@ export const GetAdminOverviewResponse = zod.object({
   "email": zod.string().nullable(),
   "displayName": zod.string().nullable(),
   "activityCount": zod.number(),
-  "journalEntryCount": zod.number(),
   "changeCount": zod.number(),
   "firstActivityAt": zod.string().nullable(),
   "lastActivityAt": zod.string().nullable()

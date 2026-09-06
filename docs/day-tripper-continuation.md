@@ -104,8 +104,8 @@ changes.
 - The route loads only the signed-in user's `inbox` and `active` tasks and sends
   task decision signals plus current minutes and energy. Task-level interest
   remains available to Gemini as a property of each task; the user is no longer
-  asked for a current-interest input. It does not send notes, journal entries,
-  or other private planning context.
+  asked for a current-interest input. It does not send notes or other private
+  planning context.
 - Gemini is instructed to return at most three supplied task IDs, consider fit
   instead of simply choosing the highest priority, respect deadlines/urgency,
   and never invent task information.
@@ -190,8 +190,8 @@ through a real Clerk browser session, because the available preview session is
 signed out.
 
 **Do not start:** Scheduling, Board occurrence UI, drag-and-drop, AI planning,
-replanning, Journal integration, reality timestamps, energy tracking, analytics,
-or offline Board support.
+replanning, reality timestamps, energy tracking, analytics, or offline Board
+support.
 
 ## Manual Board-card scheduling
 
@@ -218,8 +218,8 @@ real private data because the available browser session is signed out.
 
 **Do not start:** Drag-and-drop, AI or automatic scheduling, recurring
 scheduling, planning/replanning changes, actual-time or Reality tracking, energy
-or delay tracking, Journal/Retention changes, analytics, insights, or offline
-Board support.
+or delay tracking, Retention changes, analytics, insights, or offline Board
+support.
 
 ## Board foundation checkpoint
 
@@ -287,25 +287,15 @@ recommendation behavior, or Practices/Retention changes.
 stopwatch verification are complete locally. The latest completed working area
 was the timestamp-based stopwatch recording path.
 
-**Status:** The local source, generated API clients, development database, and
-external Supabase schema are aligned for the current Drizzle model. Schedule
-creation and acceptance are working. The main Journal now requests the full
-user-owned journal rather than only the selected day, and newly created notes
-are placed into the visible client cache before the normal refetch. Browser-push
-alarms have not been started because the required product behavior was not
-selected.
+**Status:** The former Journal feature has been removed from the product. The
+Today surface no longer exposes note creation or privacy controls, planning and
+Gemini no longer receive note content, and the generated API surface no longer
+contains Journal contracts. Historical migrations remain intact, with migration
+`0014_pretty_hercules` dropping the retired `journal_entries` table.
 
-**Where the work is located:**
-
-- Main Journal UI: `artifacts/day-tripper/src/components/journal-panel.tsx`
-- Journal API: `artifacts/api-server/src/routes/journalEntries.ts`
-- Journal contract: `lib/api-spec/openapi.yaml`
-- Generated clients: `lib/api-client-react/src/generated/` and
-  `lib/api-zod/src/generated/`
-- Database schema and migrations: `lib/db/src/schema/` and
-  `lib/db/drizzle/`
-- Schedule planning and acceptance: `artifacts/day-tripper/src/App.tsx` and
-  `artifacts/api-server/src/routes/planning.ts`
+The remaining planning flow continues to use the user's explicit intention,
+available time, style, fixed commitments, saved activities, and conversation
+messages. Task recommendations remain a separate task-only Gemini path.
 
 **Approved product boundary:**
 
@@ -371,10 +361,6 @@ selected.
 - Chart behavior after a new personal high and after changing retention speed.
 - Backdated personal-high behavior, historical snapshot immutability, and
   chart segmentation after backdated observations.
-- An authenticated production end-to-end Journal create/list flow through the
-  Render deployment. The local endpoint contract, Supabase schema, and client
-  refresh path are aligned, but this still needs a user-authenticated live
-  confirmation after the latest release.
 - Browser-push alarm behavior and delivery infrastructure.
 - Authenticated stopwatch interaction through the private retention page remains
   unverified because the available browser preview is signed out. The source

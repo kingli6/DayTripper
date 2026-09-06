@@ -71,10 +71,6 @@ export interface PlanningRequest {
      * @nullable
      */
   fixedCommitments?: string | null;
-  /** @maxItems 20 */
-  includeJournalEntryIds?: number[];
-  /** @maxItems 20 */
-  considerJournalEntryIds?: number[];
   /** @maxItems 8 */
   discussionMessages?: PlanningDiscussionMessage[];
 }
@@ -110,10 +106,6 @@ export interface PlanningDiscussionRequest {
      * @nullable
      */
   fixedCommitments?: string | null;
-  /** @maxItems 20 */
-  includeJournalEntryIds?: number[];
-  /** @maxItems 20 */
-  considerJournalEntryIds?: number[];
   /** @maxItems 8 */
   messages: PlanningDiscussionMessage[];
 }
@@ -922,83 +914,6 @@ export interface ActivityChangeNoteInput {
   note: string;
 }
 
-export type JournalEntryPrivacy = typeof JournalEntryPrivacy[keyof typeof JournalEntryPrivacy];
-
-
-export const JournalEntryPrivacy = {
-  private: 'private',
-  planning: 'planning',
-} as const;
-
-export interface JournalEntry {
-  id: number;
-  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
-  recordedDate: string;
-  content: string;
-  /** @nullable */
-  activityId: number | null;
-  /** @nullable */
-  topic: string | null;
-  /**
-     * @maxItems 5
-     * @items.minLength 1
-     * @items.maxLength 40
-     */
-  tags: string[];
-  privacy: JournalEntryPrivacy;
-  recordedAt: string;
-}
-
-export type JournalEntryInputPrivacy = typeof JournalEntryInputPrivacy[keyof typeof JournalEntryInputPrivacy];
-
-
-export const JournalEntryInputPrivacy = {
-  private: 'private',
-  planning: 'planning',
-} as const;
-
-export interface JournalEntryInput {
-  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
-  recordedDate: string;
-  /**
-     * @minLength 1
-     * @maxLength 5000
-     */
-  content: string;
-  /** @nullable */
-  activityId?: number | null;
-  /**
-     * @maxLength 120
-     * @nullable
-     */
-  topic?: string | null;
-  /**
-     * @maxItems 5
-     * @items.minLength 1
-     * @items.maxLength 40
-     */
-  tags?: string[];
-  privacy?: JournalEntryInputPrivacy;
-}
-
-export type JournalEntryUpdatePrivacy = typeof JournalEntryUpdatePrivacy[keyof typeof JournalEntryUpdatePrivacy];
-
-
-export const JournalEntryUpdatePrivacy = {
-  private: 'private',
-  planning: 'planning',
-} as const;
-
-export interface JournalEntryUpdate {
-  privacy: JournalEntryUpdatePrivacy;
-  /**
-     * @maxItems 5
-     * @items.minLength 1
-     * @items.maxLength 40
-     */
-  tags?: string[];
-}
-
 export type RetentionSpeed = typeof RetentionSpeed[keyof typeof RetentionSpeed];
 
 
@@ -1109,7 +1024,6 @@ export interface AdminAccountMetric {
   /** @nullable */
   displayName: string | null;
   activityCount: number;
-  journalEntryCount: number;
   changeCount: number;
   /** @nullable */
   firstActivityAt: string | null;
@@ -1183,19 +1097,5 @@ export type ListActivityChangesParams = {
  * @pattern ^\d{4}-\d{2}-\d{2}$
  */
 date: string;
-};
-
-export type ListJournalEntriesParams = {
-/**
- * @pattern ^\d{4}-\d{2}-\d{2}$
- */
-date?: string;
-};
-
-export type ListPlanningJournalCandidatesParams = {
-/**
- * @pattern ^\d{4}-\d{2}-\d{2}$
- */
-currentDate: string;
 };
 

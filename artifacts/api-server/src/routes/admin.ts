@@ -12,7 +12,6 @@ import {
   activitiesTable,
   adminActionsTable,
   db,
-  journalEntriesTable,
 } from "@workspace/db";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -91,10 +90,6 @@ router.get("/admin/overview", async (req, res): Promise<void> => {
           (SELECT COUNT(*) FROM activity_changes),
           pg_total_relation_size('public.activity_changes'::regclass)
         UNION ALL
-        SELECT 'journal_entries',
-          (SELECT COUNT(*) FROM journal_entries),
-          pg_total_relation_size('public.journal_entries'::regclass)
-        UNION ALL
         SELECT 'app_metadata',
           (SELECT COUNT(*) FROM app_metadata),
           pg_total_relation_size('public.app_metadata'::regclass)
@@ -108,14 +103,11 @@ router.get("/admin/overview", async (req, res): Promise<void> => {
     db.execute(sql`
       SELECT owners.account_id,
         COALESCE(activity_metrics.activity_count, 0) AS activity_count,
-        COALESCE(journal_metrics.journal_entry_count, 0) AS journal_entry_count,
         COALESCE(change_metrics.change_count, 0) AS change_count,
         activity_metrics.first_activity_at,
         activity_metrics.last_activity_at
       FROM (
         SELECT owner_id AS account_id FROM activities
-        UNION
-        SELECT owner_id AS account_id FROM journal_entries
         UNION
         SELECT owner_id AS account_id FROM activity_changes
       ) AS owners
@@ -126,11 +118,6 @@ router.get("/admin/overview", async (req, res): Promise<void> => {
         FROM activities
         GROUP BY owner_id
       ) AS activity_metrics ON activity_metrics.owner_id = owners.account_id
-      LEFT JOIN (
-        SELECT owner_id, COUNT(*) AS journal_entry_count
-        FROM journal_entries
-        GROUP BY owner_id
-      ) AS journal_metrics ON journal_metrics.owner_id = owners.account_id
       LEFT JOIN (
         SELECT owner_id, COUNT(*) AS change_count
         FROM activity_changes
@@ -173,7 +160,6 @@ router.get("/admin/overview", async (req, res): Promise<void> => {
       accountId,
       ...identity,
       activityCount: numberValue(item.activity_count),
-      journalEntryCount: numberValue(item.journal_entry_count),
       changeCount: numberValue(item.change_count),
       firstActivityAt: item.first_activity_at ? new Date(String(item.first_activity_at)).toISOString() : null,
       lastActivityAt: item.last_activity_at ? new Date(String(item.last_activity_at)).toISOString() : null,
@@ -235,8 +221,6 @@ router.post("/admin/accounts/:accountId/reset", async (req, res): Promise<void> 
       SELECT EXISTS (
         SELECT 1 FROM activities WHERE owner_id = ${targetOwnerId}
         UNION ALL
-        SELECT 1 FROM journal_entries WHERE owner_id = ${targetOwnerId}
-        UNION ALL
         SELECT 1 FROM activity_changes WHERE owner_id = ${targetOwnerId}
       ) AS has_records
     `);
@@ -244,16 +228,13 @@ router.post("/admin/accounts/:accountId/reset", async (req, res): Promise<void> 
     if (!hasRecords) return null;
 
     const deleted = await tx.execute(sql`
-      WITH deleted_journal AS (
-        DELETE FROM journal_entries WHERE owner_id = ${targetOwnerId} RETURNING 1
-      ), deleted_changes AS (
+      WITH deleted_changes AS (
         DELETE FROM activity_changes WHERE owner_id = ${targetOwnerId} RETURNING 1
       ), deleted_activities AS (
         DELETE FROM activities WHERE owner_id = ${targetOwnerId} RETURNING 1
       )
       SELECT
-        (SELECT COUNT(*) FROM deleted_journal)
-        + (SELECT COUNT(*) FROM deleted_changes)
+        (SELECT COUNT(*) FROM deleted_changes)
         + (SELECT COUNT(*) FROM deleted_activities) AS deleted_rows
     `);
     const deletedRows = numberValue((deleted.rows[0] as ScalarRow | undefined)?.deleted_rows);

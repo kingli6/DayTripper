@@ -13,7 +13,6 @@ export interface AdminAccountMetric {
   /** @nullable */
   displayName: string | null;
   activityCount: number;
-  journalEntryCount: number;
   changeCount: number;
   /** @nullable */
   firstActivityAt: string | null;

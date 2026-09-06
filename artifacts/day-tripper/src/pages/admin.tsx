@@ -73,7 +73,7 @@ function accountLabel(account: Pick<AdminAccountMetric, 'email' | 'displayName'>
 }
 
 function recordCount(account: AdminAccountMetric) {
-  return account.activityCount + account.journalEntryCount + account.changeCount;
+  return account.activityCount + account.changeCount;
 }
 
 function AdminSkeleton() {
@@ -312,14 +312,10 @@ function AccountDetail({
         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/[0.1] text-primary"><Mail className="size-4" strokeWidth={1.7} /></span>
       </div>
 
-      <div className="mt-7 grid grid-cols-3 gap-2.5" data-testid="section-admin-selected-counts">
+      <div className="mt-7 grid grid-cols-2 gap-2.5" data-testid="section-admin-selected-counts">
         <div className="rounded-2xl border border-border/65 bg-background/50 p-3">
           <p className="font-mono-ui text-[22px] leading-none" data-testid="text-admin-selected-activities">{numberLabel(account.activityCount)}</p>
           <p className="mt-2 text-[10px] leading-4 text-muted-foreground">saved activities</p>
-        </div>
-        <div className="rounded-2xl border border-border/65 bg-background/50 p-3">
-          <p className="font-mono-ui text-[22px] leading-none" data-testid="text-admin-selected-journal">{numberLabel(account.journalEntryCount)}</p>
-          <p className="mt-2 text-[10px] leading-4 text-muted-foreground">journal records</p>
         </div>
         <div className="rounded-2xl border border-border/65 bg-background/50 p-3">
           <p className="font-mono-ui text-[22px] leading-none" data-testid="text-admin-selected-changes">{numberLabel(account.changeCount)}</p>
@@ -429,9 +425,8 @@ function AdminOverviewPage() {
   const selectedAccount = accounts.find((account) => account.accountId === selectedId) ?? null;
   const totals = useMemo(() => accounts.reduce((sum, account) => ({
     activities: sum.activities + account.activityCount,
-    journal: sum.journal + account.journalEntryCount,
     changes: sum.changes + account.changeCount,
-  }), { activities: 0, journal: 0, changes: 0 }), [accounts]);
+  }), { activities: 0, changes: 0 }), [accounts]);
 
   function handleSelect(account: AdminAccountMetric) {
     setSelectedId(account.accountId);
@@ -474,7 +469,7 @@ function AdminOverviewPage() {
               <>
                 <div className="grid gap-3 sm:grid-cols-3">
                   <StatCard icon={Users} label="Accounts with saved records" value={numberLabel(accounts.length)} note="Distinct accounts available for support" tone="teal" />
-                  <StatCard icon={Wrench} label="Saved planner records" value={numberLabel(totals.activities + totals.journal + totals.changes)} note={`${numberLabel(totals.activities)} activities · ${numberLabel(totals.changes)} changes`} tone="peach" />
+                  <StatCard icon={Wrench} label="Saved planner records" value={numberLabel(totals.activities + totals.changes)} note={`${numberLabel(totals.activities)} activities · ${numberLabel(totals.changes)} changes`} tone="peach" />
                   <StatCard icon={Clock3} label="Recent owner actions" value={numberLabel(overview.recentAdminActions.length)} note="Visible maintenance history in the overview" tone="sand" />
                 </div>
 

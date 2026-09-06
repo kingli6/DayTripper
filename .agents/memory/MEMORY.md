@@ -11,3 +11,4 @@
 - [Clerk API session cookies](clerk-api-session-cookies.md) — shared browser API calls should explicitly include credentials when app and API are proxied through artifact routes.
 - [Continuation checkpoints](continuation-checkpoints.md) — resume from a verified canonical handoff, not from stale pasted transcripts or milestone notes.
 - [Offline status authority](offline-status-authority.md) — successful API contact should override stale navigator.onLine signals in the activity sync UI.
+- [Cross-cutting feature removal](cross-cutting-feature-removal.md) — remove runtime, generated contracts, schema source, and admin paths together; preserve history and append a destructive migration.
