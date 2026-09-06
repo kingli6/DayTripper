@@ -623,6 +623,19 @@ export interface TaskRecommendationInput {
   currentEnergy: number;
 }
 
+export interface ExecutionDecisionInput {
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  availableMinutes: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  currentEnergy: number;
+}
+
 export type TaskRecommendationResponseRecommendationsItem = {
   taskId: number;
   /**
@@ -649,6 +662,31 @@ export interface TaskRecommendationResponse {
   /** @maxItems 3 */
   recommendations: TaskRecommendationResponseRecommendationsItem[];
   source: TaskRecommendationResponseSource;
+}
+
+export interface ExecutionDecision {
+  /** @minimum 1 */
+  taskId: number;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  durationMinutes: number;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  firstAction: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  stoppingPoint: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  reason: string;
 }
 
 export interface TaskScheduleInput {

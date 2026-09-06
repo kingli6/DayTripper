@@ -5,12 +5,12 @@ import {
   useArchiveTask,
   useCompleteTask,
   useCreateTask,
+  useDecideExecutionTask,
   useListTasks,
-  useRecommendTasks,
   useScheduleTask,
   useUpdateTask,
 } from '@workspace/api-client-react';
-import type { Task, TaskInput, TaskScheduleInput, TaskUpdate } from '@workspace/api-client-react';
+import type { ExecutionDecision, Task, TaskInput, TaskScheduleInput, TaskUpdate } from '@workspace/api-client-react';
 import { Archive, Check, Clock3, ListTodo, RotateCcw, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -36,12 +36,6 @@ type TaskFormValues = z.infer<typeof taskSchema>;
 type RecommendationInputs = {
   availableMinutes: number;
   energy: number;
-};
-
-type RecommendationResult = {
-  taskId: number;
-  rank: number;
-  reason: string;
 };
 
 type QuadrantKey = 'importantUrgent' | 'importantNotUrgent' | 'notImportantUrgent' | 'notImportantNotUrgent';
@@ -384,18 +378,21 @@ function MatrixTaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   );
 }
 
-function RecommendationCard({ rank, task, explanation, onEdit, onSchedule }: { rank: number; task: Task; explanation: string; onEdit: () => void; onSchedule: () => void }) {
+function ExecutionDecisionCard({ decision, task, onEdit, onSchedule }: { decision: ExecutionDecision; task: Task; onEdit: () => void; onSchedule: () => void }) {
   return (
-    <article className="border-b border-border/55 py-2.5 last:border-0" data-testid={`card-recommendation-${task.id}`}>
-      <div className="flex items-center gap-2.5">
-        <span className="w-4 shrink-0 text-sm font-semibold text-primary">{rank}</span>
-        <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left" data-testid={`button-edit-recommendation-${task.id}`}>
-          <div className="flex min-w-0 items-center gap-3">
-            <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{task.title}</p>
-            <span className="shrink-0 text-[10px] text-muted-foreground">{task.estimatedMinutes}m · {quadrantTitle(task)}</span>
-          </div>
-          <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{explanation}</p>
-        </button>
+    <article className="border-b border-border/55 py-2.5 last:border-0" data-testid={`card-execution-decision-${task.id}`}>
+      <div className="flex items-start gap-2.5">
+        <div className="min-w-0 flex-1">
+          <button type="button" onClick={onEdit} className="flex min-w-0 max-w-full items-center gap-3 text-left" data-testid={`button-edit-execution-decision-${task.id}`}>
+            <p className="min-w-0 truncate text-sm font-semibold text-foreground">{task.title}</p>
+            <span className="shrink-0 text-[10px] text-muted-foreground">{decision.durationMinutes}m · {quadrantTitle(task)}</span>
+          </button>
+          <dl className="mt-3 grid gap-2 text-[11px] sm:grid-cols-3">
+            <div><dt className="font-mono-ui uppercase tracking-[0.12em] text-primary">First action</dt><dd className="mt-0.5 text-foreground">{decision.firstAction}</dd></div>
+            <div><dt className="font-mono-ui uppercase tracking-[0.12em] text-primary">Stop at</dt><dd className="mt-0.5 text-foreground">{decision.stoppingPoint}</dd></div>
+            <div><dt className="font-mono-ui uppercase tracking-[0.12em] text-primary">Why</dt><dd className="mt-0.5 text-muted-foreground">{decision.reason}</dd></div>
+          </dl>
+        </div>
         <button type="button" onClick={onSchedule} data-testid={`button-schedule-task-${task.id}`} className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-[10px] font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <span className="hidden sm:inline">Work on this</span>
           <span className="sm:hidden">Work</span>
@@ -405,14 +402,15 @@ function RecommendationCard({ rank, task, explanation, onEdit, onSchedule }: { r
   );
 }
 
-function ScheduleTaskModal({ task, pending, onSchedule, onClose }: {
+function ScheduleTaskModal({ task, recommendedDurationMinutes, pending, onSchedule, onClose }: {
   task: Task;
+  recommendedDurationMinutes?: number;
   pending: boolean;
   onSchedule: (data: TaskScheduleInput) => Promise<void>;
   onClose: () => void;
 }) {
   const [startTime, setStartTime] = useState(() => defaultScheduleStart(task.estimatedMinutes));
-  const [durationMinutes, setDurationMinutes] = useState(task.estimatedMinutes);
+  const [durationMinutes, setDurationMinutes] = useState(recommendedDurationMinutes ?? task.estimatedMinutes);
   const [formError, setFormError] = useState('');
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -520,18 +518,17 @@ export default function TasksPage() {
   const queryClient = useQueryClient();
   const list = useListTasks();
   const createTask = useCreateTask();
-  const recommendTask = useRecommendTasks();
+  const decideTask = useDecideExecutionTask();
   const scheduleTask = useScheduleTask();
   const updateTask = useUpdateTask();
   const completeTask = useCompleteTask();
   const archiveTask = useArchiveTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [schedulingTask, setSchedulingTask] = useState<Task | null>(null);
+  const [schedulingTask, setSchedulingTask] = useState<{ task: Task; durationMinutes?: number } | null>(null);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
   const [recommendationInputs, setRecommendationInputs] = useState<RecommendationInputs>({ availableMinutes: 60, energy: 3 });
   const [recommendationRun, setRecommendationRun] = useState<RecommendationInputs | null>(null);
-  const [serverRecommendations, setServerRecommendations] = useState<RecommendationResult[]>([]);
-  const [recommendationSource, setRecommendationSource] = useState<'gemini' | 'deterministic'>('deterministic');
+  const [executionDecision, setExecutionDecision] = useState<ExecutionDecision | null>(null);
 
   const tasks = useMemo(() => [...(list.data ?? [])].filter((task) => task.status !== 'archived').sort((a, b) => focusScore(b) - focusScore(a) || a.id - b.id), [list.data]);
   const activeTasks = tasks.filter((task) => task.status === 'inbox' || task.status === 'active');
@@ -550,17 +547,24 @@ export default function TasksPage() {
     if (!recommendationRun) return [];
     return deterministicRecommendations(activeTasks, recommendationRun);
   }, [activeTasks, recommendationRun]);
-  const recommendations = useMemo(() => {
-    if (!recommendationRun) return [];
-    const tasksById = new Map(activeTasks.map((task) => [task.id, task]));
-    const remoteRecommendations = serverRecommendations
-      .map((recommendation) => {
-        const task = tasksById.get(recommendation.taskId);
-        return task ? { task, explanation: recommendation.reason } : null;
-      })
-      .filter((recommendation): recommendation is { task: Task; explanation: string } => recommendation !== null);
-    return remoteRecommendations.length ? remoteRecommendations : localRecommendations;
-  }, [activeTasks, localRecommendations, recommendationRun, serverRecommendations]);
+  const localDecision = useMemo<ExecutionDecision | null>(() => {
+    const recommendation = localRecommendations[0];
+    if (!recommendation || !recommendationRun) return null;
+    const durationMinutes = Math.max(1, Math.min(
+      recommendation.task.estimatedMinutes,
+      recommendationRun.availableMinutes,
+      25,
+    ));
+    return {
+      taskId: recommendation.task.id,
+      durationMinutes,
+      firstAction: `Write down the smallest concrete next step for “${recommendation.task.title}”, then begin it.`,
+      stoppingPoint: `Stop after the ${durationMinutes}-minute session and decide whether to continue.`,
+      reason: recommendation.explanation,
+    };
+  }, [localRecommendations, recommendationRun]);
+  const decision = executionDecision ?? localDecision;
+  const decisionTask = decision ? activeTasks.find((task) => task.id === decision.taskId) : undefined;
   const showSuccess = (text: string) => {
     setNotice({ tone: 'success', text });
     window.setTimeout(() => setNotice(null), 3200);
@@ -650,20 +654,18 @@ export default function TasksPage() {
     if (!activeTasks.length) return;
     const inputs = { ...recommendationInputs };
     setRecommendationRun(inputs);
-    setServerRecommendations([]);
-    setRecommendationSource('deterministic');
+    setExecutionDecision(null);
 
     try {
-      const response = await recommendTask.mutateAsync({
+      const response = await decideTask.mutateAsync({
         data: {
           availableMinutes: inputs.availableMinutes,
           currentEnergy: inputs.energy,
         },
       });
-      setServerRecommendations(response.recommendations);
-      setRecommendationSource(response.source);
+      setExecutionDecision(response);
     } catch {
-      // The local ranking remains visible if the recommendation request cannot reach the server.
+      // The local decision remains visible if the decision request cannot reach the server.
     }
   };
 
@@ -695,13 +697,13 @@ export default function TasksPage() {
                   </label>
                 </div>
               </div>
-              <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || recommendTask.isPending} data-testid="button-recommend-tasks" className="mt-3 min-h-10 w-full rounded-lg bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">{recommendTask.isPending ? 'Finding a good fit…' : 'WHAT SHOULD I WORK ON?'}</button>
-              {recommendTask.isPending ? (
-                <p className="mt-3 text-[11px] text-muted-foreground" role="status" data-testid="status-recommendations-loading">Comparing active tasks with your time and energy…</p>
+              <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || decideTask.isPending} data-testid="button-recommend-tasks" className="mt-3 min-h-10 w-full rounded-lg bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">{decideTask.isPending ? 'Choosing one next step…' : 'WHAT SHOULD I WORK ON?'}</button>
+              {decideTask.isPending ? (
+                <p className="mt-3 text-[11px] text-muted-foreground" role="status" data-testid="status-recommendations-loading">Choosing one task with your time, energy, and execution guidance…</p>
               ) : recommendationRun ? (
                 <div className="mt-3" data-testid="list-recommendations">
-                  <div className="mb-1 flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">Next three</p><span className="text-[10px] text-muted-foreground">{recommendationSource === 'gemini' ? 'AI-assisted' : 'Local ranking'} · {recommendationRun.availableMinutes}m / E{recommendationRun.energy}</span></div>
-                  {recommendations.length ? recommendations.map((recommendation, index) => <RecommendationCard key={recommendation.task.id} rank={index + 1} task={recommendation.task} explanation={recommendation.explanation} onEdit={() => setEditingTask(recommendation.task)} onSchedule={() => setSchedulingTask(recommendation.task)} />) : <p className="py-2 text-[11px] text-muted-foreground">No active task recommendations yet.</p>}
+                  <div className="mb-1 flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">One next step</p><span className="text-[10px] text-muted-foreground">{recommendationRun.availableMinutes}m / E{recommendationRun.energy}</span></div>
+                  {decision && decisionTask ? <ExecutionDecisionCard decision={decision} task={decisionTask} onEdit={() => setEditingTask(decisionTask)} onSchedule={() => setSchedulingTask({ task: decisionTask, durationMinutes: decision.durationMinutes })} /> : <p className="py-2 text-[11px] text-muted-foreground">No active task decision yet.</p>}
                 </div>
               ) : null}
             </section>
@@ -744,7 +746,7 @@ export default function TasksPage() {
       </AppShell>
       {notice && <div className={`fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)] ${notice.tone === 'error' ? 'border-destructive/25' : 'border-primary/25'}`} role="status" data-testid="status-tasks-notice"><span className={`flex size-7 shrink-0 items-center justify-center rounded-full ${notice.tone === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>{notice.tone === 'error' ? <X className="size-3.5" /> : <Check className="size-3.5" />}</span><p className="min-w-0 flex-1 text-xs font-semibold text-foreground">{notice.text}</p><button type="button" onClick={() => setNotice(null)} aria-label="Dismiss task message" data-testid="button-dismiss-tasks-notice" className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="size-3.5" /></button></div>}
       {editingTask && <TaskEditModal task={editingTask} pending={updateTask.isPending} onSave={(values) => void update(editingTask, values)} onClose={() => setEditingTask(null)} />}
-      {schedulingTask && <ScheduleTaskModal task={schedulingTask} pending={scheduleTask.isPending} onSchedule={(data) => schedule(schedulingTask, data)} onClose={() => setSchedulingTask(null)} />}
+      {schedulingTask && <ScheduleTaskModal task={schedulingTask.task} recommendedDurationMinutes={schedulingTask.durationMinutes} pending={scheduleTask.isPending} onSchedule={(data) => schedule(schedulingTask.task, data)} onClose={() => setSchedulingTask(null)} />}
     </div>
   );
 }

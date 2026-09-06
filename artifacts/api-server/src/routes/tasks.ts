@@ -1,12 +1,20 @@
 import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { Router, type IRouter } from "express";
-import { activitiesTable, db, tasksTable } from "@workspace/db";
+import {
+  activitiesTable,
+  db,
+  executionObservationsTable,
+  executionStateTable,
+  tasksTable,
+} from "@workspace/db";
 import {
   ArchiveTaskParams,
   CompleteTaskParams,
   CompleteTaskResponse,
   CreateTaskBody,
   CreateTaskResponse,
+  DecideExecutionTaskBody,
+  DecideExecutionTaskResponse,
   ListTasksResponse,
   RecommendTasksBody,
   RecommendTasksResponse,
@@ -19,6 +27,12 @@ import {
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
 import { getGeminiConfig, isGeminiConfigured } from "../lib/ai";
+import { deriveExecutionPolicy, type ExecutionPolicyStateLevel } from "../lib/executionPolicy";
+import {
+  createDeterministicExecutionDecision,
+  validateExecutionDecision,
+  validateExecutionDecisionForTask,
+} from "../lib/executionDecision";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -264,6 +278,164 @@ ${JSON.stringify(tasks.map((task) => ({
   }
 }
 
+type ExecutionDecisionState = {
+  energy: ExecutionPolicyStateLevel;
+  stress: ExecutionPolicyStateLevel;
+  availableMinutes: number;
+};
+
+function energyLevelFromScore(value: number): ExecutionPolicyStateLevel {
+  if (value <= 2) return "low";
+  if (value >= 4) return "high";
+  return "normal";
+}
+
+function storedLevel(value: string | null | undefined): ExecutionPolicyStateLevel {
+  return value === "low" || value === "high" ? value : "normal";
+}
+
+function decisionTask(task: typeof tasksTable.$inferSelect) {
+  return {
+    id: task.id,
+    title: task.title,
+    estimatedMinutes: task.estimatedMinutes,
+    status: task.status,
+    ownerId: task.ownerId,
+  };
+}
+
+function policyForDecisionTask(
+  task: typeof tasksTable.$inferSelect,
+  state: ExecutionDecisionState,
+  observations: Array<typeof executionObservationsTable.$inferSelect>,
+) {
+  return deriveExecutionPolicy({
+    task: {
+      title: task.title,
+      importance: task.importance,
+      urgency: task.urgency,
+      energyRequired: task.energyRequired,
+      interest: task.interest,
+      estimatedMinutes: task.estimatedMinutes,
+      deadline: task.deadline,
+    },
+    state,
+    observations: observations.map((observation) => ({
+      dimension: observation.dimension,
+      finding: observation.finding,
+      stateContext: observation.stateContext as
+        | "baseline"
+        | "relaxed"
+        | "normal"
+        | "stressed"
+        | "overloaded"
+        | null,
+      confidence: observation.confidence,
+      evidenceCount: observation.evidenceCount,
+    })),
+  });
+}
+
+async function geminiExecutionDecision(
+  tasks: Array<typeof tasksTable.$inferSelect>,
+  policies: Map<number, ReturnType<typeof deriveExecutionPolicy>>,
+  state: ExecutionDecisionState,
+  guidance: Array<typeof executionObservationsTable.$inferSelect>,
+  log: { warn: (object: unknown, message: string) => void },
+) {
+  if (!isGeminiConfigured()) return null;
+
+  const config = getGeminiConfig();
+  const prompt = `Choose one concrete execution decision. Return only JSON with exactly these keys:
+{"taskId":123,"durationMinutes":20,"firstAction":"A concrete first action.","stoppingPoint":"A clear boundary for stopping.","reason":"A short explanation."}
+
+Choose exactly one taskId from the supplied candidate list. Do not invent tasks or IDs. durationMinutes must be a whole number from 1 through the supplied maxDurationMinutes and must not exceed availableMinutes. Keep firstAction, stoppingPoint, and reason concise and concrete. Do not return alternatives, arrays, markdown, or any additional keys.
+
+Current execution state:
+${JSON.stringify(state, null, 2)}
+
+Relevant user-controlled guidance:
+${JSON.stringify(guidance.slice(0, 12).map((observation) => ({
+    finding: observation.finding,
+    stateContext: observation.stateContext,
+  })), null, 2)}
+
+Candidate tasks:
+${JSON.stringify(tasks.map((task) => {
+    const policy = policies.get(task.id);
+    return {
+      taskId: task.id,
+      title: task.title,
+      importance: task.importance,
+      urgency: task.urgency,
+      interest: task.interest,
+      estimatedMinutes: task.estimatedMinutes,
+      deadline: task.deadline?.toISOString() ?? null,
+      maxDurationMinutes: policy?.suggestedDurationMinutes ?? 1,
+      nextActionStyle: policy?.nextActionStyle ?? "concrete_first_action",
+      stoppingPointRequired: policy?.stoppingPointRequired ?? true,
+      reduceScope: policy?.reduceScope ?? true,
+    };
+  }), null, 2)}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+
+  try {
+    const response = await fetch(`${config.baseUrl}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          maxOutputTokens: 1024,
+          temperature: 0.2,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      log.warn({ status: response.status }, "Execution decision provider request failed");
+      return null;
+    }
+
+    const text = extractGeminiText(await response.json());
+    if (!text) return null;
+
+    let candidate: unknown;
+    try {
+      candidate = parseGeminiJson(text);
+    } catch {
+      log.warn({}, "Execution decision provider returned invalid JSON");
+      return null;
+    }
+
+    let decision: ReturnType<typeof validateExecutionDecision>;
+    try {
+      decision = validateExecutionDecision(candidate);
+      const task = tasks.find((item) => item.id === decision.taskId);
+      const policy = task ? policies.get(task.id) : undefined;
+      if (!task || !policy) throw new TypeError("Execution decision selected an unknown task.");
+      return validateExecutionDecisionForTask(
+        candidate,
+        decisionTask(task),
+        policy,
+        state.availableMinutes,
+      );
+    } catch {
+      log.warn({}, "Execution decision provider returned an invalid decision");
+      return null;
+    }
+  } catch (error) {
+    log.warn({ err: error }, "Execution decision provider request failed");
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 router.get("/tasks", async (_req, res): Promise<void> => {
   const tasks = await db
     .select()
@@ -340,6 +512,89 @@ router.post("/tasks/recommend", async (req, res): Promise<void> => {
   const aiResult = await geminiRecommendations(tasks, inputs, req.log);
   res.setHeader("Cache-Control", "private, no-store");
   res.json(RecommendTasksResponse.parse(aiResult ?? fallback));
+});
+
+router.post("/tasks/decision", async (req, res): Promise<void> => {
+  const parsed = DecideExecutionTaskBody.safeParse(req.body);
+  if (!parsed.success) {
+    req.log.warn({ errors: parsed.error.flatten() }, "Invalid execution decision input");
+    res.status(400).json({ error: "Please check the execution decision inputs." });
+    return;
+  }
+
+  if (!Number.isInteger(parsed.data.availableMinutes)
+    || !Number.isInteger(parsed.data.currentEnergy)) {
+    res.status(400).json({ error: "Execution decision inputs must be whole numbers." });
+    return;
+  }
+
+  const ownerId = res.locals.userId as string;
+  const tasks = await db
+    .select()
+    .from(tasksTable)
+    .where(and(
+      eq(tasksTable.ownerId, ownerId),
+      inArray(tasksTable.status, ["inbox", "active"]),
+    ))
+    .orderBy(asc(tasksTable.deadline), desc(tasksTable.updatedAt));
+
+  if (!tasks.length) {
+    res.status(404).json({ error: "No active or inbox task is available for a decision." });
+    return;
+  }
+
+  const [storedState] = await db
+    .select()
+    .from(executionStateTable)
+    .where(eq(executionStateTable.ownerId, ownerId));
+  const state: ExecutionDecisionState = {
+    energy: storedState?.energy
+      ? storedLevel(storedState.energy)
+      : energyLevelFromScore(parsed.data.currentEnergy),
+    stress: storedLevel(storedState?.stress),
+    availableMinutes: parsed.data.availableMinutes,
+  };
+
+  const guidanceRows = await db
+    .select()
+    .from(executionObservationsTable)
+    .where(eq(executionObservationsTable.ownerId, ownerId))
+    .orderBy(desc(executionObservationsTable.updatedAt));
+  const relevantGuidance = guidanceRows.filter((observation) =>
+    observation.capabilities.length === 0
+    || observation.capabilities.includes("task_recommendation"),
+  );
+
+  const policies = new Map(
+    tasks.map((task) => [task.id, policyForDecisionTask(task, state, relevantGuidance)]),
+  );
+  const ranked = deterministicRecommendations(tasks, {
+    availableMinutes: parsed.data.availableMinutes,
+    currentEnergy: parsed.data.currentEnergy,
+  });
+  const selected = ranked[0] ? tasks.find((task) => task.id === ranked[0].taskId) : undefined;
+  const selectedPolicy = selected ? policies.get(selected.id) : undefined;
+
+  if (!selected || !selectedPolicy) {
+    res.status(404).json({ error: "No valid task decision is available." });
+    return;
+  }
+
+  const fallback = createDeterministicExecutionDecision(
+    decisionTask(selected),
+    selectedPolicy,
+    ranked[0].reason,
+  );
+  const aiDecision = await geminiExecutionDecision(
+    tasks,
+    policies,
+    state,
+    relevantGuidance,
+    req.log,
+  );
+
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(DecideExecutionTaskResponse.parse(aiDecision ?? fallback));
 });
 
 router.post("/tasks/:id/schedule", async (req, res): Promise<void> => {

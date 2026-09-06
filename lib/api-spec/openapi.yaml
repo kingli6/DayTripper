@@ -241,6 +241,29 @@ paths:
                 $ref: "#/components/schemas/TaskRecommendationResponse"
         "400":
           description: Invalid recommendation inputs
+  /tasks/decision:
+    post:
+      operationId: decideExecutionTask
+      tags: [tasks]
+      summary: Decide what the user should work on next
+      description: Returns one bounded execution decision using deterministic policy constraints, relevant user guidance, and Gemini when available
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutionDecisionInput"
+      responses:
+        "200":
+          description: One concrete execution decision
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionDecision"
+        "400":
+          description: Invalid execution decision inputs
+        "404":
+          description: No active or inbox task is available
   /tasks/{id}/schedule:
     post:
       operationId: scheduleTask
@@ -1428,6 +1451,20 @@ components:
       required:
         - availableMinutes
         - currentEnergy
+    ExecutionDecisionInput:
+      type: object
+      properties:
+        availableMinutes:
+          type: number
+          minimum: 1
+          maximum: 1440
+        currentEnergy:
+          type: number
+          minimum: 1
+          maximum: 5
+      required:
+        - availableMinutes
+        - currentEnergy
     TaskRecommendationResponse:
       type: object
       properties:
@@ -1457,6 +1494,35 @@ components:
       required:
         - recommendations
         - source
+    ExecutionDecision:
+      type: object
+      additionalProperties: false
+      properties:
+        taskId:
+          type: number
+          minimum: 1
+        durationMinutes:
+          type: number
+          minimum: 1
+          maximum: 1440
+        firstAction:
+          type: string
+          minLength: 1
+          maxLength: 500
+        stoppingPoint:
+          type: string
+          minLength: 1
+          maxLength: 500
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - taskId
+        - durationMinutes
+        - firstAction
+        - stoppingPoint
+        - reason
     TaskScheduleInput:
       type: object
       properties:

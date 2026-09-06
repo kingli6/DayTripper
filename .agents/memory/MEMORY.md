@@ -16,3 +16,4 @@
 - [Cross-cutting feature removal](cross-cutting-feature-removal.md) — remove runtime, generated contracts, schema source, and admin paths together; preserve history and append a destructive migration.
 - [Drizzle schema drift](drizzle-schema-drift.md) — do not force schema push when legacy journal_entries drift prompts deletion; apply only verified additive changes.
 - [Push-created database migrations](push-created-database-migrations.md) — when development schema history is empty, apply a verified new migration without replaying the full journal.
+- [OpenAPI same-shape contracts](openapi-same-shape-contracts.md) — after adding a duplicate-shaped schema, verify each operation’s generated input type so refs do not silently swap.

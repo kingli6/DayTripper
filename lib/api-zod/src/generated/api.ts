@@ -553,6 +553,41 @@ export const RecommendTasksResponse = zod.object({
 
 
 /**
+ * Returns one bounded execution decision using deterministic policy constraints, relevant user guidance, and Gemini when available
+ * @summary Decide what the user should work on next
+ */
+export const decideExecutionTaskBodyAvailableMinutesMax = 1440;
+
+export const decideExecutionTaskBodyCurrentEnergyMax = 5;
+
+
+
+export const DecideExecutionTaskBody = zod.object({
+  "availableMinutes": zod.number().min(1).max(decideExecutionTaskBodyAvailableMinutesMax),
+  "currentEnergy": zod.number().min(1).max(decideExecutionTaskBodyCurrentEnergyMax)
+})
+
+
+export const decideExecutionTaskResponseDurationMinutesMax = 1440;
+
+export const decideExecutionTaskResponseFirstActionMax = 500;
+
+export const decideExecutionTaskResponseStoppingPointMax = 500;
+
+export const decideExecutionTaskResponseReasonMax = 500;
+
+
+
+export const DecideExecutionTaskResponse = zod.object({
+  "taskId": zod.number().min(1),
+  "durationMinutes": zod.number().min(1).max(decideExecutionTaskResponseDurationMinutesMax),
+  "firstAction": zod.string().min(1).max(decideExecutionTaskResponseFirstActionMax),
+  "stoppingPoint": zod.string().min(1).max(decideExecutionTaskResponseStoppingPointMax),
+  "reason": zod.string().min(1).max(decideExecutionTaskResponseReasonMax)
+})
+
+
+/**
  * Creates a normal work Activity for an active task without completing or changing the task
  * @summary Schedule an owned task into Today
  */

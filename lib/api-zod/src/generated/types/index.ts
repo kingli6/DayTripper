@@ -28,6 +28,8 @@ export * from './aiStatus';
 export * from './applyReplanningProposalRequest';
 export * from './applyReplanningResult';
 export * from './executionCapability';
+export * from './executionDecision';
+export * from './executionDecisionInput';
 export * from './executionObservation';
 export * from './executionObservationInput';
 export * from './executionObservationInputStateContext';

@@ -31,6 +31,8 @@ import type {
   AiStatus,
   ApplyReplanningProposalRequest,
   ApplyReplanningResult,
+  ExecutionDecision,
+  ExecutionDecisionInput,
   ExecutionObservation,
   ExecutionObservationInput,
   ExecutionObservationUpdate,
@@ -902,6 +904,78 @@ export const useRecommendTasks = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getRecommendTasksMutationOptions(options));
+    }
+
+export const getDecideExecutionTaskUrl = () => {
+
+
+
+
+  return `/api/tasks/decision`
+}
+
+/**
+ * Returns one bounded execution decision using deterministic policy constraints, relevant user guidance, and Gemini when available
+ * @summary Decide what the user should work on next
+ */
+export const decideExecutionTask = async (executionDecisionInput: ExecutionDecisionInput, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionDecision> => {
+
+  return customFetch<ExecutionDecision>(getDecideExecutionTaskUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(executionDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getDecideExecutionTaskMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideExecutionTask>>, TError,{data: BodyType<ExecutionDecisionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof decideExecutionTask>>, TError,{data: BodyType<ExecutionDecisionInput>}, TContext> => {
+
+const mutationKey = ['decideExecutionTask'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof decideExecutionTask>>, {data: BodyType<ExecutionDecisionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  decideExecutionTask(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DecideExecutionTaskMutationResult = NonNullable<Awaited<ReturnType<typeof decideExecutionTask>>>
+    export type DecideExecutionTaskMutationBody = BodyType<ExecutionDecisionInput>
+    export type DecideExecutionTaskMutationError = ErrorType<void>
+
+    /**
+ * @summary Decide what the user should work on next
+ */
+export const useDecideExecutionTask = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof decideExecutionTask>>, TError,{data: BodyType<ExecutionDecisionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof decideExecutionTask>>,
+        TError,
+        {data: BodyType<ExecutionDecisionInput>},
+        TContext
+      > => {
+      return useMutation(getDecideExecutionTaskMutationOptions(options));
     }
 
 export const getScheduleTaskUrl = (id: number,) => {
