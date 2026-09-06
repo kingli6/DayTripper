@@ -20,7 +20,6 @@ import {
   LockKeyhole,
   Menu,
   Pencil,
-  Pin,
   Plus,
   RotateCcw,
   ShieldCheck,
@@ -155,7 +154,6 @@ type ActivityDraft = {
   category: string | null;
   completed: boolean;
   locked: boolean;
-  pinned: boolean;
   note: string | null;
 };
 
@@ -211,19 +209,6 @@ function minutesFromTime(time: string) {
   return hours * 60 + minutes;
 }
 
-function durationMinutes(activity: Activity) {
-  if (!activity.endTime) return null;
-  const duration = minutesFromTime(activity.endTime) - minutesFromTime(activity.startTime);
-  return duration > 0 ? duration : null;
-}
-
-function durationLabel(minutes: number) {
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
-}
-
 function currentMinutes() {
   const now = new Date();
   return now.getHours() * 60 + now.getMinutes();
@@ -257,7 +242,6 @@ function draftFromActivity(activity: EditorActivity, date: string): ActivityDraf
     category: activity?.category ?? null,
     completed: activity?.completed ?? false,
     locked: activity?.locked ?? false,
-    pinned: activity?.pinned ?? false,
     note: activity?.note ?? null,
   };
 }
@@ -284,23 +268,23 @@ function Sidebar({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning:
         </div>
         <div className="mt-16">
           <p className="px-3 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/45">Your space</p>
-          <div className="mt-3 flex items-center gap-3 rounded-xl bg-sidebar-accent px-3 py-3 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]">
+          <Link href="/tasks" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-tasks">
+            <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+            <span>Tasks</span>
+          </Link>
+          <Link href="/today" className="mt-1 flex items-center gap-3 rounded-xl bg-sidebar-accent px-3 py-3 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-sidebar-today">
             <CalendarDays className="size-4 text-sidebar-primary" strokeWidth={1.8} />
             <span>Today</span>
             <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
-          </div>
+          </Link>
+          <Link href="/board" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-board">
+            <LayoutGrid className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+            <span>Board</span>
+          </Link>
           <Link href="/retention" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-retention">
             <Circle className="size-3.5 text-sidebar-primary" strokeWidth={1.8} />
             <span>Practices</span>
           </Link>
-           <Link href="/board" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-board">
-             <LayoutGrid className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-             <span>Board</span>
-           </Link>
-           <Link href="/tasks" className="mt-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-sidebar-tasks">
-             <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-             <span>Tasks</span>
-           </Link>
         </div>
         <div className="mt-14 px-3">
           <div className="mb-4 flex size-8 items-center justify-center rounded-full border border-sidebar-primary/35 bg-sidebar-primary/10 text-sidebar-primary">
@@ -317,7 +301,7 @@ function Sidebar({ onAdd, onOpenPlanning }: { onAdd: () => void; onOpenPlanning:
         </button>
         <button type="button" onClick={onOpenPlanning} data-testid="button-sidebar-planning" className="mb-6 flex w-full items-center justify-center gap-2 rounded-xl border border-sidebar-primary/35 px-3 py-3 text-sm font-semibold text-sidebar-foreground transition-colors hover:border-sidebar-primary/70 hover:bg-sidebar-accent">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
-          Shape the day
+          Plan today
         </button>
         <div className="border-t border-sidebar-border/80 px-3 pt-5">
           <div className="flex items-center gap-2 text-[11px] text-sidebar-foreground/55">
@@ -421,16 +405,19 @@ function MobileHeader({
         <p className="font-display text-[21px] tracking-[-0.03em]">Day Tripper</p>
       </div>
       <div className="flex items-center gap-2">
-        <Link href="/retention" aria-label="Open retention practices" title="Practices" data-testid="link-mobile-retention" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
-          <Circle className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+        <Link href="/tasks" aria-label="Open your Tasks" title="Tasks" data-testid="link-mobile-tasks" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
+          <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+        </Link>
+        <Link href="/today" aria-label="Open Today" title="Today" data-testid="link-mobile-today" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
+          <CalendarDays className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </Link>
         <Link href="/board" aria-label="Open your Board" title="Board" data-testid="link-mobile-board" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <LayoutGrid className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </Link>
-        <Link href="/tasks" aria-label="Open your Tasks" title="Tasks" data-testid="link-mobile-tasks" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
-          <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+        <Link href="/retention" aria-label="Open retention practices" title="Practices" data-testid="link-mobile-retention" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
+          <Circle className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </Link>
-        <button type="button" onClick={onOpenPlanning} aria-label="Shape the day with a suggestion" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
+        <button type="button" onClick={onOpenPlanning} aria-label="Plan today" data-testid="button-mobile-planning" className="flex size-10 items-center justify-center rounded-xl border border-sidebar-primary/35 text-sidebar-foreground">
           <Sparkles className="size-4 text-sidebar-primary" strokeWidth={1.8} />
         </button>
         <button type="button" onClick={onAdd} aria-label="Add an activity" data-testid="button-mobile-add" className="flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
@@ -623,7 +610,6 @@ function ActivityCard({ activity, now, onEdit, onToggle }: { activity: Activity;
                 {isPast && !activity.completed && <span className="font-mono-ui text-[9px] uppercase tracking-[0.12em] text-muted-foreground/65">passed by</span>}
                 {category && <span className="rounded-full px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em]" style={{ backgroundColor: category.soft, color: category.color }}>{category.label}</span>}
                 {activity.locked && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-secondary-foreground"><LockKeyhole className="size-3" strokeWidth={1.8} /> Locked</span>}
-                {activity.pinned && <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-secondary-foreground"><Pin className="size-3" strokeWidth={1.8} /> Pinned</span>}
               </div>
               <h3 className={`mt-2 text-[15px] font-semibold leading-5 ${activity.completed ? 'text-muted-foreground line-through decoration-primary/40' : 'text-foreground'}`} data-testid={`text-activity-title-${activity.id}`}>{activity.title}</h3>
               {activity.note && <p className="mt-1.5 max-w-[520px] text-xs leading-5 text-muted-foreground" data-testid={`text-activity-note-${activity.id}`}>{activity.note}</p>}
@@ -670,82 +656,6 @@ function Timeline({ activities, now, onEdit, onToggle }: { activities: Activity[
         );
       })}
     </div>
-  );
-}
-
-function DayDistribution({ activities }: { activities: Activity[] }) {
-  const distribution = useMemo(() => {
-    const totals = CATEGORIES.map((category) => ({
-      category,
-      minutes: activities.reduce((total, activity) => (
-        activity.category === category ? total + (durationMinutes(activity) ?? 0) : total
-      ), 0),
-    }));
-    const uncategorizedMinutes = activities.reduce((total, activity) => (
-      activity.category && isCategory(activity.category) ? total : total + (durationMinutes(activity) ?? 0)
-    ), 0);
-    const timedMinutes = totals.reduce((total, item) => total + item.minutes, 0) + uncategorizedMinutes;
-    const ongoingCount = activities.filter((activity) => activity.endTime === null).length;
-
-    return {
-      rows: [
-        ...totals.filter((item) => item.minutes > 0),
-        ...(uncategorizedMinutes > 0 ? [{ category: 'uncategorized' as const, minutes: uncategorizedMinutes }] : []),
-      ],
-      timedMinutes,
-      ongoingCount,
-    };
-  }, [activities]);
-
-  return (
-    <details open className="group rounded-[22px] border border-border/75 bg-card/65 p-5" data-testid="summary-day-distribution">
-      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 [&::-webkit-details-marker]:hidden">
-        <div>
-          <p className="font-mono-ui text-[10px] uppercase tracking-[0.15em] text-muted-foreground">A quiet mirror</p>
-          <h2 className="mt-2 font-display text-[23px] leading-tight tracking-[-0.03em]">How today is distributed</h2>
-        </div>
-        <ChevronDown className="mt-1 size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" strokeWidth={1.8} />
-      </summary>
-      <div className="mt-5 border-t border-border/60 pt-4">
-        {distribution.timedMinutes > 0 ? (
-          <div className="space-y-3" role="list" aria-label="Timed activity distribution">
-            {distribution.rows.map((row) => {
-              const isUncategorized = row.category === 'uncategorized';
-              const meta = isUncategorized ? null : categoryMeta[row.category];
-              const percentage = Math.round((row.minutes / distribution.timedMinutes) * 100);
-              return (
-                <div key={row.category} role="listitem" data-testid={`distribution-row-${row.category}`}>
-                  <div className="flex items-center justify-between gap-3 text-xs">
-                    <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
-                      <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: meta?.color ?? 'hsl(var(--muted-foreground))' }} aria-hidden="true" />
-                      <span>{meta?.label ?? 'Uncategorized'}</span>
-                    </span>
-                    <span className="shrink-0 font-mono-ui text-[10px] text-muted-foreground">{durationLabel(row.minutes)} · {percentage}%</span>
-                  </div>
-                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                    <div className="h-full rounded-full" style={{ width: `${percentage}%`, backgroundColor: meta?.color ?? 'hsl(var(--muted-foreground))' }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm leading-6 text-muted-foreground" data-testid="status-distribution-empty">
-            No fixed durations to mirror yet. Open time is still part of the day.
-          </p>
-        )}
-        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/60 pt-3 text-[11px] leading-5 text-muted-foreground">
-          <span>{distribution.timedMinutes ? `${durationLabel(distribution.timedMinutes)} with an end time` : 'No fixed durations recorded'}</span>
-          {distribution.ongoingCount > 0 && (
-            <>
-              <span className="text-border" aria-hidden="true">/</span>
-              <span data-testid="text-distribution-ongoing">{distribution.ongoingCount} ongoing {distribution.ongoingCount === 1 ? 'activity' : 'activities'} kept separate</span>
-            </>
-          )}
-        </div>
-        <p className="mt-3 text-[11px] leading-5 text-muted-foreground/75">This only reflects the schedule you entered. It is not a target or a measure of how the day should look.</p>
-      </div>
-    </details>
   );
 }
 
@@ -1212,7 +1122,6 @@ function ActivityModal({ date, activity, onClose, onSave, onDelete, onDeleted }:
   const [category, setCategory] = useState<Category | ''>('');
   const [completed, setCompleted] = useState(false);
   const [locked, setLocked] = useState(false);
-  const [pinned, setPinned] = useState(false);
   const [note, setNote] = useState('');
   const [initialDraft, setInitialDraft] = useState<ActivityDraft>(() => draftFromActivity(activity, date));
   const [confirmAction, setConfirmAction] = useState<'delete' | 'discard' | null>(null);
@@ -1231,7 +1140,6 @@ function ActivityModal({ date, activity, onClose, onSave, onDelete, onDeleted }:
     setCategory(activity?.category && isCategory(activity.category) ? activity.category : '');
     setCompleted(nextDraft.completed);
     setLocked(nextDraft.locked);
-    setPinned(nextDraft.pinned);
     setNote(nextDraft.note ?? '');
     setConfirmAction(null);
     setFormError('');
@@ -1245,7 +1153,6 @@ function ActivityModal({ date, activity, onClose, onSave, onDelete, onDeleted }:
     category: category || null,
     completed,
     locked,
-    pinned,
     note: note || null,
   };
   const hasUnsavedChanges = JSON.stringify(currentDraft) !== JSON.stringify(initialDraft);
@@ -1329,7 +1236,7 @@ function ActivityModal({ date, activity, onClose, onSave, onDelete, onDeleted }:
       category: category || null,
       completed,
       locked,
-      pinned,
+      pinned: activity?.pinned ?? false,
       note: note.trim() || null,
     };
     try {
@@ -1452,19 +1359,12 @@ function ActivityModal({ date, activity, onClose, onSave, onDelete, onDeleted }:
               <label htmlFor="activity-note" className="text-xs font-semibold text-foreground">A note <span className="font-normal text-muted-foreground">(optional)</span></label>
               <textarea id="activity-note" value={note} onChange={(event) => setNote(event.target.value)} placeholder="Anything future-you should know?" rows={3} data-testid="input-activity-note" className="mt-2 w-full resize-none rounded-xl border border-input bg-card px-3.5 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground/55 focus:border-primary focus:ring-2 focus:ring-primary/15" />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div>
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/75 bg-card/55 p-3.5 transition-colors hover:border-primary/35">
                 <input type="checkbox" checked={locked} onChange={(event) => setLocked(event.target.checked)} data-testid="checkbox-activity-locked" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" />
                 <span>
                   <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><LockKeyhole className="size-3.5 text-primary" strokeWidth={1.8} /> Lock this activity</span>
                   <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Protect it from future planning changes.</span>
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/75 bg-card/55 p-3.5 transition-colors hover:border-primary/35">
-                <input type="checkbox" checked={pinned} onChange={(event) => setPinned(event.target.checked)} data-testid="checkbox-activity-pinned" className="mt-0.5 size-4 accent-[hsl(var(--primary))]" />
-                <span>
-                  <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground"><Pin className="size-3.5 text-primary" strokeWidth={1.8} /> Pin for reuse</span>
-                  <span className="mt-1 block text-[11px] leading-5 text-muted-foreground">Keep this activity marked as a reusable template.</span>
                 </span>
               </label>
             </div>
@@ -1544,6 +1444,18 @@ function Today() {
 
   const completedCount = activities.filter((activity) => activity.completed).length;
   const nextActivity = useMemo(() => activities.filter((activity) => !activity.completed && minutesFromTime(activity.startTime) >= now).sort((a, b) => a.startTime.localeCompare(b.startTime))[0], [activities, now]);
+
+  function openPlanToday() {
+    const hasRemainingSchedule = activities.some((activity) => (
+      !activity.completed
+      && (activity.endTime === null || minutesFromTime(activity.endTime) > now)
+    ));
+    if (hasRemainingSchedule) {
+      setReplanningOpen(true);
+    } else {
+      setPlanningOpen(true);
+    }
+  }
 
   function openCreate() {
     setEditorActivity(null);
@@ -1647,9 +1559,9 @@ function Today() {
       <div className="pointer-events-none absolute -right-24 -top-28 size-[430px] rounded-full bg-accent/10 blur-3xl" />
       <div className="pointer-events-none absolute bottom-[-180px] left-[25%] size-[420px] rounded-full bg-secondary/35 blur-3xl" />
       <div className="relative flex min-h-[100dvh]">
-        <Sidebar onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} />
+        <Sidebar onAdd={openCreate} onOpenPlanning={openPlanToday} />
         <div className="min-w-0 flex-1">
-           <MobileHeader onAdd={openCreate} onOpenPlanning={() => setPlanningOpen(true)} />
+          <MobileHeader onAdd={openCreate} onOpenPlanning={openPlanToday} />
           <main className="mx-auto w-full max-w-[1180px] px-5 pb-12 pt-6 sm:px-8 sm:pt-9 lg:px-14 lg:pb-16 lg:pt-10">
             <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
               <div className="flex items-center gap-2">
@@ -1679,17 +1591,12 @@ function Today() {
                     <p className="mt-1 text-xs text-muted-foreground">{completedCount ? `${completedCount} already held` : 'Nothing needs to be finished to make this day count.'}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                   <button type="button" onClick={() => setReplanningOpen(true)} data-testid="button-open-replanning" className="inline-flex items-center gap-2 rounded-full border border-accent/35 bg-accent/[0.08] px-4 py-2.5 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                     <RotateCcw className="size-3.5" strokeWidth={1.8} />
-                     <span className="hidden sm:inline">Re-plan the rest</span>
-                     <span className="sm:hidden">Re-plan</span>
-                   </button>
-                   <button type="button" onClick={() => setPlanningOpen(true)} data-testid="button-open-planning" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.06] px-4 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
+                    <button type="button" onClick={openPlanToday} data-testid="button-open-plan-today" className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.06] px-4 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">
                      <Sparkles className="size-3.5" strokeWidth={1.8} />
-                     <span className="hidden sm:inline">Shape the day</span>
+                      <span className="hidden sm:inline">Plan today</span>
                      <span className="sm:hidden">Plan</span>
                    </button>
-                    <button type="button" onClick={() => setChangeReviewOpen(true)} data-testid="button-open-change-review" className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold text-foreground transition-colors hover:border-primary/40 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                     <button type="button" onClick={() => setChangeReviewOpen(true)} data-testid="button-open-change-review" className="inline-flex items-center gap-2 rounded-full border border-transparent bg-transparent px-2 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <Clock3 className="size-3.5" strokeWidth={1.8} />
                       <span className="hidden sm:inline">Review changes</span>
                       <span className="sm:hidden">Review</span>
@@ -1723,8 +1630,7 @@ function Today() {
                   </div>
                 ) : activities.length === 0 ? <EmptyDay onAdd={openCreate} /> : <Timeline activities={activities} now={now} onEdit={openEdit} onToggle={(activity) => void toggle(activity)} />}
               </section>
-               <aside className="animate-rise delay-2 space-y-4 lg:pt-1">
-                 <DayDistribution activities={activities} />
+                <aside className="animate-rise delay-2 space-y-4 lg:pt-1">
                 <div className="rounded-[24px] border border-primary/15 bg-primary p-5 text-primary-foreground shadow-[0_20px_50px_hsl(177_28%_39%/0.14)]">
                   <div className="flex items-center justify-between">
                     <span className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary-foreground/65">A little orientation</span>

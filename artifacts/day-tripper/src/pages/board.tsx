@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ArrowDown, ArrowUp, Archive, BookOpen, CalendarClock, Check, ChevronDown, Circle, Clock3, Flag, Home, LayoutGrid, Pencil, Plus, RotateCcw, ShieldCheck, Users, BriefcaseBusiness, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Archive, BookOpen, CalendarClock, Check, ChevronDown, Circle, Clock3, Flag, Home, LayoutGrid, ListTodo, Pencil, Plus, RotateCcw, ShieldCheck, Users, BriefcaseBusiness, X } from 'lucide-react';
 import { Link } from 'wouter';
 import { BoardCardForm, BOARD_CATEGORIES, type BoardCategory, type BoardCardFormValues } from '@/components/board-card-form';
 import { useQueryClient } from '@tanstack/react-query';
@@ -93,6 +93,10 @@ function BoardRail() {
         <BoardBrand />
         <nav className="mt-16" aria-label="Private space">
           <p className="px-3 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/45">Your space</p>
+          <Link href="/tasks" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-board-tasks">
+            <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
+            Tasks
+          </Link>
           <Link href="/today" className="mt-3 flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-board-today">
             <Circle className="size-3.5 text-sidebar-primary" strokeWidth={1.8} />
             Today
@@ -575,6 +579,12 @@ export default function BoardPage() {
 function BoardHeader({ total, onAdd }: { total: number; onAdd: () => void }) {
   return (
     <>
+      <nav className="mb-4 flex items-center gap-4 overflow-x-auto border-b border-border/60 pb-3 text-[11px] font-semibold lg:hidden" aria-label="Primary navigation">
+        <Link href="/tasks" data-testid="link-mobile-board-tasks" className="text-muted-foreground">Tasks</Link>
+        <Link href="/today" data-testid="link-mobile-board-today" className="text-muted-foreground">Today</Link>
+        <Link href="/board" data-testid="link-mobile-board-current" className="text-primary">Board</Link>
+        <Link href="/retention" data-testid="link-mobile-board-practices" className="text-muted-foreground">Practices</Link>
+      </nav>
       <header className="animate-rise flex items-center justify-between border-b border-border/60 pb-5">
         <div className="flex items-center gap-2"><Circle className="size-2.5 fill-accent text-accent" strokeWidth={0} /><span className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-muted-foreground">A private collection</span></div>
         <div className="flex items-center gap-3"><Link href="/today" data-testid="link-board-back-today" className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/45 hover:text-primary sm:inline-flex"><ChevronDown className="size-3.5 rotate-90" /> Today</Link><span className="hidden text-xs text-muted-foreground/75 md:block">{total} {total === 1 ? 'active card' : 'active cards'}</span></div>

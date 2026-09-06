@@ -1,6 +1,6 @@
 # Day Tripper Continuation Checkpoint
 
-Last reviewed: 2026-09-05
+Last reviewed: 2026-09-06
 
 This is the canonical handoff file for continuing Day Tripper across sessions or
 when the available conversation context is nearly exhausted. It is intentionally
@@ -31,6 +31,34 @@ must update it after every meaningful product decision, implementation chunk,
 verification result, blocked boundary, or change in the next safe action. The
 user should be able to point a new session to this file without repeating prior
 context. Do not wait for a reminder.
+
+## Information architecture cleanup
+
+**Status:** Implemented and locally verified on 2026-09-06.
+
+**Completed:**
+
+- Normalized the primary navigation to Tasks, Today, Board, Practices in that
+  order across the existing product surfaces, while keeping `/admin` outside
+  normal navigation and adding no Matrix route.
+- Replaced the separate visible Today planning actions with the single
+  user-facing “Plan today” action. It still opens the existing day-planning flow
+  for an open day and the existing replanning flow when a schedule remains.
+- Kept Review changes as a secondary action and kept Add activity available.
+- Removed the visible Today distribution summary and the incomplete
+  Pin/Pinned activity control without changing the underlying activity model or
+  data.
+
+**Verified:** Full workspace typecheck, API build, workflow-matched web
+production build, `git diff --check`, clean API/web workflow restarts, and
+signed-out preview rendering without new application errors.
+
+**Not yet verified:** Authenticated visual checks for the four navigation links,
+Plan today routing, Today activities, and secondary status controls because the
+available preview session is signed out.
+
+**Do not start:** Any replacement pin/reuse workflow, distribution dashboard,
+Matrix route, or unrelated redesign as part of this cleanup.
 
 ## Tasks MVP foundation
 

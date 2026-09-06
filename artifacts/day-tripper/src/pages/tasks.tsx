@@ -186,14 +186,14 @@ function TaskRail() {
         </Link>
         <nav className="mt-10" aria-label="Private space">
           <p className="px-3 font-mono-ui text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/45">Your space</p>
-          <Link href="/today" className="mt-2 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-today">
-            <span className="size-3.5 rounded-full border border-sidebar-primary" />
-            Today
-          </Link>
-          <Link href="/tasks" className="mt-1 flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-tasks-tasks">
+          <Link href="/tasks" className="mt-2 flex items-center gap-3 rounded-lg bg-sidebar-accent px-3 py-2.5 text-sm text-sidebar-accent-foreground shadow-[inset_3px_0_0_hsl(var(--sidebar-primary))]" data-testid="link-tasks-tasks">
             <ListTodo className="size-4 text-sidebar-primary" strokeWidth={1.8} />
             Tasks
             <span className="ml-auto size-1.5 rounded-full bg-sidebar-primary" />
+          </Link>
+          <Link href="/today" className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-today">
+            <span className="size-3.5 rounded-full border border-sidebar-primary" />
+            Today
           </Link>
           <Link href="/board" className="mt-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/65 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-tasks-board">
             <span className="size-3.5 rounded border border-sidebar-primary" />
@@ -711,6 +711,12 @@ export default function TasksPage() {
       <div className="relative flex min-h-[100dvh]">
         <TaskRail />
         <main className="min-w-0 flex-1 px-5 pb-12 pt-5 sm:px-8 sm:pt-7 lg:px-10 lg:pb-14 lg:pt-8">
+          <nav className="mb-4 flex items-center gap-4 overflow-x-auto border-b border-border/60 pb-3 text-[11px] font-semibold lg:hidden" aria-label="Primary navigation">
+            <Link href="/tasks" data-testid="link-mobile-tasks-page" className="text-primary">Tasks</Link>
+            <Link href="/today" data-testid="link-mobile-today-page" className="text-muted-foreground">Today</Link>
+            <Link href="/board" data-testid="link-mobile-board-page" className="text-muted-foreground">Board</Link>
+            <Link href="/retention" data-testid="link-mobile-practices-page" className="text-muted-foreground">Practices</Link>
+          </nav>
           <header className="flex items-center justify-between border-b border-border/60 pb-3">
             <div className="flex items-center gap-2"><ListTodo className="size-4 text-primary" /><span className="text-sm font-semibold text-foreground">Tasks</span></div>
             <Link href="/today" data-testid="link-tasks-back-today" className="hidden items-center rounded-full border border-border bg-card px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:border-primary/45 hover:text-primary sm:inline-flex">Today</Link>
