@@ -1669,6 +1669,14 @@ components:
           $ref: "#/components/schemas/RetentionPracticeDirection"
         retentionSpeed:
           $ref: "#/components/schemas/RetentionSpeed"
+        repeatIntervalDays:
+          type: ["number", "null"]
+          minimum: 1
+          description: Number of calendar days before the practice is suggested again; null means always available
+        nextAvailableDate:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
+          description: Calendar date when this practice becomes available again, derived from the latest recorded result
         createdAt:
           type: string
         updatedAt:
@@ -1679,6 +1687,8 @@ components:
         - unit
         - direction
         - retentionSpeed
+        - repeatIntervalDays
+        - nextAvailableDate
         - createdAt
         - updatedAt
     RetentionPracticeInput:
@@ -1693,6 +1703,10 @@ components:
         retentionSpeed:
           $ref: "#/components/schemas/RetentionSpeed"
           default: moderate
+        repeatIntervalDays:
+          type: ["number", "null"]
+          minimum: 1
+          description: Number of calendar days before the practice is suggested again; null means always available
       required:
         - name
         - unit
@@ -1707,6 +1721,10 @@ components:
           $ref: "#/components/schemas/RetentionPracticeUnit"
         retentionSpeed:
           $ref: "#/components/schemas/RetentionSpeed"
+        repeatIntervalDays:
+          type: ["number", "null"]
+          minimum: 1
+          description: Number of calendar days before the practice is suggested again; null means always available
     RetentionObservation:
       type: object
       properties:

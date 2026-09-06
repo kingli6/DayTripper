@@ -1,0 +1,1 @@
+ALTER TABLE "retention_practices" ADD COLUMN "repeat_interval_days" integer;

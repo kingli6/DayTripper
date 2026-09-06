@@ -12,3 +12,4 @@
 - [Continuation checkpoints](continuation-checkpoints.md) — resume from a verified canonical handoff, not from stale pasted transcripts or milestone notes.
 - [Offline status authority](offline-status-authority.md) — successful API contact should override stale navigator.onLine signals in the activity sync UI.
 - [Cross-cutting feature removal](cross-cutting-feature-removal.md) — remove runtime, generated contracts, schema source, and admin paths together; preserve history and append a destructive migration.
+- [Drizzle schema drift](drizzle-schema-drift.md) — do not force schema push when legacy journal_entries drift prompts deletion; apply only verified additive changes.

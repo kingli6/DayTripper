@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, lte } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lte } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import {
   db,
@@ -37,13 +37,33 @@ function ownerIdFromRequest(res: { locals: { userId?: unknown } }): string | nul
   return typeof res.locals.userId === "string" ? res.locals.userId : null;
 }
 
-function serializePractice(practice: typeof retentionPracticesTable.$inferSelect) {
+function addCalendarDays(value: string, days: number): string {
+  const [year, month, day] = value.split("-").map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day));
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function nextAvailableDate(
+  lastCompletedDate: string | null,
+  repeatIntervalDays: number | null,
+): string | null {
+  if (!lastCompletedDate || repeatIntervalDays === null) return null;
+  return addCalendarDays(lastCompletedDate, repeatIntervalDays);
+}
+
+function serializePractice(
+  practice: typeof retentionPracticesTable.$inferSelect,
+  lastCompletedDate: string | null = null,
+) {
   return {
     id: practice.id,
     name: practice.name,
     unit: practice.unit,
     direction: "higher" as const,
     retentionSpeed: practice.retentionSpeed as "slow" | "moderate" | "fast",
+    repeatIntervalDays: practice.repeatIntervalDays,
+    nextAvailableDate: nextAvailableDate(lastCompletedDate, practice.repeatIntervalDays),
     createdAt: toIsoTimestamp(practice.createdAt),
     updatedAt: toIsoTimestamp(practice.updatedAt),
   };
@@ -78,6 +98,21 @@ async function findOwnedPractice(practiceId: number, ownerId: string) {
   return practice;
 }
 
+async function findLatestObservationDate(practiceId: number): Promise<string | null> {
+  const [observation] = await db
+    .select({ recordedDate: retentionObservationsTable.recordedDate })
+    .from(retentionObservationsTable)
+    .where(eq(retentionObservationsTable.practiceId, practiceId))
+    .orderBy(
+      desc(retentionObservationsTable.recordedDate),
+      desc(retentionObservationsTable.createdAt),
+      desc(retentionObservationsTable.id),
+    )
+    .limit(1);
+
+  return observation?.recordedDate ?? null;
+}
+
 function trimmedRequiredValue(value: string): string | null {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
@@ -96,8 +131,34 @@ router.get("/retention/practices", async (req, res): Promise<void> => {
     .where(eq(retentionPracticesTable.ownerId, ownerId))
     .orderBy(desc(retentionPracticesTable.updatedAt), asc(retentionPracticesTable.id));
 
+  const latestDates = new Map<number, string>();
+  if (practices.length > 0) {
+    const observations = await db
+      .select({
+        practiceId: retentionObservationsTable.practiceId,
+        recordedDate: retentionObservationsTable.recordedDate,
+      })
+      .from(retentionObservationsTable)
+      .where(inArray(retentionObservationsTable.practiceId, practices.map((practice) => practice.id)))
+      .orderBy(
+        desc(retentionObservationsTable.recordedDate),
+        desc(retentionObservationsTable.createdAt),
+        desc(retentionObservationsTable.id),
+      );
+
+    for (const observation of observations) {
+      if (!latestDates.has(observation.practiceId)) {
+        latestDates.set(observation.practiceId, observation.recordedDate);
+      }
+    }
+  }
+
   res.setHeader("Cache-Control", "private, no-store");
-  res.json(ListRetentionPracticesResponse.parse(practices.map(serializePractice)));
+  res.json(
+    ListRetentionPracticesResponse.parse(
+      practices.map((practice) => serializePractice(practice, latestDates.get(practice.id) ?? null)),
+    ),
+  );
 });
 
 router.post("/retention/practices", async (req, res): Promise<void> => {
@@ -120,6 +181,14 @@ router.post("/retention/practices", async (req, res): Promise<void> => {
     res.status(400).json({ error: "Practice name and unit are required." });
     return;
   }
+  if (
+    parsed.data.repeatIntervalDays !== undefined
+    && parsed.data.repeatIntervalDays !== null
+    && (!Number.isInteger(parsed.data.repeatIntervalDays) || parsed.data.repeatIntervalDays < 1)
+  ) {
+    res.status(400).json({ error: "Repeat availability must be a whole number of days." });
+    return;
+  }
 
   const [practice] = await db
     .insert(retentionPracticesTable)
@@ -129,6 +198,7 @@ router.post("/retention/practices", async (req, res): Promise<void> => {
       unit,
       direction: "higher",
       retentionSpeed: parsed.data.retentionSpeed ?? "moderate",
+      repeatIntervalDays: parsed.data.repeatIntervalDays ?? null,
     })
     .returning();
 
@@ -156,8 +226,9 @@ router.get("/retention/practices/:practiceId", async (req, res): Promise<void> =
     return;
   }
 
+  const lastCompletedDate = await findLatestObservationDate(practice.id);
   res.setHeader("Cache-Control", "private, no-store");
-  res.json(GetRetentionPracticeResponse.parse(serializePractice(practice)));
+  res.json(GetRetentionPracticeResponse.parse(serializePractice(practice, lastCompletedDate)));
 });
 
 router.patch("/retention/practices/:practiceId", async (req, res): Promise<void> => {
@@ -200,6 +271,16 @@ router.patch("/retention/practices/:practiceId", async (req, res): Promise<void>
   if (parsed.data.retentionSpeed !== undefined) {
     updateValues.retentionSpeed = parsed.data.retentionSpeed;
   }
+  if (parsed.data.repeatIntervalDays !== undefined) {
+    if (
+      parsed.data.repeatIntervalDays !== null
+      && (!Number.isInteger(parsed.data.repeatIntervalDays) || parsed.data.repeatIntervalDays < 1)
+    ) {
+      res.status(400).json({ error: "Repeat availability must be a whole number of days." });
+      return;
+    }
+    updateValues.repeatIntervalDays = parsed.data.repeatIntervalDays;
+  }
 
   if (Object.keys(updateValues).length === 0) {
     res.status(400).json({ error: "No practice changes were provided." });
@@ -222,7 +303,8 @@ router.patch("/retention/practices/:practiceId", async (req, res): Promise<void>
     return;
   }
 
-  res.json(UpdateRetentionPracticeResponse.parse(serializePractice(practice)));
+  const lastCompletedDate = await findLatestObservationDate(practice.id);
+  res.json(UpdateRetentionPracticeResponse.parse(serializePractice(practice, lastCompletedDate)));
 });
 
 router.delete("/retention/practices/:practiceId", async (req, res): Promise<void> => {

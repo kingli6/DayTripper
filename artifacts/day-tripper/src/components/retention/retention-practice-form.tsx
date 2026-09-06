@@ -25,6 +25,16 @@ const units: Array<{ value: RetentionPracticeInput['unit']; label: string }> = [
   { value: 'items', label: 'Items completed' },
 ];
 
+const repeatIntervals = [
+  { value: 'none', label: 'No interval — always available' },
+  { value: '1', label: '1 day' },
+  { value: '2', label: '2 days' },
+  { value: '3', label: '3 days' },
+  { value: '4', label: '4 days' },
+  { value: '5', label: '5 days' },
+  { value: 'custom', label: 'Custom number of days' },
+] as const;
+
 export function RetentionPracticeForm({
   practice,
   pending,
@@ -39,17 +49,46 @@ export function RetentionPracticeForm({
   const [retentionSpeed, setRetentionSpeed] = useState<RetentionSpeed>(
     practice?.retentionSpeed ?? 'moderate',
   );
+  const [repeatInterval, setRepeatInterval] = useState<string>(
+    practice?.repeatIntervalDays ? String(practice.repeatIntervalDays) : 'none',
+  );
+  const [customRepeatDays, setCustomRepeatDays] = useState(
+    practice?.repeatIntervalDays && ![1, 2, 3, 4, 5].includes(practice.repeatIntervalDays)
+      ? String(practice.repeatIntervalDays)
+      : '',
+  );
+  const [localError, setLocalError] = useState('');
 
   useEffect(() => {
     setName(practice?.name ?? '');
     setUnit((practice?.unit as RetentionPracticeInput['unit'] | undefined) ?? 'correct answers');
     setRetentionSpeed(practice?.retentionSpeed ?? 'moderate');
+    setRepeatInterval(practice?.repeatIntervalDays ? String(practice.repeatIntervalDays) : 'none');
+    setCustomRepeatDays(
+      practice?.repeatIntervalDays && ![1, 2, 3, 4, 5].includes(practice.repeatIntervalDays)
+        ? String(practice.repeatIntervalDays)
+        : '',
+    );
+    setLocalError('');
   }, [practice]);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) return;
-    onSubmit({ name: name.trim(), unit, retentionSpeed });
+    const repeatIntervalDays = repeatInterval === 'none'
+      ? null
+      : repeatInterval === 'custom'
+        ? Number(customRepeatDays)
+        : Number(repeatInterval);
+    if (
+      repeatIntervalDays !== null
+      && (!Number.isInteger(repeatIntervalDays) || repeatIntervalDays < 1)
+    ) {
+      setLocalError('Enter a whole number of days at or above 1.');
+      return;
+    }
+    setLocalError('');
+    onSubmit({ name: name.trim(), unit, retentionSpeed, repeatIntervalDays });
   }
 
   return (
@@ -92,7 +131,27 @@ export function RetentionPracticeForm({
               ))}
             </div>
           </fieldset>
-          {error && <p className="rounded-xl border border-destructive/25 bg-destructive/[0.06] px-3 py-2.5 text-xs text-destructive" role="alert" data-testid="status-practice-form-error">{error}</p>}
+          <div>
+            <label htmlFor="practice-repeat-interval" className="text-xs font-semibold text-foreground">Repeat / availability</label>
+            <select id="practice-repeat-interval" value={repeatInterval} onChange={(event) => { setRepeatInterval(event.target.value); setLocalError(''); }} data-testid="input-practice-repeat-interval" className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+              {repeatIntervals.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            {repeatInterval === 'custom' && (
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={customRepeatDays}
+                onChange={(event) => { setCustomRepeatDays(event.target.value); setLocalError(''); }}
+                placeholder="Number of days"
+                aria-label="Custom repeat interval in days"
+                data-testid="input-practice-custom-repeat-days"
+                className="mt-2 h-12 w-full rounded-xl border border-input bg-background px-3.5 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-primary focus:ring-2 focus:ring-primary/15"
+              />
+            )}
+            <p className="mt-2 text-[11px] leading-5 text-muted-foreground">This is guidance, not a lock. You can always practice early if you choose.</p>
+          </div>
+          {(localError || error) && <p className="rounded-xl border border-destructive/25 bg-destructive/[0.06] px-3 py-2.5 text-xs text-destructive" role="alert" data-testid="status-practice-form-error">{localError || error}</p>}
           <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-5 sm:flex-row sm:justify-end">
             <button type="button" onClick={onClose} data-testid="button-cancel-practice" className="rounded-full border border-border px-5 py-2.5 text-xs font-semibold text-foreground hover:border-primary/40">Keep looking</button>
             <button type="submit" disabled={pending || !name.trim()} data-testid="button-save-practice" className="rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-55">

@@ -17,6 +17,7 @@ export const retentionPracticesTable = pgTable("retention_practices", {
   unit: text("unit").notNull(),
   direction: text("direction").notNull().default("higher"),
   retentionSpeed: text("retention_speed").notNull().default("moderate"),
+  repeatIntervalDays: integer("repeat_interval_days"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

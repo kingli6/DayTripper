@@ -968,12 +968,18 @@ export const AddActivityChangeNoteResponse = zod.object({
  * Returns practices owned by the authenticated user
  * @summary List the user's retention practices
  */
+
+export const listRetentionPracticesResponseNextAvailableDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const ListRetentionPracticesResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "direction": zod.enum(['higher']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
+  "repeatIntervalDays": zod.number().min(1).nullable().describe('Number of calendar days before the practice is suggested again; null means always available'),
+  "nextAvailableDate": zod.string().regex(listRetentionPracticesResponseNextAvailableDateRegExp).nullable().describe('Calendar date when this practice becomes available again, derived from the latest recorded result'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -988,11 +994,17 @@ export const createRetentionPracticeBodyNameMax = 120;
 
 export const createRetentionPracticeBodyRetentionSpeedDefault = `moderate`;
 
+
 export const CreateRetentionPracticeBody = zod.object({
   "name": zod.string().min(1).max(createRetentionPracticeBodyNameMax),
   "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
-  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']).default(createRetentionPracticeBodyRetentionSpeedDefault)
+  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']).default(createRetentionPracticeBodyRetentionSpeedDefault),
+  "repeatIntervalDays": zod.number().min(1).nullish().describe('Number of calendar days before the practice is suggested again; null means always available')
 })
+
+
+export const createRetentionPracticeResponseNextAvailableDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
 
 export const CreateRetentionPracticeResponse = zod.object({
   "id": zod.number(),
@@ -1000,6 +1012,8 @@ export const CreateRetentionPracticeResponse = zod.object({
   "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "direction": zod.enum(['higher']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
+  "repeatIntervalDays": zod.number().min(1).nullable().describe('Number of calendar days before the practice is suggested again; null means always available'),
+  "nextAvailableDate": zod.string().regex(createRetentionPracticeResponseNextAvailableDateRegExp).nullable().describe('Calendar date when this practice becomes available again, derived from the latest recorded result'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -1016,12 +1030,18 @@ export const GetRetentionPracticeParams = zod.object({
   "practiceId": zod.coerce.number().int().min(1)
 })
 
+
+export const getRetentionPracticeResponseNextAvailableDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const GetRetentionPracticeResponse = zod.object({
   "id": zod.number(),
   "name": zod.string(),
   "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "direction": zod.enum(['higher']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
+  "repeatIntervalDays": zod.number().min(1).nullable().describe('Number of calendar days before the practice is suggested again; null means always available'),
+  "nextAvailableDate": zod.string().regex(getRetentionPracticeResponseNextAvailableDateRegExp).nullable().describe('Calendar date when this practice becomes available again, derived from the latest recorded result'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })
@@ -1042,11 +1062,17 @@ export const updateRetentionPracticeBodyNameMax = 120;
 
 
 
+
 export const UpdateRetentionPracticeBody = zod.object({
   "name": zod.string().min(1).max(updateRetentionPracticeBodyNameMax).optional(),
   "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']).optional(),
-  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']).optional()
+  "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']).optional(),
+  "repeatIntervalDays": zod.number().min(1).nullish().describe('Number of calendar days before the practice is suggested again; null means always available')
 })
+
+
+export const updateRetentionPracticeResponseNextAvailableDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
 
 export const UpdateRetentionPracticeResponse = zod.object({
   "id": zod.number(),
@@ -1054,6 +1080,8 @@ export const UpdateRetentionPracticeResponse = zod.object({
   "unit": zod.enum(['correct answers', 'repetitions', 'minutes', 'pages', 'words', 'items']),
   "direction": zod.enum(['higher']),
   "retentionSpeed": zod.enum(['slow', 'moderate', 'fast']),
+  "repeatIntervalDays": zod.number().min(1).nullable().describe('Number of calendar days before the practice is suggested again; null means always available'),
+  "nextAvailableDate": zod.string().regex(updateRetentionPracticeResponseNextAvailableDateRegExp).nullable().describe('Calendar date when this practice becomes available again, derived from the latest recorded result'),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 })

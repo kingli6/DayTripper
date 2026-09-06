@@ -16,4 +16,10 @@ export interface RetentionPracticeUpdate {
   name?: string;
   unit?: RetentionPracticeUnit;
   retentionSpeed?: RetentionSpeed;
+  /**
+     * Number of calendar days before the practice is suggested again; null means always available
+     * @minimum 1
+     * @nullable
+     */
+  repeatIntervalDays?: number | null;
 }

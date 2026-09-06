@@ -39,6 +39,37 @@ function formatShortDate(value: string) {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(`${value}T12:00:00`));
 }
 
+function calendarDay(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+function daysBetween(from: string, to: string) {
+  return Math.round((calendarDay(to) - calendarDay(from)) / 86_400_000);
+}
+
+function practiceAvailability(practice: RetentionPractice, today = localDate()) {
+  if (!practice.nextAvailableDate) {
+    return { ready: true, label: 'Ready now', group: null };
+  }
+
+  const daysUntilAvailable = daysBetween(today, practice.nextAvailableDate);
+  if (daysUntilAvailable <= 0) {
+    return { ready: true, label: 'Ready now', group: null };
+  }
+
+  const group = daysUntilAvailable === 1
+    ? 'Tomorrow'
+    : daysUntilAvailable < 7
+      ? new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date(`${practice.nextAvailableDate}T12:00:00`))
+      : formatShortDate(practice.nextAvailableDate);
+  const label = daysUntilAvailable === 1
+    ? 'Available tomorrow'
+    : `Available in ${daysUntilAvailable} days`;
+
+  return { ready: false, label, group };
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'That change could not be saved. Try once more.';
 }
@@ -145,20 +176,72 @@ function PracticeList({
       </div>
     );
   }
-  return (
-    <div className="space-y-3" data-testid="list-retention-practices">
-      {practices.map((practice) => (
-        <button type="button" key={practice.id} onClick={() => setLocation(`/retention/${practice.id}`)} data-testid={`card-retention-practice-${practice.id}`} className="group flex w-full items-center justify-between gap-5 rounded-[20px] border border-border/75 bg-card/75 px-5 py-5 text-left transition-transform hover:-translate-y-0.5 hover:border-primary/40 sm:px-6">
-          <span className="min-w-0">
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="font-display text-[24px] leading-none tracking-[-0.035em] text-foreground">{practice.name}</span>
-              <span className="rounded-full bg-secondary px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-secondary-foreground">{practice.retentionSpeed}</span>
-            </span>
-            <span className="mt-2 block text-xs text-muted-foreground">Measured in {practice.unit} · Higher is better</span>
+
+  const today = localDate();
+  const readyPractices = practices.filter((practice) => practiceAvailability(practice, today).ready);
+  const comingUpPractices = practices
+    .filter((practice) => !practiceAvailability(practice, today).ready)
+    .sort((a, b) => (a.nextAvailableDate ?? '').localeCompare(b.nextAvailableDate ?? ''));
+  const comingUpGroups = comingUpPractices.reduce<Array<{ label: string; practices: RetentionPractice[] }>>(
+    (groups, practice) => {
+      const label = practiceAvailability(practice, today).group ?? 'Coming up';
+      const group = groups.find((item) => item.label === label);
+      if (group) group.practices.push(practice);
+      else groups.push({ label, practices: [practice] });
+      return groups;
+    },
+    [],
+  );
+
+  function practiceCard(practice: RetentionPractice) {
+    const availability = practiceAvailability(practice, today);
+    return (
+      <button type="button" key={practice.id} onClick={() => setLocation(`/retention/${practice.id}`)} data-testid={`card-retention-practice-${practice.id}`} className="group flex w-full items-center justify-between gap-5 rounded-[20px] border border-border/75 bg-card/75 px-5 py-5 text-left transition-transform hover:-translate-y-0.5 hover:border-primary/40 sm:px-6">
+        <span className="min-w-0">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-display text-[24px] leading-none tracking-[-0.035em] text-foreground">{practice.name}</span>
+            <span className="rounded-full bg-secondary px-2 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] text-secondary-foreground">{practice.retentionSpeed}</span>
           </span>
-          <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" strokeWidth={1.6} />
-        </button>
-      ))}
+          <span className="mt-2 block text-xs text-muted-foreground">Measured in {practice.unit} · Higher is better</span>
+          <span className={`mt-3 inline-flex rounded-full px-2.5 py-1 font-mono-ui text-[9px] uppercase tracking-[0.12em] ${availability.ready ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'}`} data-testid={`status-retention-availability-${practice.id}`}>
+            {availability.label}
+          </span>
+        </span>
+        <ChevronRight className="size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" strokeWidth={1.6} />
+      </button>
+    );
+  }
+
+  return (
+    <div className="space-y-8" data-testid="list-retention-practices">
+      {readyPractices.length > 0 && (
+        <section aria-labelledby="ready-practices-title">
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <div>
+              <h3 id="ready-practices-title" className="font-display text-[28px] tracking-[-0.04em]">Ready now</h3>
+              <p className="mt-1 text-xs text-muted-foreground">Available to work on today.</p>
+            </div>
+            <span className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">{readyPractices.length} {readyPractices.length === 1 ? 'practice' : 'practices'}</span>
+          </div>
+          <div className="space-y-3">{readyPractices.map(practiceCard)}</div>
+        </section>
+      )}
+      {comingUpGroups.length > 0 && (
+        <section aria-labelledby="coming-up-practices-title">
+          <div className="mb-3">
+            <h3 id="coming-up-practices-title" className="font-display text-[28px] tracking-[-0.04em]">Coming up</h3>
+            <p className="mt-1 text-xs text-muted-foreground">A gentle view of what becomes available next. You can always practice early.</p>
+          </div>
+          <div className="space-y-6">
+            {comingUpGroups.map((group) => (
+              <div key={group.label}>
+                <h4 className="mb-2 font-mono-ui text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{group.label}</h4>
+                <div className="space-y-3">{group.practices.map(practiceCard)}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -255,6 +338,8 @@ function PracticeDetail({
         clearStopwatchState();
         setRecordingMode('manual');
         void queryClient.invalidateQueries({ queryKey: getListRetentionObservationsQueryKey(practiceId) });
+        void queryClient.invalidateQueries({ queryKey: getGetRetentionPracticeQueryKey(practiceId) });
+        void queryClient.invalidateQueries({ queryKey: getListRetentionPracticesQueryKey() });
       },
       onError: (error) => {
         stopwatchSubmissionRef.current = false;
@@ -299,6 +384,8 @@ function PracticeDetail({
         setValue('');
         setContext('');
         void queryClient.invalidateQueries({ queryKey: getListRetentionObservationsQueryKey(practiceId) });
+        void queryClient.invalidateQueries({ queryKey: getGetRetentionPracticeQueryKey(practiceId) });
+        void queryClient.invalidateQueries({ queryKey: getListRetentionPracticesQueryKey() });
       },
       onError: (error) => setFormError(errorMessage(error)),
     });
@@ -314,6 +401,8 @@ function PracticeDetail({
     return <div className="rounded-[22px] border border-destructive/25 bg-destructive/[0.06] p-6 text-sm text-destructive" role="alert" data-testid="status-retention-observations-error">Your practice is here, but its results could not be loaded. <button type="button" onClick={() => void observationsQuery.refetch()} className="font-semibold underline underline-offset-4" data-testid="button-retry-retention-observations">Try again</button></div>;
   }
 
+  const availability = practiceAvailability(practice);
+
   return (
     <div className="space-y-7">
       <button type="button" onClick={() => setLocation('/retention')} data-testid="button-back-to-practices" className="inline-flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-primary"><ArrowLeft className="size-3.5" strokeWidth={1.8} /> All practices</button>
@@ -322,6 +411,9 @@ function PracticeDetail({
           <p className="font-mono-ui text-[10px] uppercase tracking-[0.2em] text-primary">A record of practice</p>
           <h1 className="mt-3 font-display text-[clamp(2.8rem,7vw,5.6rem)] leading-[0.9] tracking-[-0.065em]" data-testid={`text-retention-practice-name-${practice.id}`}>{practice.name}</h1>
           <p className="mt-4 text-sm text-muted-foreground">Results in <span className="font-semibold text-foreground">{practice.unit}</span> · Higher is better</p>
+          <div className={`mt-4 inline-flex items-center rounded-full px-3 py-1.5 font-mono-ui text-[10px] uppercase tracking-[0.14em] ${availability.ready ? 'bg-primary/10 text-primary' : 'bg-secondary text-secondary-foreground'}`} data-testid={`status-retention-detail-availability-${practice.id}`}>
+            {availability.label}
+          </div>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={() => onEdit(practice)} data-testid={`button-edit-retention-practice-${practice.id}`} className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-xs font-semibold hover:border-primary/45 hover:text-primary"><Pencil className="size-3.5" strokeWidth={1.8} /> Edit</button>

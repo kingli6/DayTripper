@@ -32,6 +32,34 @@ verification result, blocked boundary, or change in the next safe action. The
 user should be able to point a new session to this file without repeating prior
 context. Do not wait for a reminder.
 
+## Practice availability
+
+**Status:** Implemented and locally verified on 2026-09-06.
+
+**Completed:**
+
+- Added nullable `repeat_interval_days` to existing retention practices and
+  exposed `repeatIntervalDays` plus derived `nextAvailableDate` through the
+  existing authenticated Practices API.
+- Derived the next available calendar date from the latest recorded observation
+  rather than creating a duplicate completion system. A null interval keeps a
+  practice always available.
+- Added the Repeat / availability setting to create/edit, including 1–5 day
+  presets and a custom whole-day value. Availability remains guidance only;
+  recording a result early is still allowed and recalculates the next date.
+- Updated Practices to separate Ready now from Coming up, group upcoming items
+  by relative date, and refresh list/detail availability after recording.
+
+**Verified:** API/client codegen, workspace libraries, API/web typechecks, API
+and web production builds, safe development-column application, clean workflow
+restarts, health check, unauthenticated Practices privacy check, and signed-out
+preview rendering.
+
+**Database note:** The generated migration is additive. Drizzle push was not
+forced because it detected an unrelated pre-existing `journal_entries` table
+drift with two rows that it wanted to delete; only the new availability column
+was applied to development.
+
 ## Information architecture cleanup
 
 **Status:** Implemented and locally verified on 2026-09-06.

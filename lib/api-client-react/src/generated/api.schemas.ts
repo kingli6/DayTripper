@@ -948,6 +948,18 @@ export interface RetentionPractice {
   unit: RetentionPracticeUnit;
   direction: RetentionPracticeDirection;
   retentionSpeed: RetentionSpeed;
+  /**
+     * Number of calendar days before the practice is suggested again; null means always available
+     * @minimum 1
+     * @nullable
+     */
+  repeatIntervalDays: number | null;
+  /**
+     * Calendar date when this practice becomes available again, derived from the latest recorded result
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  nextAvailableDate: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -960,6 +972,12 @@ export interface RetentionPracticeInput {
   name: string;
   unit: RetentionPracticeUnit;
   retentionSpeed?: RetentionSpeed;
+  /**
+     * Number of calendar days before the practice is suggested again; null means always available
+     * @minimum 1
+     * @nullable
+     */
+  repeatIntervalDays?: number | null;
 }
 
 export interface RetentionPracticeUpdate {
@@ -970,6 +988,12 @@ export interface RetentionPracticeUpdate {
   name?: string;
   unit?: RetentionPracticeUnit;
   retentionSpeed?: RetentionSpeed;
+  /**
+     * Number of calendar days before the practice is suggested again; null means always available
+     * @minimum 1
+     * @nullable
+     */
+  repeatIntervalDays?: number | null;
 }
 
 /**
