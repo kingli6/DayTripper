@@ -33,6 +33,7 @@ import {
 import type { Activity, ActivityInput, PlanningDiscussionMessage, PlanningProposal, PlanningRequest } from '@workspace/api-client-react';
 import { ChangeReviewPanel } from '@/components/change-review-panel';
 import { AppShell } from '@/components/app-shell';
+import { ExecutionInterviewModal } from '@/components/execution-interview-modal';
 import TasksPage from '@/pages/tasks';
 import { PlanningDiscussion } from '@/components/planning-discussion';
 import { ReplanningStudio } from '@/components/replanning-studio';
@@ -1272,6 +1273,7 @@ function Today() {
   const [planningOpen, setPlanningOpen] = useState(false);
   const [replanningOpen, setReplanningOpen] = useState(false);
   const [changeReviewOpen, setChangeReviewOpen] = useState(false);
+  const [executionInterviewOpen, setExecutionInterviewOpen] = useState(false);
   const [acceptedNotice, setAcceptedNotice] = useState('');
   const [deletedActivity, setDeletedActivity] = useState<Activity | null>(null);
   const [undoPending, setUndoPending] = useState(false);
@@ -1511,6 +1513,23 @@ function Today() {
                   <p className="mt-4 font-display text-[21px] leading-[1.15] tracking-[-0.025em]">Plans are a place to return to, not a test to pass.</p>
                    <ApiStatus />
                 </div>
+                 <div className="rounded-[22px] border border-[hsl(15_66%_71%/0.38)] bg-[hsl(15_66%_71%/0.09)] p-5">
+                   <div className="flex items-center justify-between gap-3">
+                     <span className="font-mono-ui text-[10px] uppercase tracking-[0.15em] text-[hsl(15_58%_42%)]">A quieter way to help</span>
+                     <LockKeyhole className="size-4 text-[hsl(15_58%_42%)]" strokeWidth={1.7} />
+                   </div>
+                   <p className="mt-4 font-display text-[21px] leading-[1.15] tracking-[-0.025em]">Tell Day Tripper how work feels from the inside.</p>
+                   <p className="mt-3 text-xs leading-5 text-muted-foreground">A few private questions, one at a time. Skip anything that does not fit.</p>
+                   <button
+                     type="button"
+                     onClick={() => setExecutionInterviewOpen(true)}
+                     data-testid="button-open-execution-interview"
+                     className="mt-5 inline-flex min-h-10 items-center gap-2 rounded-full border border-[hsl(15_58%_42%/0.38)] bg-card/70 px-3.5 py-2 text-xs font-semibold text-[hsl(15_58%_42%)] transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(15_58%_42%)]"
+                   >
+                     Help Day Tripper understand how I work
+                     <ArrowRight className="size-3.5" strokeWidth={1.8} />
+                   </button>
+                 </div>
               </aside>
             </div>
             <footer className="mt-10 flex flex-col gap-2 border-t border-border/60 pt-5 text-[11px] text-muted-foreground/75 sm:flex-row sm:items-center sm:justify-between">
@@ -1543,6 +1562,7 @@ function Today() {
       {replanningOpen && <ReplanningStudio date={date} activities={activities} onClose={() => setReplanningOpen(false)} onApplied={handleReplanningApplied} />}
       {changeReviewOpen && <ChangeReviewPanel date={date} onClose={() => setChangeReviewOpen(false)} />}
       {editorActivity !== undefined && <ActivityModal date={date} activity={editorActivity} onClose={() => setEditorActivity(undefined)} onSave={saveActivity} onDelete={deleteActivity} onDeleted={handleDeleted} />}
+      {executionInterviewOpen && <ExecutionInterviewModal onClose={() => setExecutionInterviewOpen(false)} />}
     </div>
   );
 }

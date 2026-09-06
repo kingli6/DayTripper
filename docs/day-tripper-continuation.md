@@ -203,6 +203,49 @@ cross-account isolation through a signed-in browser/API session.
 surfaces, Tasks/Today/Practices changes, recommendation changes, or Gemini
 integration as part of this backend-only step.
 
+## Personalized execution system — Step 2
+
+**Status:** Implemented and locally verified on 2026-09-06.
+
+**Completed:**
+
+- Added a bounded, user-owned `execution_interviews` session record with a
+  short transcript, current question, status, and finish timestamp.
+- Added authenticated start, answer, and stop endpoints. The interview asks
+  one conversational behavioral question at a time, adapts through the
+  server-only Gemini integration, and stops after at most four questions.
+- Added strict server-side validation for the model response, including
+  bounded findings, allowed state contexts, cautious confidence, explicit or
+  inferred evidence type, and at most three observations per answer.
+- Merged similar observations by dimension, state context, and finding
+  similarity. Repeated evidence increases confidence gradually instead of
+  creating duplicates or jumping to certainty.
+- Added a compact Today entry point and accessible modal with skip, stop,
+  loading, retry/error, keyboard escape, focus return, and completion states.
+  The UI does not expose scores, progress gamification, personality labels, or
+  a separate profile/settings area.
+- Kept Tasks, Today planning, Practices, scheduling, and recommendations
+  unchanged apart from the compact interview entry point.
+
+**Verified:** OpenAPI codegen, full workspace typecheck, API and web
+production builds with workflow `PORT`/`BASE_PATH`, additive development table
+application and column inspection, API workflow restart, signed-out 401
+responses for all three interview endpoints, signed-out preview rendering,
+clean browser logs after restart, and `git diff --check`.
+
+**Database note:** The development database has an empty historical Drizzle
+ledger and unrelated pre-existing `journal_entries` drift. The new interview
+table was applied directly after inspection; schema push was not forced and
+historical migrations remain unchanged.
+
+**Not yet verified:** Authenticated end-to-end interview completion and
+Gemini-backed observation persistence because the available preview session is
+signed out. The server route and UI are ready for that signed-in check.
+
+**Do not start:** Recommendation changes, automatic schedule edits, scores,
+personality tests, a large execution profile/settings area, or open-ended chat
+as part of this interview slice.
+
 ## Tasks MVP foundation
 
 **Status:** Implemented and locally verified on 2026-09-05.

@@ -1216,6 +1216,96 @@ export const SetExecutionStateResponse = zod.object({
 
 
 /**
+ * Starts a short behavioral interview owned by the authenticated user
+ * @summary Start a private execution interview
+ */
+export const startExecutionInterviewResponseQuestionMax = 240;
+
+export const startExecutionInterviewResponseQuestionNumberMax = 4;
+
+
+
+export const StartExecutionInterviewResponse = zod.object({
+  "interviewId": zod.number(),
+  "status": zod.enum(['active']),
+  "question": zod.string().min(1).max(startExecutionInterviewResponseQuestionMax),
+  "questionNumber": zod.number().min(1).max(startExecutionInterviewResponseQuestionNumberMax)
+})
+
+
+/**
+ * Records one answer and returns an adapted next question or a finished interview
+ * @summary Answer the current execution interview question
+ */
+
+
+
+export const AnswerExecutionInterviewParams = zod.object({
+  "interviewId": zod.coerce.number().min(1)
+})
+
+export const answerExecutionInterviewBodyAnswerMax = 2000;
+
+
+
+export const AnswerExecutionInterviewBody = zod.object({
+  "answer": zod.string().min(1).max(answerExecutionInterviewBodyAnswerMax)
+})
+
+export const answerExecutionInterviewResponseQuestionMax = 240;
+
+export const answerExecutionInterviewResponseQuestionNumberMax = 4;
+
+
+export const answerExecutionInterviewResponseObservationsItemDimensionMax = 120;
+
+export const answerExecutionInterviewResponseObservationsItemFindingMax = 1000;
+
+export const answerExecutionInterviewResponseObservationsItemConfidenceMin = 0;
+export const answerExecutionInterviewResponseObservationsItemConfidenceMax = 1;
+
+export const answerExecutionInterviewResponseObservationsItemEvidenceCountMin = 0;
+
+export const answerExecutionInterviewResponseObservationsItemSourceMax = 120;
+
+
+
+export const AnswerExecutionInterviewResponse = zod.object({
+  "status": zod.enum(['active', 'finished']),
+  "question": zod.string().max(answerExecutionInterviewResponseQuestionMax).nullable(),
+  "questionNumber": zod.number().min(1).max(answerExecutionInterviewResponseQuestionNumberMax).nullable(),
+  "observations": zod.array(zod.object({
+  "id": zod.number().min(1),
+  "dimension": zod.string().min(1).max(answerExecutionInterviewResponseObservationsItemDimensionMax),
+  "finding": zod.string().min(1).max(answerExecutionInterviewResponseObservationsItemFindingMax),
+  "stateContext": zod.union([zod.literal('baseline'),zod.literal('relaxed'),zod.literal('normal'),zod.literal('stressed'),zod.literal('overloaded'),zod.literal(null)]).nullable(),
+  "confidence": zod.number().min(answerExecutionInterviewResponseObservationsItemConfidenceMin).max(answerExecutionInterviewResponseObservationsItemConfidenceMax),
+  "evidenceCount": zod.number().min(answerExecutionInterviewResponseObservationsItemEvidenceCountMin),
+  "source": zod.string().min(1).max(answerExecutionInterviewResponseObservationsItemSourceMax),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+/**
+ * Stops an active execution interview without changing saved activities
+ * @summary Finish a private execution interview
+ */
+
+
+
+export const FinishExecutionInterviewParams = zod.object({
+  "interviewId": zod.coerce.number().min(1)
+})
+
+export const FinishExecutionInterviewResponse = zod.object({
+  "status": zod.enum(['finished', 'stopped']),
+  "summary": zod.string()
+})
+
+
+/**
  * Returns protected aggregate account, table, database, and admin-action metrics without user-authored content
  * @summary Get protected database diagnostics
  */
