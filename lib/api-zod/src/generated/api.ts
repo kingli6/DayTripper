@@ -1280,6 +1280,136 @@ export const SetExecutionStateResponse = zod.object({
 
 
 /**
+ * @summary Get the user's active execution session
+ */
+
+
+export const getActiveExecutionSessionResponsePlannedMinutesMax = 1440;
+
+export const getActiveExecutionSessionResponseFirstActionMax = 500;
+
+export const getActiveExecutionSessionResponseStoppingPointMax = 500;
+
+
+
+export const GetActiveExecutionSessionResponse = zod.object({
+  "id": zod.number().min(1),
+  "taskId": zod.number().min(1),
+  "startedAt": zod.string(),
+  "plannedMinutes": zod.number().min(1).max(getActiveExecutionSessionResponsePlannedMinutesMax),
+  "endedAt": zod.string().nullable(),
+  "status": zod.enum(['active', 'completed', 'stopped']),
+  "firstAction": zod.string().min(1).max(getActiveExecutionSessionResponseFirstActionMax),
+  "stoppingPoint": zod.string().min(1).max(getActiveExecutionSessionResponseStoppingPointMax)
+})
+
+
+/**
+ * @summary Start a bounded execution session for an owned task
+ */
+
+export const startExecutionSessionBodyPlannedMinutesMax = 1440;
+
+export const startExecutionSessionBodyFirstActionMax = 500;
+
+export const startExecutionSessionBodyStoppingPointMax = 500;
+
+
+
+export const StartExecutionSessionBody = zod.object({
+  "taskId": zod.number().min(1),
+  "plannedMinutes": zod.number().min(1).max(startExecutionSessionBodyPlannedMinutesMax),
+  "firstAction": zod.string().min(1).max(startExecutionSessionBodyFirstActionMax),
+  "stoppingPoint": zod.string().min(1).max(startExecutionSessionBodyStoppingPointMax)
+})
+
+
+
+export const startExecutionSessionResponsePlannedMinutesMax = 1440;
+
+export const startExecutionSessionResponseFirstActionMax = 500;
+
+export const startExecutionSessionResponseStoppingPointMax = 500;
+
+
+
+export const StartExecutionSessionResponse = zod.object({
+  "id": zod.number().min(1),
+  "taskId": zod.number().min(1),
+  "startedAt": zod.string(),
+  "plannedMinutes": zod.number().min(1).max(startExecutionSessionResponsePlannedMinutesMax),
+  "endedAt": zod.string().nullable(),
+  "status": zod.enum(['active', 'completed', 'stopped']),
+  "firstAction": zod.string().min(1).max(startExecutionSessionResponseFirstActionMax),
+  "stoppingPoint": zod.string().min(1).max(startExecutionSessionResponseStoppingPointMax)
+})
+
+
+/**
+ * @summary Complete an active execution session
+ */
+
+
+
+export const CompleteExecutionSessionParams = zod.object({
+  "sessionId": zod.coerce.number().min(1)
+})
+
+
+
+export const completeExecutionSessionResponsePlannedMinutesMax = 1440;
+
+export const completeExecutionSessionResponseFirstActionMax = 500;
+
+export const completeExecutionSessionResponseStoppingPointMax = 500;
+
+
+
+export const CompleteExecutionSessionResponse = zod.object({
+  "id": zod.number().min(1),
+  "taskId": zod.number().min(1),
+  "startedAt": zod.string(),
+  "plannedMinutes": zod.number().min(1).max(completeExecutionSessionResponsePlannedMinutesMax),
+  "endedAt": zod.string().nullable(),
+  "status": zod.enum(['active', 'completed', 'stopped']),
+  "firstAction": zod.string().min(1).max(completeExecutionSessionResponseFirstActionMax),
+  "stoppingPoint": zod.string().min(1).max(completeExecutionSessionResponseStoppingPointMax)
+})
+
+
+/**
+ * @summary Stop an active execution session
+ */
+
+
+
+export const StopExecutionSessionParams = zod.object({
+  "sessionId": zod.coerce.number().min(1)
+})
+
+
+
+export const stopExecutionSessionResponsePlannedMinutesMax = 1440;
+
+export const stopExecutionSessionResponseFirstActionMax = 500;
+
+export const stopExecutionSessionResponseStoppingPointMax = 500;
+
+
+
+export const StopExecutionSessionResponse = zod.object({
+  "id": zod.number().min(1),
+  "taskId": zod.number().min(1),
+  "startedAt": zod.string(),
+  "plannedMinutes": zod.number().min(1).max(stopExecutionSessionResponsePlannedMinutesMax),
+  "endedAt": zod.string().nullable(),
+  "status": zod.enum(['active', 'completed', 'stopped']),
+  "firstAction": zod.string().min(1).max(stopExecutionSessionResponseFirstActionMax),
+  "stoppingPoint": zod.string().min(1).max(stopExecutionSessionResponseStoppingPointMax)
+})
+
+
+/**
  * Returns protected aggregate account, table, database, and admin-action metrics without user-authored content
  * @summary Get protected database diagnostics
  */

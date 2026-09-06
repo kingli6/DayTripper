@@ -1,22 +1,36 @@
-import { and, asc, desc, eq } from "drizzle-orm";
-import { Router, type IRouter } from "express";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { Router, type IRouter, type Response } from "express";
 import {
   db,
   executionObservationsTable,
+  executionSessionsTable,
   executionStateTable,
+  tasksTable,
 } from "@workspace/db";
 import {
+  CompleteExecutionSessionParams,
+  CompleteExecutionSessionResponse,
   CreateExecutionObservationBody,
   CreateExecutionObservationResponse,
+  GetActiveExecutionSessionResponse,
   GetExecutionStateResponse,
   ListExecutionObservationsResponse,
   SetExecutionStateBody,
   SetExecutionStateResponse,
+  StartExecutionSessionBody,
+  StartExecutionSessionResponse,
+  StopExecutionSessionParams,
+  StopExecutionSessionResponse,
   UpdateExecutionObservationBody,
   UpdateExecutionObservationParams,
   UpdateExecutionObservationResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
+import {
+  canStartExecutionSession,
+  endExecutionSessionStatus,
+  validateExecutionSessionStart,
+} from "../lib/executionSession";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -51,6 +65,19 @@ function serializeState(state: typeof executionStateTable.$inferSelect) {
     stress: state.stress,
     availableMinutes: state.availableMinutes,
     capturedAt: state.capturedAt.toISOString(),
+  };
+}
+
+function serializeSession(session: typeof executionSessionsTable.$inferSelect) {
+  return {
+    id: session.id,
+    taskId: session.taskId,
+    startedAt: session.startedAt.toISOString(),
+    plannedMinutes: session.plannedMinutes,
+    endedAt: session.endedAt?.toISOString() ?? null,
+    status: session.status,
+    firstAction: session.firstAction,
+    stoppingPoint: session.stoppingPoint,
   };
 }
 
@@ -319,6 +346,189 @@ router.put("/execution/state", async (req, res): Promise<void> => {
       .returning();
 
   res.json(SetExecutionStateResponse.parse(serializeState(state)));
+});
+
+router.get("/execution/sessions/active", async (_req, res): Promise<void> => {
+  const ownerId = ownerIdFromRequest(res);
+  if (!ownerId) {
+    res.status(401).json({ error: "Authentication is required." });
+    return;
+  }
+
+  const [session] = await db
+    .select()
+    .from(executionSessionsTable)
+    .where(and(
+      eq(executionSessionsTable.ownerId, ownerId),
+      eq(executionSessionsTable.status, "active"),
+    ))
+    .orderBy(desc(executionSessionsTable.startedAt))
+    .limit(1);
+
+  if (!session) {
+    res.status(404).json({ error: "No active execution session." });
+    return;
+  }
+
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(GetActiveExecutionSessionResponse.parse(serializeSession(session)));
+});
+
+router.post("/execution/sessions", async (req, res): Promise<void> => {
+  const ownerId = ownerIdFromRequest(res);
+  if (!ownerId) {
+    res.status(401).json({ error: "Authentication is required." });
+    return;
+  }
+
+  const parsed = StartExecutionSessionBody.safeParse(req.body);
+  if (!parsed.success) {
+    req.log.warn({ errors: parsed.error.flatten() }, "Invalid execution session input");
+    res.status(400).json({ error: "Please check the execution session details." });
+    return;
+  }
+
+  let sessionInput: ReturnType<typeof validateExecutionSessionStart>;
+  try {
+    sessionInput = validateExecutionSessionStart(parsed.data);
+  } catch {
+    res.status(400).json({ error: "A valid duration, first action, and stopping point are required." });
+    return;
+  }
+
+  const [task] = await db
+    .select({ id: tasksTable.id, ownerId: tasksTable.ownerId, status: tasksTable.status })
+    .from(tasksTable)
+    .where(and(
+      eq(tasksTable.id, sessionInput.taskId),
+      eq(tasksTable.ownerId, ownerId),
+      inArray(tasksTable.status, ["inbox", "active"]),
+    ))
+    .limit(1);
+
+  const [existing] = await db
+    .select({ id: executionSessionsTable.id })
+    .from(executionSessionsTable)
+    .where(and(
+      eq(executionSessionsTable.ownerId, ownerId),
+      eq(executionSessionsTable.status, "active"),
+    ))
+    .limit(1);
+
+  if (!canStartExecutionSession(
+    ownerId,
+    task,
+    Boolean(existing),
+  )) {
+    if (!task) {
+      res.status(404).json({ error: "The task is no longer available for execution." });
+      return;
+    }
+    res.status(409).json({ error: "An execution session is already active." });
+    return;
+  }
+
+  let session: typeof executionSessionsTable.$inferSelect;
+  try {
+    [session] = await db
+      .insert(executionSessionsTable)
+      .values({
+        ownerId,
+        taskId: sessionInput.taskId,
+        plannedMinutes: sessionInput.plannedMinutes,
+        firstAction: sessionInput.firstAction,
+        stoppingPoint: sessionInput.stoppingPoint,
+        status: "active",
+      })
+      .returning();
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "23505") {
+      res.status(409).json({ error: "An execution session is already active." });
+      return;
+    }
+    throw error;
+  }
+
+  res.status(201).json(StartExecutionSessionResponse.parse(serializeSession(session)));
+});
+
+async function endExecutionSession(
+  sessionId: number,
+  ownerId: string,
+  status: "completed" | "stopped",
+  res: Response,
+  log: { warn: (value: unknown, message: string) => void },
+): Promise<void> {
+  const [session] = await db
+    .select()
+    .from(executionSessionsTable)
+    .where(and(
+      eq(executionSessionsTable.id, sessionId),
+      eq(executionSessionsTable.ownerId, ownerId),
+    ))
+    .limit(1);
+
+  if (!session) {
+    res.status(404).json({ error: "Execution session not found." });
+    return;
+  }
+  try {
+    endExecutionSessionStatus(session.status as "active" | "completed" | "stopped", status);
+  } catch {
+    res.status(400).json({ error: "This execution session has already ended." });
+    return;
+  }
+
+  const [ended] = await db
+    .update(executionSessionsTable)
+    .set({ endedAt: new Date(), status })
+    .where(and(
+      eq(executionSessionsTable.id, sessionId),
+      eq(executionSessionsTable.ownerId, ownerId),
+      eq(executionSessionsTable.status, "active"),
+    ))
+    .returning();
+
+  if (!ended) {
+    log.warn({ sessionId }, "Execution session ended concurrently");
+    res.status(400).json({ error: "This execution session has already ended." });
+    return;
+  }
+
+  const response = status === "completed"
+    ? CompleteExecutionSessionResponse.parse(serializeSession(ended))
+    : StopExecutionSessionResponse.parse(serializeSession(ended));
+  res.json(response);
+}
+
+router.post("/execution/sessions/:sessionId/complete", async (req, res): Promise<void> => {
+  const ownerId = ownerIdFromRequest(res);
+  if (!ownerId) {
+    res.status(401).json({ error: "Authentication is required." });
+    return;
+  }
+
+  const params = CompleteExecutionSessionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "A valid execution session is required." });
+    return;
+  }
+  await endExecutionSession(params.data.sessionId, ownerId, "completed", res, req.log);
+});
+
+router.post("/execution/sessions/:sessionId/stop", async (req, res): Promise<void> => {
+  const ownerId = ownerIdFromRequest(res);
+  if (!ownerId) {
+    res.status(401).json({ error: "Authentication is required." });
+    return;
+  }
+
+  const params = StopExecutionSessionParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: "A valid execution session is required." });
+    return;
+  }
+  await endExecutionSession(params.data.sessionId, ownerId, "stopped", res, req.log);
 });
 
 export default router;

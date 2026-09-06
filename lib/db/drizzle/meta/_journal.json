@@ -141,6 +141,20 @@
       "when": 1788724402507,
       "tag": "0019_free_toad",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1788726144213,
+      "tag": "0020_green_captain_britain",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1788726354735,
+      "tag": "0021_lovely_hitman",
+      "breakpoints": true
     }
   ]
 }

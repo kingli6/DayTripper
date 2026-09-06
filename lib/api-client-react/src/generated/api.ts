@@ -36,6 +36,8 @@ import type {
   ExecutionObservation,
   ExecutionObservationInput,
   ExecutionObservationUpdate,
+  ExecutionSession,
+  ExecutionSessionInput,
   ExecutionState,
   ExecutionStateInput,
   HealthStatus,
@@ -2530,6 +2532,296 @@ export const useSetExecutionState = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSetExecutionStateMutationOptions(options));
+    }
+
+export const getGetActiveExecutionSessionUrl = () => {
+
+
+
+
+  return `/api/execution/sessions/active`
+}
+
+/**
+ * @summary Get the user's active execution session
+ */
+export const getActiveExecutionSession = async ( options?: Parameters<typeof customFetch>[1]): Promise<ExecutionSession> => {
+
+  return customFetch<ExecutionSession>(getGetActiveExecutionSessionUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetActiveExecutionSessionQueryKey = () => {
+    return [
+    `/api/execution/sessions/active`
+    ] as const;
+    }
+
+
+export const getGetActiveExecutionSessionQueryOptions = <TData = Awaited<ReturnType<typeof getActiveExecutionSession>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getActiveExecutionSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetActiveExecutionSessionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getActiveExecutionSession>>> = ({ signal }) => getActiveExecutionSession({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getActiveExecutionSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetActiveExecutionSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getActiveExecutionSession>>>
+export type GetActiveExecutionSessionQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the user's active execution session
+ */
+
+export function useGetActiveExecutionSession<TData = Awaited<ReturnType<typeof getActiveExecutionSession>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getActiveExecutionSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetActiveExecutionSessionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getStartExecutionSessionUrl = () => {
+
+
+
+
+  return `/api/execution/sessions`
+}
+
+/**
+ * @summary Start a bounded execution session for an owned task
+ */
+export const startExecutionSession = async (executionSessionInput: ExecutionSessionInput, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionSession> => {
+
+  return customFetch<ExecutionSession>(getStartExecutionSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(executionSessionInput)
+  }
+);}
+
+
+
+
+
+export const getStartExecutionSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startExecutionSession>>, TError,{data: BodyType<ExecutionSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startExecutionSession>>, TError,{data: BodyType<ExecutionSessionInput>}, TContext> => {
+
+const mutationKey = ['startExecutionSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startExecutionSession>>, {data: BodyType<ExecutionSessionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  startExecutionSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartExecutionSessionMutationResult = NonNullable<Awaited<ReturnType<typeof startExecutionSession>>>
+    export type StartExecutionSessionMutationBody = BodyType<ExecutionSessionInput>
+    export type StartExecutionSessionMutationError = ErrorType<void>
+
+    /**
+ * @summary Start a bounded execution session for an owned task
+ */
+export const useStartExecutionSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startExecutionSession>>, TError,{data: BodyType<ExecutionSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startExecutionSession>>,
+        TError,
+        {data: BodyType<ExecutionSessionInput>},
+        TContext
+      > => {
+      return useMutation(getStartExecutionSessionMutationOptions(options));
+    }
+
+export const getCompleteExecutionSessionUrl = (sessionId: number,) => {
+
+
+
+
+  return `/api/execution/sessions/${sessionId}/complete`
+}
+
+/**
+ * @summary Complete an active execution session
+ */
+export const completeExecutionSession = async (sessionId: number, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionSession> => {
+
+  return customFetch<ExecutionSession>(getCompleteExecutionSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompleteExecutionSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeExecutionSession>>, TError,{sessionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeExecutionSession>>, TError,{sessionId: number}, TContext> => {
+
+const mutationKey = ['completeExecutionSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeExecutionSession>>, {sessionId: number}> = (props) => {
+          const {sessionId} = props ?? {};
+
+          return  completeExecutionSession(sessionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CompleteExecutionSessionMutationResult = NonNullable<Awaited<ReturnType<typeof completeExecutionSession>>>
+
+    export type CompleteExecutionSessionMutationError = ErrorType<void>
+
+    /**
+ * @summary Complete an active execution session
+ */
+export const useCompleteExecutionSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeExecutionSession>>, TError,{sessionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof completeExecutionSession>>,
+        TError,
+        {sessionId: number},
+        TContext
+      > => {
+      return useMutation(getCompleteExecutionSessionMutationOptions(options));
+    }
+
+export const getStopExecutionSessionUrl = (sessionId: number,) => {
+
+
+
+
+  return `/api/execution/sessions/${sessionId}/stop`
+}
+
+/**
+ * @summary Stop an active execution session
+ */
+export const stopExecutionSession = async (sessionId: number, options?: Parameters<typeof customFetch>[1]): Promise<ExecutionSession> => {
+
+  return customFetch<ExecutionSession>(getStopExecutionSessionUrl(sessionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getStopExecutionSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopExecutionSession>>, TError,{sessionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stopExecutionSession>>, TError,{sessionId: number}, TContext> => {
+
+const mutationKey = ['stopExecutionSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stopExecutionSession>>, {sessionId: number}> = (props) => {
+          const {sessionId} = props ?? {};
+
+          return  stopExecutionSession(sessionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StopExecutionSessionMutationResult = NonNullable<Awaited<ReturnType<typeof stopExecutionSession>>>
+
+    export type StopExecutionSessionMutationError = ErrorType<void>
+
+    /**
+ * @summary Stop an active execution session
+ */
+export const useStopExecutionSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stopExecutionSession>>, TError,{sessionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stopExecutionSession>>,
+        TError,
+        {sessionId: number},
+        TContext
+      > => {
+      return useMutation(getStopExecutionSessionMutationOptions(options));
     }
 
 export const getGetAdminOverviewUrl = () => {

@@ -734,6 +734,98 @@ paths:
           description: Invalid execution state
         "401":
           description: Authentication required
+  /execution/sessions/active:
+    get:
+      operationId: getActiveExecutionSession
+      tags: [execution]
+      summary: Get the user's active execution session
+      responses:
+        "200":
+          description: Active execution session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionSession"
+        "401":
+          description: Authentication required
+        "404":
+          description: No active execution session
+  /execution/sessions:
+    post:
+      operationId: startExecutionSession
+      tags: [execution]
+      summary: Start a bounded execution session for an owned task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExecutionSessionInput"
+      responses:
+        "201":
+          description: Execution session started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionSession"
+        "400":
+          description: Invalid execution session
+        "401":
+          description: Authentication required
+        "404":
+          description: Task not found or not active
+        "409":
+          description: An active execution session already exists
+  /execution/sessions/{sessionId}/complete:
+    post:
+      operationId: completeExecutionSession
+      tags: [execution]
+      summary: Complete an active execution session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: number
+            minimum: 1
+      responses:
+        "200":
+          description: Execution session completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionSession"
+        "400":
+          description: Execution session is not active
+        "401":
+          description: Authentication required
+        "404":
+          description: Execution session not found
+  /execution/sessions/{sessionId}/stop:
+    post:
+      operationId: stopExecutionSession
+      tags: [execution]
+      summary: Stop an active execution session
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: number
+            minimum: 1
+      responses:
+        "200":
+          description: Execution session stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionSession"
+        "400":
+          description: Execution session is not active
+        "401":
+          description: Authentication required
+        "404":
+          description: Execution session not found
   /admin/overview:
     get:
       operationId: getAdminOverview
@@ -1523,6 +1615,70 @@ components:
         - firstAction
         - stoppingPoint
         - reason
+    ExecutionSessionStatus:
+      type: string
+      enum: [active, completed, stopped]
+    ExecutionSession:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: number
+          minimum: 1
+        taskId:
+          type: number
+          minimum: 1
+        startedAt:
+          type: string
+        plannedMinutes:
+          type: number
+          minimum: 1
+          maximum: 1440
+        endedAt:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/ExecutionSessionStatus"
+        firstAction:
+          type: string
+          minLength: 1
+          maxLength: 500
+        stoppingPoint:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - id
+        - taskId
+        - startedAt
+        - plannedMinutes
+        - endedAt
+        - status
+        - firstAction
+        - stoppingPoint
+    ExecutionSessionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        taskId:
+          type: number
+          minimum: 1
+        plannedMinutes:
+          type: number
+          minimum: 1
+          maximum: 1440
+        firstAction:
+          type: string
+          minLength: 1
+          maxLength: 500
+        stoppingPoint:
+          type: string
+          minLength: 1
+          maxLength: 500
+      required:
+        - taskId
+        - plannedMinutes
+        - firstAction
+        - stoppingPoint
     TaskScheduleInput:
       type: object
       properties:

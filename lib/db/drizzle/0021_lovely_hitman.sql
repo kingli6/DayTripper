@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "execution_sessions_one_active_owner" ON "execution_sessions" USING btree ("owner_id") WHERE "execution_sessions"."status" = 'active';

@@ -2,16 +2,21 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   getListActivitiesQueryKey,
   getListTasksQueryKey,
+  getGetActiveExecutionSessionQueryKey,
   useArchiveTask,
   useCompleteTask,
+  useCompleteExecutionSession,
   useCreateTask,
   useDecideExecutionTask,
+  useGetActiveExecutionSession,
   useListTasks,
   useScheduleTask,
+  useStartExecutionSession,
+  useStopExecutionSession,
   useUpdateTask,
 } from '@workspace/api-client-react';
-import type { ExecutionDecision, Task, TaskInput, TaskScheduleInput, TaskUpdate } from '@workspace/api-client-react';
-import { Archive, Check, Clock3, ListTodo, RotateCcw, X } from 'lucide-react';
+import type { ExecutionDecision, ExecutionSession, Task, TaskInput, TaskScheduleInput, TaskUpdate } from '@workspace/api-client-react';
+import { Archive, Check, Clock3, ListTodo, RotateCcw, Square, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation } from 'wouter';
@@ -378,7 +383,53 @@ function MatrixTaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   );
 }
 
-function ExecutionDecisionCard({ decision, task, onEdit, onSchedule }: { decision: ExecutionDecision; task: Task; onEdit: () => void; onSchedule: () => void }) {
+function formatTimer(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return `${minutes}:${`${remainder}`.padStart(2, '0')}`;
+}
+
+function ExecutionSessionPanel({ session, task, pending, onComplete, onStop }: {
+  session: ExecutionSession;
+  task?: Task;
+  pending: boolean;
+  onComplete: () => void;
+  onStop: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  const endAt = new Date(session.startedAt).getTime() + session.plannedMinutes * 60_000;
+  const remainingSeconds = Math.max(0, Math.ceil((endAt - now) / 1000));
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [session.startedAt]);
+
+  return (
+    <section className="border border-primary/40 bg-primary/[0.06] p-3.5" data-testid="section-execution-session">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-primary">Execution session</p>
+          <p className="mt-1 truncate text-sm font-semibold text-foreground">{task?.title ?? `Task #${session.taskId}`}</p>
+        </div>
+        <div className={`font-mono-ui text-2xl font-semibold tabular-nums tracking-[-0.04em] ${remainingSeconds === 0 ? 'text-accent' : 'text-foreground'}`} aria-label={remainingSeconds === 0 ? 'Planned time elapsed' : `${formatTimer(remainingSeconds)} remaining`} data-testid="text-session-timer">
+          {remainingSeconds === 0 ? 'TIME UP' : formatTimer(remainingSeconds)}
+        </div>
+      </div>
+      <dl className="mt-4 grid gap-3 text-[11px] sm:grid-cols-2">
+        <div><dt className="font-mono-ui uppercase tracking-[0.12em] text-primary">First</dt><dd className="mt-1 text-foreground">{session.firstAction}</dd></div>
+        <div><dt className="font-mono-ui uppercase tracking-[0.12em] text-primary">Stop after</dt><dd className="mt-1 text-foreground">{session.stoppingPoint}</dd></div>
+      </dl>
+      {remainingSeconds === 0 && <p className="mt-3 text-[11px] font-semibold text-accent" role="status" data-testid="status-session-elapsed">Planned time has elapsed. Choose how to close the session.</p>}
+      <div className="mt-4 flex gap-2">
+        <button type="button" onClick={onComplete} disabled={pending} data-testid="button-complete-execution-session" className="rounded-md bg-primary px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">Complete</button>
+        <button type="button" onClick={onStop} disabled={pending} data-testid="button-stop-execution-session" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground hover:border-primary/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"><Square className="size-3" /> Stop</button>
+      </div>
+    </section>
+  );
+}
+
+function ExecutionDecisionCard({ decision, task, activeSession, startPending, onEdit, onStart, onSchedule }: { decision: ExecutionDecision; task: Task; activeSession?: ExecutionSession; startPending: boolean; onEdit: () => void; onStart: () => void; onSchedule: () => void }) {
   return (
     <article className="border-b border-border/55 py-2.5 last:border-0" data-testid={`card-execution-decision-${task.id}`}>
       <div className="flex items-start gap-2.5">
@@ -393,10 +444,10 @@ function ExecutionDecisionCard({ decision, task, onEdit, onSchedule }: { decisio
             <div><dt className="font-mono-ui uppercase tracking-[0.12em] text-primary">Why</dt><dd className="mt-0.5 text-muted-foreground">{decision.reason}</dd></div>
           </dl>
         </div>
-        <button type="button" onClick={onSchedule} data-testid={`button-schedule-task-${task.id}`} className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-[10px] font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="hidden sm:inline">Work on this</span>
-          <span className="sm:hidden">Work</span>
-        </button>
+        <div className="flex shrink-0 flex-col gap-1.5">
+          <button type="button" onClick={onStart} disabled={Boolean(activeSession) || startPending} data-testid={`button-start-execution-session-${task.id}`} className="rounded-md bg-primary px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">{startPending ? 'Starting…' : 'Start'}</button>
+          <button type="button" onClick={onSchedule} data-testid={`button-schedule-task-${task.id}`} className="rounded-md border border-border px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground hover:border-primary/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Schedule</button>
+        </div>
       </div>
     </article>
   );
@@ -519,6 +570,10 @@ export default function TasksPage() {
   const list = useListTasks();
   const createTask = useCreateTask();
   const decideTask = useDecideExecutionTask();
+  const activeSessionQuery = useGetActiveExecutionSession({ query: { queryKey: getGetActiveExecutionSessionQueryKey(), retry: false, staleTime: 0 } });
+  const startSession = useStartExecutionSession();
+  const completeSession = useCompleteExecutionSession();
+  const stopSession = useStopExecutionSession();
   const scheduleTask = useScheduleTask();
   const updateTask = useUpdateTask();
   const completeTask = useCompleteTask();
@@ -565,6 +620,8 @@ export default function TasksPage() {
   }, [localRecommendations, recommendationRun]);
   const decision = executionDecision ?? localDecision;
   const decisionTask = decision ? activeTasks.find((task) => task.id === decision.taskId) : undefined;
+  const activeSession = activeSessionQuery.data;
+  const activeSessionTask = activeSession ? tasks.find((task) => task.id === activeSession.taskId) : undefined;
   const showSuccess = (text: string) => {
     setNotice({ tone: 'success', text });
     window.setTimeout(() => setNotice(null), 3200);
@@ -650,6 +707,39 @@ export default function TasksPage() {
     navigate('/today');
   };
 
+  const start = async () => {
+    if (!decision || !decisionTask || activeSession) return;
+    try {
+      const session = await startSession.mutateAsync({
+        data: {
+          taskId: decision.taskId,
+          plannedMinutes: decision.durationMinutes,
+          firstAction: decision.firstAction,
+          stoppingPoint: decision.stoppingPoint,
+        },
+      });
+      queryClient.setQueryData(getGetActiveExecutionSessionQueryKey(), session);
+    } catch (error) {
+      setNotice({ tone: 'error', text: errorMessage(error) });
+    }
+  };
+
+  const endSession = async (action: 'complete' | 'stop') => {
+    if (!activeSession) return;
+    try {
+      if (action === 'complete') {
+        await completeSession.mutateAsync({ sessionId: activeSession.id });
+      } else {
+        await stopSession.mutateAsync({ sessionId: activeSession.id });
+      }
+      queryClient.setQueryData(getGetActiveExecutionSessionQueryKey(), undefined);
+      await queryClient.invalidateQueries({ queryKey: getGetActiveExecutionSessionQueryKey() });
+      showSuccess(action === 'complete' ? 'Session completed.' : 'Session stopped.');
+    } catch (error) {
+      setNotice({ tone: 'error', text: errorMessage(error) });
+    }
+  };
+
   const runRecommendations = async () => {
     if (!activeTasks.length) return;
     const inputs = { ...recommendationInputs };
@@ -670,6 +760,7 @@ export default function TasksPage() {
   };
 
   const pending = createTask.isPending || updateTask.isPending || completeTask.isPending || archiveTask.isPending || scheduleTask.isPending;
+  const sessionPending = startSession.isPending || completeSession.isPending || stopSession.isPending;
 
   return (
      <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
@@ -697,13 +788,17 @@ export default function TasksPage() {
                   </label>
                 </div>
               </div>
-              <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || decideTask.isPending} data-testid="button-recommend-tasks" className="mt-3 min-h-10 w-full rounded-lg bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">{decideTask.isPending ? 'Choosing one next step…' : 'WHAT SHOULD I WORK ON?'}</button>
-              {decideTask.isPending ? (
+               <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || decideTask.isPending || Boolean(activeSession)} data-testid="button-recommend-tasks" className="mt-3 min-h-10 w-full rounded-lg bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">{decideTask.isPending ? 'Choosing one next step…' : 'WHAT SHOULD I WORK ON?'}</button>
+               {activeSession ? (
+                 <div className="mt-3">
+                   <ExecutionSessionPanel session={activeSession} task={activeSessionTask} pending={sessionPending} onComplete={() => void endSession('complete')} onStop={() => void endSession('stop')} />
+                 </div>
+               ) : decideTask.isPending ? (
                 <p className="mt-3 text-[11px] text-muted-foreground" role="status" data-testid="status-recommendations-loading">Choosing one task with your time, energy, and execution guidance…</p>
-              ) : recommendationRun ? (
+               ) : recommendationRun ? (
                 <div className="mt-3" data-testid="list-recommendations">
                   <div className="mb-1 flex items-center justify-between gap-3"><p className="font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">One next step</p><span className="text-[10px] text-muted-foreground">{recommendationRun.availableMinutes}m / E{recommendationRun.energy}</span></div>
-                  {decision && decisionTask ? <ExecutionDecisionCard decision={decision} task={decisionTask} onEdit={() => setEditingTask(decisionTask)} onSchedule={() => setSchedulingTask({ task: decisionTask, durationMinutes: decision.durationMinutes })} /> : <p className="py-2 text-[11px] text-muted-foreground">No active task decision yet.</p>}
+                   {decision && decisionTask ? <ExecutionDecisionCard decision={decision} task={decisionTask} activeSession={activeSession} startPending={startSession.isPending} onEdit={() => setEditingTask(decisionTask)} onStart={() => void start()} onSchedule={() => setSchedulingTask({ task: decisionTask, durationMinutes: decision.durationMinutes })} /> : <p className="py-2 text-[11px] text-muted-foreground">No active task decision yet.</p>}
                 </div>
               ) : null}
             </section>

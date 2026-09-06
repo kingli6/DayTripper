@@ -689,6 +689,61 @@ export interface ExecutionDecision {
   reason: string;
 }
 
+export type ExecutionSessionStatus = typeof ExecutionSessionStatus[keyof typeof ExecutionSessionStatus];
+
+
+export const ExecutionSessionStatus = {
+  active: 'active',
+  completed: 'completed',
+  stopped: 'stopped',
+} as const;
+
+export interface ExecutionSession {
+  /** @minimum 1 */
+  id: number;
+  /** @minimum 1 */
+  taskId: number;
+  startedAt: string;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  plannedMinutes: number;
+  /** @nullable */
+  endedAt: string | null;
+  status: ExecutionSessionStatus;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  firstAction: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  stoppingPoint: string;
+}
+
+export interface ExecutionSessionInput {
+  /** @minimum 1 */
+  taskId: number;
+  /**
+     * @minimum 1
+     * @maximum 1440
+     */
+  plannedMinutes: number;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  firstAction: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  stoppingPoint: string;
+}
+
 export interface TaskScheduleInput {
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   scheduledDate: string;

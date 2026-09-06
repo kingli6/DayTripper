@@ -577,3 +577,44 @@ because the current preview session is signed out.
 three primary routes at desktop and narrow widths, especially populated rows,
 dialogs, and the mobile account menu. Do not add new navigation or widen this
 into a feature redesign.
+
+## Step 6 — Small execution/session layer
+
+**Status:** Implemented and locally verified on 2026-09-06.
+
+**Completed:**
+
+- Added the owner-scoped `execution_sessions` table with task reference,
+  persisted `startedAt`, planned minutes, optional `endedAt`, status,
+  first-action text, and stopping-point text.
+- Added authenticated session endpoints for active-session recovery, start,
+  complete, and stop. Start validates task ownership and `inbox`/`active`
+  status, rejects invalid durations, and enforces one active session per user
+  with both an application check and a partial unique index.
+- Added a compact execution-console UI to the existing Tasks decision card:
+  `START`, persisted countdown, first action, stopping point, `Complete`, and
+  `Stop`. The timer derives remaining time from persisted `startedAt`, survives
+  reload through the active-session endpoint, and shows `TIME UP` without
+  auto-completing.
+- Session completion and stopping only close the session. They do not modify
+  task status, task estimates, task priority, AI decisions, execution policy,
+  Today activities, or scheduling.
+- Added focused lifecycle, ownership-rule, duplicate-session, terminal-state,
+  and persisted-timer tests.
+
+**Database:** Added migration files `0020_green_captain_britain` for the new
+table and `0021_lovely_hitman` for the one-active-session index. The additive
+table and index were applied to development directly after Drizzle push
+detected the known unrelated legacy `journal_entries` drift; no force push or
+data deletion was used.
+
+**Verified:** API tests (19 passing), full workspace typecheck, API typecheck,
+API build, web typecheck, web production build with workflow values, OpenAPI
+codegen, clean API/web workflow restarts, development table/index inspection,
+signed-out `401` protection for the new endpoints, desktop and narrow signed-out
+preview rendering, and `git diff --check`.
+
+**Not yet verified:** Authenticated click-through of the Start/Complete/Stop
+flow and reload recovery is still unavailable because the current browser
+preview is signed out. The signed-out root preview and API protection boundary
+are clean.
