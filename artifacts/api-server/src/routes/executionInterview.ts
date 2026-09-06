@@ -101,9 +101,117 @@ function extractGeminiText(payload: unknown): string | null {
   return text || null;
 }
 
-function parseJsonText(text: string): unknown {
-  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
-  return JSON.parse(cleaned);
+function parseGeminiJson(text: string): unknown {
+  const candidates = [
+    text.trim(),
+    ...[...text.matchAll(/```(?:json)?\s*([\s\S]*?)\s*```/gi)]
+      .map((match) => match[1].trim())
+      .filter(Boolean),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      const start = candidate.indexOf("{");
+      const end = candidate.lastIndexOf("}");
+      if (start >= 0 && end > start) {
+        try {
+          return JSON.parse(candidate.slice(start, end + 1));
+        } catch {
+          // Continue to the next candidate and report a bounded parse failure.
+        }
+      }
+    }
+  }
+
+  throw new SyntaxError("Gemini response did not contain valid JSON");
+}
+
+function geminiFinishReason(payload: unknown): string | null {
+  if (!isRecord(payload) || !Array.isArray(payload.candidates)) return null;
+  const reason = (payload.candidates[0] as { finishReason?: unknown } | undefined)?.finishReason;
+  return typeof reason === "string" ? reason : null;
+}
+
+function geminiResponseShape(payload: unknown): Record<string, unknown> {
+  if (!isRecord(payload)) {
+    return {
+      type: Array.isArray(payload) ? "array" : typeof payload,
+    };
+  }
+
+  const candidates = payload.candidates;
+  const firstCandidate = Array.isArray(candidates) && isRecord(candidates[0])
+    ? candidates[0]
+    : null;
+  const content = firstCandidate && isRecord(firstCandidate.content)
+    ? firstCandidate.content
+    : null;
+  const parts = content?.parts;
+
+  return {
+    topLevelKeys: Object.keys(payload),
+    candidateCount: Array.isArray(candidates) ? candidates.length : null,
+    finishReason: firstCandidate?.finishReason ?? null,
+    partCount: Array.isArray(parts) ? parts.length : null,
+    textPartCount: Array.isArray(parts)
+      ? parts.filter((part) => isRecord(part) && typeof part.text === "string").length
+      : null,
+  };
+}
+
+function interviewResponseShape(value: unknown): Record<string, unknown> {
+  if (!isRecord(value)) {
+    return {
+      type: Array.isArray(value) ? "array" : typeof value,
+    };
+  }
+
+  const observations = value.observations;
+  const firstObservation = Array.isArray(observations) && isRecord(observations[0])
+    ? observations[0]
+    : null;
+
+  return {
+    keys: Object.keys(value),
+    observationCount: Array.isArray(observations) ? observations.length : null,
+    observationKeys: firstObservation ? Object.keys(firstObservation) : null,
+    questionType: value.question === null ? "null" : typeof value.question,
+    questionLength: typeof value.question === "string" ? value.question.length : null,
+    shouldFinishType: typeof value.shouldFinish,
+  };
+}
+
+function geminiProviderError(payload: unknown): Record<string, unknown> {
+  if (!isRecord(payload) || !isRecord(payload.error)) {
+    return {};
+  }
+
+  const providerError = payload.error;
+  const details = Array.isArray(providerError.details) ? providerError.details : [];
+  const retryInfo = details.find((detail) =>
+    isRecord(detail)
+    && typeof detail["@type"] === "string"
+    && detail["@type"].endsWith("RetryInfo"),
+  );
+
+  return {
+    providerCode: typeof providerError.code === "number" ? providerError.code : null,
+    providerStatus: typeof providerError.status === "string" ? providerError.status : null,
+    retryDelay: retryInfo && typeof retryInfo.retryDelay === "string"
+      ? retryInfo.retryDelay
+      : null,
+  };
+}
+
+function retryDelaySeconds(payload: unknown): number | null {
+  const summary = geminiProviderError(payload);
+  if (typeof summary.retryDelay !== "string") return null;
+  const match = summary.retryDelay.match(/^(\d+(?:\.\d+)?)s$/);
+  if (!match) return null;
+  const seconds = Math.ceil(Number(match[1]));
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 60) : null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -295,6 +403,10 @@ router.post("/execution/interview/:interviewId/answer", async (req, res): Promis
   );
 
   let candidate: unknown;
+  let providerPayload: unknown = null;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
+
   try {
     const response = await fetch(`${config.baseUrl}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
       method: "POST",
@@ -307,28 +419,73 @@ router.post("/execution/interview/:interviewId/answer", async (req, res): Promis
           temperature: 0.35,
         },
       }),
+      signal: controller.signal,
     });
 
     if (!response.ok) {
-      req.log.error({ status: response.status }, "Execution interview provider request failed");
-      res.status(503).json({ error: "The interview is not available right now." });
+      const providerErrorPayload = await response.json().catch(() => null);
+      const providerError = geminiProviderError(providerErrorPayload);
+      const retryAfter = retryDelaySeconds(providerErrorPayload);
+      req.log.warn({
+        interviewId: interview.id,
+        questionNumber: interview.questionIndex,
+        status: response.status,
+        ...providerError,
+      }, "Execution interview provider request was rejected");
+      if (retryAfter) {
+        res.setHeader("Retry-After", String(retryAfter));
+      }
+      res.status(503).json({
+        error: response.status === 429
+          ? "The check-in is temporarily rate limited. Please try again shortly."
+          : "The interview is not available right now.",
+      });
       return;
     }
 
-    const text = extractGeminiText(await response.json());
+    providerPayload = await response.json();
+    const text = extractGeminiText(providerPayload);
     if (!text) {
+      req.log.warn({
+        interviewId: interview.id,
+        questionNumber: interview.questionIndex,
+        finishReason: geminiFinishReason(providerPayload),
+        responseShape: geminiResponseShape(providerPayload),
+      }, "Execution interview provider returned no text");
       res.status(502).json({ error: "The interview returned an invalid response." });
       return;
     }
-    candidate = parseJsonText(text);
+
+    try {
+      candidate = parseGeminiJson(text);
+    } catch {
+      req.log.warn({
+        interviewId: interview.id,
+        questionNumber: interview.questionIndex,
+        finishReason: geminiFinishReason(providerPayload),
+        responseShape: geminiResponseShape(providerPayload),
+        textLength: text.length,
+      }, "Execution interview provider returned invalid JSON");
+      res.status(502).json({ error: "The interview returned an invalid response. Please try again." });
+      return;
+    }
   } catch (error) {
-    req.log.error({ err: error }, "Execution interview request failed");
+    req.log.error({
+      errorName: error instanceof Error ? error.name : typeof error,
+      timeout: error instanceof Error && error.name === "AbortError",
+    }, "Execution interview provider request failed");
     res.status(503).json({ error: "The interview is not available right now." });
     return;
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (!isInterviewModelResponse(candidate)) {
-    req.log.warn("Execution interview provider returned an invalid response");
+    req.log.warn({
+      interviewId: interview.id,
+      questionNumber: interview.questionIndex,
+      responseShape: interviewResponseShape(candidate),
+    }, "Execution interview provider returned an invalid response shape");
     res.status(502).json({ error: "The interview returned an invalid response." });
     return;
   }

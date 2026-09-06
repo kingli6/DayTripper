@@ -8,6 +8,14 @@ import {
 
 type InterviewStage = 'starting' | 'active' | 'finishing' | 'finished' | 'error';
 
+function apiErrorMessage(error: unknown): string | null {
+  if (!error || typeof error !== 'object' || !('data' in error)) return null;
+  const data = (error as { data?: unknown }).data;
+  if (!data || typeof data !== 'object' || !('error' in data)) return null;
+  const message = (data as { error?: unknown }).error;
+  return typeof message === 'string' && message.trim() ? message : null;
+}
+
 export function ExecutionInterviewModal({ onClose }: { onClose: () => void }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const answerRef = useRef<HTMLTextAreaElement>(null);
@@ -110,8 +118,8 @@ export function ExecutionInterviewModal({ onClose }: { onClose: () => void }) {
       setQuestion(result.question);
       setQuestionNumber(result.questionNumber);
       setStage('active');
-    } catch {
-      setErrorMessage('That answer did not go through. Please try once more.');
+    } catch (error) {
+      setErrorMessage(apiErrorMessage(error) ?? 'Day Tripper could not get the next question. Please try again, or stop here.');
       setStage('active');
     }
   }

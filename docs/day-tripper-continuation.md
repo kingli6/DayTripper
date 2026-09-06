@@ -538,3 +538,37 @@ Do not begin browser-push alarms, notification delivery, automatic calibration,
 or broader AI expansion until the product behavior and release boundary are
 explicit. Do not treat database reminder columns as an implemented alarm
 feature.
+
+## Adaptive interview transition diagnosis
+
+**Status:** Provider failure diagnosed and handled without changing interview
+state logic or product scope.
+
+The reported Q2 → Q3 failure is not caused by the stored transcript,
+second-answer persistence, observation merging, or the four-question boundary.
+A neutral three-turn reproduction reached Gemini successfully for Q1, then the
+provider returned HTTP 429 `RESOURCE_EXHAUSTED` with a retry delay on the next
+request. The route was already leaving the interview active and unmodified
+when provider requests failed, so retrying remains safe.
+
+The answer route now records only bounded diagnostics for rejected provider
+responses and invalid model shapes: interview/question identifiers, HTTP
+status, provider status/code, retry delay, finish reason, and response shape.
+It never logs answer text or the provider payload. Gemini rate limits now
+return a safe, specific retry message and `Retry-After` header; the modal
+displays the server's safe error rather than replacing it with a generic
+message. Existing four-question completion logic remains unchanged.
+
+**Verified:** workspace typecheck, API build, web production build with
+workflow variables, API/web workflow restarts, health 200, signed-out 401
+responses for start/answer/finish, clean browser preview, and `git diff
+--check`.
+
+**Not verified:** authenticated Q1 → Q2 → Q3 → Q4 → completion, observation
+persistence, and stressed/relaxed state observations. The available preview
+session is signed out and the configured Gemini provider is currently
+quota-exhausted, so those checks require a signed-in session after quota
+recovery.
+
+**Do not start:** Step 3, interview redesign, alternate AI providers, or
+changes to Tasks, Today planning, Practices, or retention behavior.
