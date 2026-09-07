@@ -935,6 +935,10 @@ export default function TasksPage() {
     try {
       if (action === 'complete') {
         await completeSession.mutateAsync({ sessionId: activeSession.id });
+        if (activeSessionTask?.repeatIntervalMinutes === null) {
+          await completeTask.mutateAsync({ id: activeSession.taskId });
+          await invalidateTasks();
+        }
       } else {
         await stopSession.mutateAsync({ sessionId: activeSession.id });
       }
@@ -966,7 +970,7 @@ export default function TasksPage() {
   };
 
   const pending = createTask.isPending || updateTask.isPending || completeTask.isPending || archiveTask.isPending || scheduleTask.isPending;
-  const sessionPending = startSession.isPending || completeSession.isPending || stopSession.isPending;
+  const sessionPending = startSession.isPending || completeSession.isPending || stopSession.isPending || completeTask.isPending;
 
   return (
      <div className="paper-grain min-h-[100dvh] overflow-hidden bg-background text-foreground">
