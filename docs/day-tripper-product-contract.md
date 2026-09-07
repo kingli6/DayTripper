@@ -128,27 +128,38 @@ scores, ideal targets, diagnosis, or judgment.
 
 ## Offline rules
 
-The timeline may eventually support limited current-day offline resilience.
+The timeline supports limited current-day offline resilience.
 When offline, the user may view the recently loaded current day, make basic
 activity changes, complete activities, and add notes. The UI must show whether
 changes are synced, saving, offline, waiting to sync, or failed to sync.
 
 Offline behavior must never silently discard edits, store credentials in
 browser storage, or pretend that AI planning works offline. The server remains
-the permanent source of truth. Complex multi-device conflict resolution and
-offline AI generation are deferred.
+the permanent source of truth. Limited stale-update conflict handling is
+implemented, while complex multi-device conflict resolution and offline AI
+generation remain deferred.
+
+## Status of earlier deferred capabilities
+
+The following capabilities were intentionally deferred at an earlier
+product-contract milestone and are now implemented in the current source tree:
+
+- AI planning proposals and AI Studio
+- Proposal review and partial acceptance
+- Review changes and controlled re-planning
+- Private schedule change history
+- Limited current-day offline sync resilience
+
+The current implementation remains bounded by the rules above. Optional
+reflection, neutral pattern summaries, drag-and-drop scheduling, automated
+coaching, and other future work remain deferred below.
 
 ## Explicitly deferred features
 
 The following are not part of the current private activity boundary:
 
-- AI planning proposals and AI Studio
-- Proposal review and partial acceptance
-- Review changes and controlled re-planning
-- Change history
 - Optional activity reflection
 - Neutral pattern summaries
-- Offline sync resilience
 - Drag-and-drop scheduling
 - Habit formation systems
 - Mood tracking
