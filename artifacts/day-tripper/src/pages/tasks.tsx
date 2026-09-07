@@ -190,6 +190,26 @@ function recurrenceLabel(task: Task) {
   return task.recurrence.type === 'daily' ? 'Every day' : `Every ${task.recurrence.intervalDays} days`;
 }
 
+function isCoolingDown(task: Task, now: number) {
+  return Boolean(
+    task.recurrence
+      && task.nextOccurrenceAt
+      && new Date(task.nextOccurrenceAt).getTime() > now,
+  );
+}
+
+function remainingOccurrenceLabel(nextOccurrenceAt: string, now: number) {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  const occurrenceDay = new Date(nextOccurrenceAt);
+  occurrenceDay.setHours(0, 0, 0, 0);
+  const daysAway = Math.round((occurrenceDay.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+
+  if (daysAway <= 0) return 'Today';
+  if (daysAway === 1) return 'Tomorrow';
+  return `${daysAway} days`;
+}
+
 function recurrenceFromForm(values: TaskFormValues): NonNullable<TaskInput['recurrence']> | null {
   if (values.recurrence === 'daily') return { type: 'daily' };
   if (values.recurrence === 'interval') {
@@ -434,6 +454,25 @@ function MatrixTaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   );
 }
 
+function CoolingDownTaskRow({ task, now, onEdit }: { task: Task; now: number; onEdit: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onEdit}
+      className="flex w-full items-center justify-between gap-4 border-b border-border/45 px-1 py-2.5 text-left text-xs text-muted-foreground transition-colors last:border-0 hover:text-foreground"
+      data-testid={`row-cooling-down-task-${task.id}`}
+    >
+      <span className="min-w-0 truncate font-medium">{task.title}</span>
+      <span className="flex shrink-0 items-center gap-2 text-[10px]">
+        <span>{recurrenceLabel(task)}</span>
+        <span className="font-semibold text-muted-foreground/80">
+          {task.nextOccurrenceAt ? remainingOccurrenceLabel(task.nextOccurrenceAt, now) : ''}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 function formatTimer(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const remainder = seconds % 60;
@@ -635,10 +674,33 @@ export default function TasksPage() {
   const [recommendationInputs, setRecommendationInputs] = useState<RecommendationInputs>({ availableMinutes: 60, energy: 3 });
   const [recommendationRun, setRecommendationRun] = useState<RecommendationInputs | null>(null);
   const [executionDecision, setExecutionDecision] = useState<ExecutionDecision | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   const tasks = useMemo(() => [...(list.data ?? [])].filter((task) => task.status !== 'archived').sort((a, b) => focusScore(b) - focusScore(a) || a.id - b.id), [list.data]);
-  const activeTasks = tasks.filter((task) => task.status === 'inbox' || task.status === 'active');
+  const activeTasks = tasks.filter((task) => (
+    (task.status === 'inbox' || task.status === 'active')
+      && !isCoolingDown(task, now)
+  ));
+  const coolingDownTasks = tasks.filter((task) => (
+    (task.status === 'inbox' || task.status === 'active')
+      && isCoolingDown(task, now)
+  ));
   const completedTasks = tasks.filter((task) => task.status === 'completed');
+  useEffect(() => {
+    const nextOccurrenceTimes = coolingDownTasks
+      .map((task) => task.nextOccurrenceAt ? new Date(task.nextOccurrenceAt).getTime() : 0)
+      .filter((time) => time > now);
+    if (!nextOccurrenceTimes.length) return;
+
+    const nextOccurrenceAt = Math.min(...nextOccurrenceTimes);
+    const delay = Math.min(
+      2_147_483_647,
+      Math.max(0, nextOccurrenceAt - now + 50),
+    );
+    const timeout = window.setTimeout(() => setNow(Date.now()), delay);
+    return () => window.clearTimeout(timeout);
+  }, [coolingDownTasks, now]);
+
   const matrixTasks = useMemo(() => {
     const groups: Record<QuadrantKey, Task[]> = {
       importantUrgent: [],
@@ -920,6 +982,15 @@ export default function TasksPage() {
                   ))}
                 </div>
               </section>
+               {coolingDownTasks.length > 0 && <section className="border-t border-border/60 pt-4" data-testid="section-cooling-down">
+                 <div className="mb-2 flex items-center justify-between gap-3">
+                   <h2 className="text-sm font-semibold text-muted-foreground">Coming back</h2>
+                   <span className="text-[10px] text-muted-foreground">{coolingDownTasks.length}</span>
+                 </div>
+                 <div className="rounded-lg border border-border/55 bg-muted/20 px-2">
+                   {coolingDownTasks.map((task) => <CoolingDownTaskRow key={task.id} task={task} now={now} onEdit={() => setEditingTask(task)} />)}
+                 </div>
+               </section>}
               {completedTasks.length > 0 && <section className="border-t border-border/60 pt-5" data-testid="section-completed-tasks"><div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-semibold text-muted-foreground">Completed</h2><span className="text-[10px] text-muted-foreground">{completedTasks.length}</span></div><div>{completedTasks.map((task) => <div key={task.id} className="flex items-center gap-2.5 border-b border-border/55 py-2.5 last:border-0" data-testid={`row-completed-task-${task.id}`}><button type="button" onClick={() => void restore(task)} disabled={pending} aria-label={`Restore ${task.title}`} data-testid={`button-restore-task-${task.id}`} className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-40"><Check className="size-3" /></button><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{task.title}</p><button type="button" onClick={() => void archive(task)} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-completed-task-${task.id}`} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"><Archive className="size-3.5" /></button></div>)}</div></section>}
             </>
           )}
