@@ -43,6 +43,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import RetentionPage from '@/pages/retention';
+import SettingsPage from '@/pages/settings';
 import { Link, Redirect, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import AdminPage from '@/pages/admin';
 
@@ -1530,6 +1531,7 @@ function Router() {
         <Route path="/today" component={UserPortal} />
         <Route path="/tasks" component={TasksPortal} />
         <Route path="/retention/:id?" component={RetentionPage} />
+        <Route path="/settings" component={SettingsPortal} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/sign-in/*?" component={SignInPage} />
         <Route path="/sign-up/*?" component={SignUpPage} />
@@ -1606,6 +1608,14 @@ function TasksPortal() {
   if (!isLoaded) return <AuthLoading />;
   if (!isSignedIn) return <Redirect to="/" />;
   return <TasksPage />;
+}
+
+function SettingsPortal() {
+  const { isLoaded, isSignedIn } = useUser();
+
+  if (!isLoaded) return <AuthLoading />;
+  if (!isSignedIn) return <Redirect to="/" />;
+  return <SettingsPage />;
 }
 
 function SignInPage() {

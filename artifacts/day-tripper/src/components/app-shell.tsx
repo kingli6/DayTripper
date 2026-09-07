@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useClerk, useUser } from '@clerk/react';
-import { BookOpen, CalendarDays, ChevronRight, ListTodo, PanelLeft, ShieldCheck, UserRound } from 'lucide-react';
+import { BookOpen, CalendarDays, ChevronRight, ListTodo, PanelLeft, Settings2, ShieldCheck, UserRound } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 
 const shellBasePath = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -9,6 +9,7 @@ const PRIMARY_NAVIGATION = [
   { href: '/tasks', label: 'Tasks', icon: ListTodo, testId: 'link-primary-tasks' },
   { href: '/today', label: 'Today', icon: CalendarDays, testId: 'link-primary-today' },
   { href: '/retention', label: 'Practices', icon: BookOpen, testId: 'link-primary-practices' },
+  { href: '/settings', label: 'Settings', icon: Settings2, testId: 'link-primary-settings' },
 ] as const;
 
 function isActivePath(href: string, location: string) {
