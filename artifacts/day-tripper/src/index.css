@@ -93,7 +93,7 @@
 
   --sidebar: 212 38% 7%;
 
-  --sidebar-foreground: 195 28% 92%;
+  --sidebar-foreground: 195 30% 96%;
 
   --sidebar-border: 204 22% 18%;
 
@@ -118,11 +118,11 @@
 
   --secondary: 271 36% 24%;
 
-  --secondary-foreground: 280 55% 86%;
+  --secondary-foreground: 280 60% 90%;
 
   --muted: 204 24% 17%;
 
-  --muted-foreground: 204 15% 64%;
+  --muted-foreground: 204 18% 78%;
 
   --accent: 294 75% 68%;
 
@@ -241,7 +241,7 @@
 
   --sidebar: 205 35% 10%;
 
-  --sidebar-foreground: 43 37% 91%;
+  --sidebar-foreground: 43 37% 96%;
 
   --sidebar-border: 198 20% 23%;
 
@@ -267,11 +267,11 @@
 
   --secondary: 198 22% 25%;
 
-  --secondary-foreground: 43 37% 91%;
+  --secondary-foreground: 43 37% 95%;
 
   --muted: 198 22% 24%;
 
-  --muted-foreground: 198 14% 67%;
+  --muted-foreground: 198 18% 76%;
 
   --accent: 15 66% 71%;
 
