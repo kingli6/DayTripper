@@ -153,9 +153,9 @@ export function RetentionPracticeForm({
           </div>
           {(localError || error) && <p className="rounded-xl border border-destructive/25 bg-destructive/[0.06] px-3 py-2.5 text-xs text-destructive" role="alert" data-testid="status-practice-form-error">{localError || error}</p>}
           <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-5 sm:flex-row sm:justify-end">
-            <button type="button" onClick={onClose} data-testid="button-cancel-practice" className="rounded-full border border-border px-5 py-2.5 text-xs font-semibold text-foreground hover:border-primary/40">Keep looking</button>
+            <button type="button" onClick={onClose} data-testid="button-cancel-practice" className="rounded-full border border-border px-5 py-2.5 text-xs font-semibold text-foreground hover:border-primary/40">Cancel</button>
             <button type="submit" disabled={pending || !name.trim()} data-testid="button-save-practice" className="rounded-full bg-primary px-5 py-2.5 text-xs font-semibold text-primary-foreground hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-55">
-              {pending ? 'Saving…' : practice ? 'Save changes' : 'Keep this practice'}
+              {pending ? 'Saving…' : practice ? 'Save changes' : 'Add practice'}
             </button>
           </div>
         </form>
