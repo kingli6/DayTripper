@@ -58,6 +58,7 @@ type RecommendationInputs = {
 };
 
 type QuadrantKey = 'importantUrgent' | 'importantNotUrgent' | 'notImportantUrgent' | 'notImportantNotUrgent';
+type ActiveTaskSort = 'default' | 'lowest-time' | 'lowest-energy' | 'highest-priority' | 'lowest-mental-load';
 
 const QUADRANTS: Array<{ key: QuadrantKey; title: string; description: string; tone: string }> = [
   { key: 'importantUrgent', title: 'Important + Urgent', description: 'Do next', tone: 'border-primary/35 bg-primary/[0.07]' },
@@ -80,6 +81,40 @@ function formatCompactDeadline(deadline: string) {
 
 function focusScore(task: Task) {
   return task.importance + task.urgency + task.interest - task.energyRequired;
+}
+
+function numericTaskValue(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function compareTaskNumbers(first: number | null, second: number | null, direction: 'asc' | 'desc') {
+  if (first === null && second === null) return 0;
+  if (first === null) return 1;
+  if (second === null) return -1;
+  return direction === 'asc' ? first - second : second - first;
+}
+
+function compareActiveTasks(first: Task, second: Task, sort: ActiveTaskSort) {
+  if (sort === 'default') return 0;
+  if (sort === 'lowest-time') {
+    return compareTaskNumbers(numericTaskValue(first.estimatedMinutes), numericTaskValue(second.estimatedMinutes), 'asc');
+  }
+  if (sort === 'lowest-energy') {
+    return compareTaskNumbers(numericTaskValue(first.energyRequired), numericTaskValue(second.energyRequired), 'asc');
+  }
+  if (sort === 'highest-priority') {
+    const firstPriority = numericTaskValue(first.importance) !== null && numericTaskValue(first.urgency) !== null
+      ? first.importance + first.urgency
+      : null;
+    const secondPriority = numericTaskValue(second.importance) !== null && numericTaskValue(second.urgency) !== null
+      ? second.importance + second.urgency
+      : null;
+    return compareTaskNumbers(firstPriority, secondPriority, 'desc');
+  }
+  // The current task model's energy rating is its measure of felt demand,
+  // so use it as the mental-load signal without introducing another field.
+  return compareTaskNumbers(numericTaskValue(first.energyRequired), numericTaskValue(second.energyRequired), 'asc')
+    || compareTaskNumbers(numericTaskValue(first.estimatedMinutes), numericTaskValue(second.estimatedMinutes), 'asc');
 }
 
 function quadrantKey(task: Task): QuadrantKey {
@@ -690,12 +725,17 @@ export default function TasksPage() {
   const [recommendationRun, setRecommendationRun] = useState<RecommendationInputs | null>(null);
   const [executionDecision, setExecutionDecision] = useState<ExecutionDecision | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [activeTaskSort, setActiveTaskSort] = useState<ActiveTaskSort>('default');
 
   const tasks = useMemo(() => [...(list.data ?? [])].filter((task) => task.status !== 'archived').sort((a, b) => focusScore(b) - focusScore(a) || a.id - b.id), [list.data]);
   const activeTasks = tasks.filter((task) => (
     (task.status === 'inbox' || task.status === 'active')
       && !isCoolingDown(task, now)
   ));
+  const activeTasksForList = useMemo(
+    () => [...activeTasks].sort((first, second) => compareActiveTasks(first, second, activeTaskSort) || first.id - second.id),
+    [activeTasks, activeTaskSort],
+  );
   const coolingDownTasks = tasks.filter((task) => (
     (task.status === 'inbox' || task.status === 'active')
       && isCoolingDown(task, now)
@@ -979,10 +1019,31 @@ export default function TasksPage() {
           ) : (
             <>
               <section data-testid="section-active-tasks">
-                <div className="mb-2 flex items-center justify-between gap-3"><h2 className="text-base font-semibold text-foreground">Active tasks</h2><span className="text-[11px] text-muted-foreground">{activeTasks.length}</span></div>
+                 <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                   <h2 className="text-base font-semibold text-foreground">Active tasks</h2>
+                   <div className="flex items-center gap-2">
+                     <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                       <span>Sort:</span>
+                       <select
+                         value={activeTaskSort}
+                         onChange={(event) => setActiveTaskSort(event.target.value as ActiveTaskSort)}
+                         aria-label="Sort active tasks"
+                         data-testid="select-active-task-sort"
+                         className="h-7 rounded-md border border-border/70 bg-background/70 px-1.5 text-[10px] font-semibold text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+                       >
+                         <option value="default">Default</option>
+                         <option value="lowest-time">Lowest time</option>
+                         <option value="lowest-energy">Lowest energy</option>
+                         <option value="highest-priority">Highest priority</option>
+                         <option value="lowest-mental-load">Lowest mental load</option>
+                       </select>
+                     </label>
+                     <span className="text-[11px] text-muted-foreground">{activeTasks.length}</span>
+                   </div>
+                 </div>
                 {activeTasks.length === 0 ? (
                   <div className="border-y border-dashed border-border/70 px-1 py-5 text-xs text-muted-foreground" data-testid="status-tasks-empty">No active tasks.</div>
-                ) : <div>{activeTasks.map((task) => <TaskItem key={task.id} task={task} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
+                 ) : <div>{activeTasksForList.map((task) => <TaskItem key={task.id} task={task} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
               </section>
                <section className="border-t border-border/60 pt-4" data-testid="section-eisenhower">
                 <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-foreground">Priority matrix</h2><span className="text-[10px] text-muted-foreground">Importance + urgency</span></div>
