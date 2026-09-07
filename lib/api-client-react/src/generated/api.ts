@@ -31,6 +31,7 @@ import type {
   AiStatus,
   ApplyReplanningProposalRequest,
   ApplyReplanningResult,
+  CompleteTaskInput,
   ExecutionAnalysis,
   ExecutionDecision,
   ExecutionDecisionInput,
@@ -1282,14 +1283,15 @@ export const getCompleteTaskUrl = (id: number,) => {
 /**
  * @summary Mark a task complete
  */
-export const completeTask = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Task> => {
+export const completeTask = async (id: number,
+    completeTaskInput?: CompleteTaskInput, options?: Parameters<typeof customFetch>[1]): Promise<Task> => {
 
   return customFetch<Task>(getCompleteTaskUrl(id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(completeTaskInput)
   }
 );}
 
@@ -1298,8 +1300,8 @@ export const completeTask = async (id: number, options?: Parameters<typeof custo
 
 
 export const getCompleteTaskMutationOptions = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTask>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof completeTask>>, TError,{id: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTask>>, TError,{id: number;data?: BodyType<CompleteTaskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof completeTask>>, TError,{id: number;data?: BodyType<CompleteTaskInput>}, TContext> => {
 
 const mutationKey = ['completeTask'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -1311,10 +1313,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeTask>>, {id: number}> = (props) => {
-          const {id} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof completeTask>>, {id: number;data?: BodyType<CompleteTaskInput>}> = (props) => {
+          const {id,data} = props ?? {};
 
-          return  completeTask(id,requestOptions)
+          return  completeTask(id,data,requestOptions)
         }
 
 
@@ -1325,18 +1327,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CompleteTaskMutationResult = NonNullable<Awaited<ReturnType<typeof completeTask>>>
-
+    export type CompleteTaskMutationBody = BodyType<CompleteTaskInput> | undefined
     export type CompleteTaskMutationError = ErrorType<void>
 
     /**
  * @summary Mark a task complete
  */
 export const useCompleteTask = <TError = ErrorType<void>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTask>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof completeTask>>, TError,{id: number;data?: BodyType<CompleteTaskInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof completeTask>>,
         TError,
-        {id: number},
+        {id: number;data?: BodyType<CompleteTaskInput>},
         TContext
       > => {
       return useMutation(getCompleteTaskMutationOptions(options));

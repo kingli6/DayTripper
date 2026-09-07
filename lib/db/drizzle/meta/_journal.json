@@ -155,6 +155,13 @@
       "when": 1788726354735,
       "tag": "0021_lovely_hitman",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1788773617419,
+      "tag": "0022_cloudy_joystick",
+      "breakpoints": true
     }
   ]
 }

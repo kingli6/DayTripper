@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TaskRecurrence } from './taskRecurrence';
 
 export interface TaskInput {
   /**
@@ -47,4 +48,5 @@ export interface TaskInput {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline?: string | null;
+  recurrence?: TaskRecurrence | null;
 }

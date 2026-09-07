@@ -35,6 +35,19 @@ const taskSchema = z.object({
   interest: z.preprocess((value) => Number(value), z.number().int().min(1).max(5)),
   estimatedMinutes: z.preprocess((value) => Number(value), z.number().int().min(1).max(1440)),
   deadline: z.string(),
+  recurrence: z.enum(['none', 'daily', 'interval']),
+  recurrenceIntervalDays: z.preprocess(
+    (value) => value === '' || value === undefined ? undefined : Number(value),
+    z.number().int().min(1).optional(),
+  ),
+}).superRefine((values, context) => {
+  if (values.recurrence === 'interval' && values.recurrenceIntervalDays === undefined) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['recurrenceIntervalDays'],
+      message: 'Choose how many days should be between occurrences.',
+    });
+  }
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -172,6 +185,19 @@ function defaultScheduleStart(estimatedMinutes: number) {
   return candidate + estimatedMinutes < 24 * 60 ? timeFromMinutes(candidate) : '09:00';
 }
 
+function recurrenceLabel(task: Task) {
+  if (!task.recurrence) return '';
+  return task.recurrence.type === 'daily' ? 'Every day' : `Every ${task.recurrence.intervalDays} days`;
+}
+
+function recurrenceFromForm(values: TaskFormValues): NonNullable<TaskInput['recurrence']> | null {
+  if (values.recurrence === 'daily') return { type: 'daily' };
+  if (values.recurrence === 'interval') {
+    return { type: 'interval', intervalDays: values.recurrenceIntervalDays ?? 1 };
+  }
+  return null;
+}
+
 function TaskForm({
   task,
   pending,
@@ -196,9 +222,12 @@ function TaskForm({
       interest: task?.interest ?? 3,
       estimatedMinutes: task?.estimatedMinutes ?? 30,
       deadline: task?.deadline ? task.deadline.slice(0, 16) : '',
+      recurrence: task?.recurrence?.type ?? 'none',
+      recurrenceIntervalDays: task?.recurrence?.type === 'interval' ? task.recurrence.intervalDays : undefined,
     },
   });
 
+  const recurrence = form.watch('recurrence');
   const [showDetails, setShowDetails] = useState(Boolean(task));
   const titleField = (
     <FormField control={form.control} name="title" render={({ field }) => (
@@ -243,6 +272,26 @@ function TaskForm({
             <FormMessage />
           </FormItem>
         )} />
+        <FormField control={form.control} name="recurrence" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs font-semibold text-foreground">Repeat</FormLabel>
+            <FormControl>
+              <select {...field} data-testid="select-task-recurrence" className="flex h-10 w-full rounded-lg border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+                <option value="none">Never</option>
+                <option value="daily">Every day</option>
+                <option value="interval">Every N days</option>
+              </select>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />
+        {recurrence === 'interval' && <FormField control={form.control} name="recurrenceIntervalDays" render={({ field }) => (
+          <FormItem>
+            <FormLabel className="text-xs font-semibold text-foreground">Interval in days</FormLabel>
+            <FormControl><input {...field} value={field.value ?? ''} type="number" min={1} step={1} inputMode="numeric" data-testid="input-task-recurrence-interval" className="flex h-10 w-full rounded-lg border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
+            <FormMessage />
+          </FormItem>
+        )} />}
       </div>
       <FormField control={form.control} name="notes" render={({ field }) => (
         <FormItem>
@@ -365,6 +414,7 @@ function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task
             <span title={`Interest ${task.interest} out of 5`}>I{task.interest}</span>
             <span title={`Priority ${task.importance + task.urgency} out of 10`}>P{task.importance + task.urgency}</span>
             {task.deadline && <span title={`Deadline ${formatDeadline(task.deadline)}`}>Due {formatCompactDeadline(task.deadline)}</span>}
+             {task.recurrence && <span title="Recurring task">{recurrenceLabel(task)}</span>}
           </div>
         </div>
         <button type="button" onClick={onArchive} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-task-${task.id}`} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40">
@@ -379,7 +429,7 @@ function MatrixTaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   return (
     <button type="button" onClick={onEdit} className="flex w-full items-center justify-between gap-3 border-b border-border/55 px-1 py-2 text-left text-xs transition-colors last:border-0 hover:text-primary" data-testid={`card-matrix-task-${task.id}`}>
       <p className="min-w-0 truncate font-medium text-foreground">{task.title}</p>
-      <span className="shrink-0 text-[10px] text-muted-foreground" title={`Estimated ${task.estimatedMinutes} minutes, priority ${task.importance + task.urgency} out of 10`}>{task.estimatedMinutes}m · P{task.importance + task.urgency}</span>
+      <span className="shrink-0 text-[10px] text-muted-foreground" title={`Estimated ${task.estimatedMinutes} minutes, priority ${task.importance + task.urgency} out of 10`}>{task.estimatedMinutes}m · P{task.importance + task.urgency}{task.recurrence ? ` · ${recurrenceLabel(task)}` : ''}</span>
     </button>
   );
 }
@@ -667,6 +717,7 @@ export default function TasksPage() {
       interest: values.interest,
       estimatedMinutes: values.estimatedMinutes,
       deadline: values.deadline ? new Date(values.deadline).toISOString() : null,
+        recurrence: recurrenceFromForm(values),
     };
     try {
       await createTask.mutateAsync({ data });
@@ -687,6 +738,7 @@ export default function TasksPage() {
       interest: values.interest,
       estimatedMinutes: values.estimatedMinutes,
       deadline: values.deadline ? new Date(values.deadline).toISOString() : null,
+      recurrence: recurrenceFromForm(values),
     };
     try {
       await updateTask.mutateAsync({ id: task.id, data });
@@ -700,9 +752,14 @@ export default function TasksPage() {
 
   const complete = async (task: Task) => {
     try {
-      await completeTask.mutateAsync({ id: task.id });
+      await completeTask.mutateAsync({
+        id: task.id,
+        ...(task.recurrence && task.nextOccurrenceAt
+          ? { data: { expectedNextOccurrenceAt: task.nextOccurrenceAt } }
+          : {}),
+      });
       await invalidateTasks();
-      showSuccess('Task completed.');
+      showSuccess(task.recurrence ? 'Occurrence completed. The task stays active.' : 'Task completed.');
     } catch (error) {
       setNotice({ tone: 'error', text: errorMessage(error) });
     }

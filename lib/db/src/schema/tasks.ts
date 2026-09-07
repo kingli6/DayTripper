@@ -1,6 +1,10 @@
 import { createInsertSchema } from "drizzle-zod";
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { z } from "zod/v4";
+
+export type TaskRecurrence =
+  | { type: "daily" }
+  | { type: "interval"; intervalDays: number };
 
 export const tasksTable = pgTable("tasks", {
   id: serial("id").primaryKey(),
@@ -13,6 +17,8 @@ export const tasksTable = pgTable("tasks", {
   interest: integer("interest").notNull(),
   estimatedMinutes: integer("estimated_minutes").notNull(),
   deadline: timestamp("deadline", { withTimezone: true }),
+  recurrence: jsonb("recurrence").$type<TaskRecurrence>(),
+  nextOccurrenceAt: timestamp("next_occurrence_at", { withTimezone: true }),
   status: text("status").notNull().default("inbox"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -28,6 +34,7 @@ export const insertTaskSchema = createInsertSchema(tasksTable).omit({
   createdAt: true,
   updatedAt: true,
   completedAt: true,
+  nextOccurrenceAt: true,
 });
 
 export type InsertTask = z.infer<typeof insertTaskSchema>;

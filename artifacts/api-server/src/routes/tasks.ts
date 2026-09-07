@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import {
   ArchiveTaskParams,
+  CompleteTaskBody,
   CompleteTaskParams,
   CompleteTaskResponse,
   CreateTaskBody,
@@ -35,6 +36,12 @@ import {
   validateExecutionDecision,
   validateExecutionDecisionForTask,
 } from "../lib/executionDecision";
+import {
+  INVALID_RECURRENCE,
+  nextOccurrenceAfter,
+  normalizeRecurrence,
+  sameRecurrence,
+} from "../lib/taskRecurrence";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -49,6 +56,8 @@ function toApiTask(task: typeof tasksTable.$inferSelect) {
     ...task,
     notes: task.notes ?? null,
     deadline: task.deadline?.toISOString() ?? null,
+    recurrence: task.recurrence ?? null,
+    nextOccurrenceAt: task.nextOccurrenceAt?.toISOString() ?? null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
     completedAt: task.completedAt?.toISOString() ?? null,
@@ -572,6 +581,13 @@ router.post("/tasks", async (req, res): Promise<void> => {
     return;
   }
 
+  const recurrence = normalizeRecurrence(parsed.data.recurrence);
+  if (recurrence === INVALID_RECURRENCE) {
+    res.status(400).json({ error: "Please choose a valid recurrence interval." });
+    return;
+  }
+
+  const nextOccurrenceAt = recurrence ? new Date() : null;
   const [task] = await db.insert(tasksTable).values({
     ownerId: res.locals.userId as string,
     title: parsed.data.title.trim(),
@@ -582,6 +598,8 @@ router.post("/tasks", async (req, res): Promise<void> => {
     interest: parsed.data.interest,
     estimatedMinutes: parsed.data.estimatedMinutes,
     deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
+    recurrence,
+    nextOccurrenceAt,
     status: "inbox",
   }).returning();
 
@@ -809,7 +827,30 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const { deadline, status, ...data } = parsed.data;
+  const recurrence = normalizeRecurrence(parsed.data.recurrence);
+  if (recurrence === INVALID_RECURRENCE) {
+    res.status(400).json({ error: "Please choose a valid recurrence interval." });
+    return;
+  }
+
+  const { deadline, recurrence: _recurrence, status, ...data } = parsed.data;
+  const [existingTask] = await db
+    .select()
+    .from(tasksTable)
+    .where(and(
+      eq(tasksTable.id, params.data.id),
+      eq(tasksTable.ownerId, res.locals.userId as string),
+      ne(tasksTable.status, "archived"),
+    ))
+    .limit(1);
+
+  if (!existingTask) {
+    res.status(404).json({ error: "Task not found." });
+    return;
+  }
+
+  const recurrenceChanged = recurrence !== undefined
+    && !sameRecurrence(existingTask.recurrence, recurrence);
   const [task] = await db
     .update(tasksTable)
     .set({
@@ -817,6 +858,14 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
       ...(data.title !== undefined ? { title: data.title.trim() } : {}),
       ...(data.notes !== undefined ? { notes: data.notes?.trim() || null } : {}),
       ...(deadline !== undefined ? { deadline: deadline ? new Date(deadline) : null } : {}),
+      ...(recurrence !== undefined
+        ? {
+            recurrence,
+            ...(recurrenceChanged
+              ? { nextOccurrenceAt: recurrence ? new Date() : null }
+              : {}),
+          }
+        : {}),
       ...(status !== undefined ? { status, completedAt: null } : {}),
     })
     .where(and(
@@ -841,22 +890,89 @@ router.post("/tasks/:id/complete", async (req, res): Promise<void> => {
     return;
   }
 
-  const [task] = await db
-    .update(tasksTable)
-    .set({ status: "completed", completedAt: new Date() })
-    .where(and(
-      eq(tasksTable.id, params.data.id),
-      eq(tasksTable.ownerId, res.locals.userId as string),
-      ne(tasksTable.status, "archived"),
-    ))
-    .returning();
+  const parsed = CompleteTaskBody.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: "Please refresh the task before completing it." });
+    return;
+  }
 
-  if (!task) {
+  const expectedNextOccurrenceAt = parsed.data.expectedNextOccurrenceAt
+    ? new Date(parsed.data.expectedNextOccurrenceAt)
+    : undefined;
+  if (expectedNextOccurrenceAt && Number.isNaN(expectedNextOccurrenceAt.getTime())) {
+    res.status(400).json({ error: "Please refresh the task before completing it." });
+    return;
+  }
+
+  const result = await db.transaction(async (tx) => {
+    const [currentTask] = await tx
+      .select()
+      .from(tasksTable)
+      .where(and(
+        eq(tasksTable.id, params.data.id),
+        eq(tasksTable.ownerId, res.locals.userId as string),
+        ne(tasksTable.status, "archived"),
+      ))
+      .limit(1);
+
+    if (!currentTask) return { kind: "missing" as const };
+
+    if (currentTask.recurrence) {
+      if (
+        !expectedNextOccurrenceAt
+        || !currentTask.nextOccurrenceAt
+        || currentTask.nextOccurrenceAt.getTime() !== expectedNextOccurrenceAt.getTime()
+      ) {
+        return { kind: "conflict" as const };
+      }
+
+      const nextOccurrenceAt = nextOccurrenceAfter(
+        currentTask.nextOccurrenceAt,
+        currentTask.recurrence,
+        new Date(),
+      );
+      const [advancedTask] = await tx
+        .update(tasksTable)
+        .set({ nextOccurrenceAt })
+        .where(and(
+          eq(tasksTable.id, params.data.id),
+          eq(tasksTable.ownerId, res.locals.userId as string),
+          ne(tasksTable.status, "archived"),
+          eq(tasksTable.nextOccurrenceAt, expectedNextOccurrenceAt),
+        ))
+        .returning();
+
+      return advancedTask
+        ? { kind: "advanced" as const, task: advancedTask }
+        : { kind: "conflict" as const };
+    }
+
+    const [completedTask] = await tx
+      .update(tasksTable)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(and(
+        eq(tasksTable.id, params.data.id),
+        eq(tasksTable.ownerId, res.locals.userId as string),
+        ne(tasksTable.status, "archived"),
+      ))
+      .returning();
+
+    return completedTask
+      ? { kind: "completed" as const, task: completedTask }
+      : { kind: "missing" as const };
+  });
+
+  if (result.kind === "missing") {
     res.status(404).json({ error: "Task not found." });
     return;
   }
 
-  res.json(CompleteTaskResponse.parse(toApiTask(task)));
+  if (result.kind === "conflict") {
+    res.status(409).json({ error: "This recurring task occurrence has already advanced. Refresh the task and try again." });
+    return;
+  }
+
+  res.json(CompleteTaskResponse.parse(toApiTask(result.task)));
 });
 
 router.delete("/tasks/:id", async (req, res): Promise<void> => {

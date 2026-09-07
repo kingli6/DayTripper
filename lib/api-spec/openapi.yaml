@@ -370,6 +370,12 @@ paths:
           required: true
           schema:
             type: number
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompleteTaskInput"
       responses:
         "200":
           description: Completed task
@@ -377,6 +383,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Task"
+        "409":
+          description: The recurring task occurrence has already advanced
         "404":
           description: Task not found
   /activities/{id}:
@@ -1470,6 +1478,13 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
+        recurrence:
+          allOf:
+            - $ref: "#/components/schemas/TaskRecurrence"
+          nullable: true
+        nextOccurrenceAt:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}T'
         status:
           type: string
           enum: [inbox, active, completed, archived]
@@ -1489,6 +1504,8 @@ components:
         - interest
         - estimatedMinutes
         - deadline
+        - recurrence
+        - nextOccurrenceAt
         - status
         - createdAt
         - updatedAt
@@ -1526,6 +1543,10 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
+        recurrence:
+          allOf:
+            - $ref: "#/components/schemas/TaskRecurrence"
+          nullable: true
       required:
         - title
         - importance
@@ -1566,9 +1587,31 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
+        recurrence:
+          allOf:
+            - $ref: "#/components/schemas/TaskRecurrence"
+          nullable: true
         status:
           type: string
           enum: [inbox, active]
+    CompleteTaskInput:
+      type: object
+      properties:
+        expectedNextOccurrenceAt:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}T'
+      required: []
+    TaskRecurrence:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [daily, interval]
+        intervalDays:
+          type: number
+          minimum: 1
+      required:
+        - type
     TaskRecommendationInput:
       type: object
       properties:
