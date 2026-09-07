@@ -11,6 +11,7 @@ export const activitiesTable = pgTable("activities", {
   endTime: text("end_time"),
   category: text("category"),
   completed: boolean("completed").notNull().default(false),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
   locked: boolean("locked").notNull().default(false),
   pinned: boolean("pinned").notNull().default(false),
   note: text("note"),

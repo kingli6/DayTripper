@@ -324,7 +324,9 @@ export const ApplyReplanningProposalBody = zod.object({
 })
 
 export const applyReplanningProposalResponseUpdatedActivitiesItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const applyReplanningProposalResponseUpdatedActivitiesItemCompletedAtRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
 export const applyReplanningProposalResponseAddedActivitiesItemScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const applyReplanningProposalResponseAddedActivitiesItemCompletedAtRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
 
 
 export const ApplyReplanningProposalResponse = zod.object({
@@ -336,6 +338,7 @@ export const ApplyReplanningProposalResponse = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "completedAt": zod.string().regex(applyReplanningProposalResponseUpdatedActivitiesItemCompletedAtRegExp).nullable(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
@@ -349,6 +352,7 @@ export const ApplyReplanningProposalResponse = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "completedAt": zod.string().regex(applyReplanningProposalResponseAddedActivitiesItemCompletedAtRegExp).nullable(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
@@ -369,6 +373,7 @@ export const ListActivitiesQueryParams = zod.object({
 })
 
 export const listActivitiesResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listActivitiesResponseCompletedAtRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
 
 
 export const ListActivitiesResponseItem = zod.object({
@@ -379,6 +384,7 @@ export const ListActivitiesResponseItem = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "completedAt": zod.string().regex(listActivitiesResponseCompletedAtRegExp).nullable(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
@@ -407,6 +413,7 @@ export const CreateActivityBody = zod.object({
 })
 
 export const createActivityResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createActivityResponseCompletedAtRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
 
 
 export const CreateActivityResponse = zod.object({
@@ -417,6 +424,7 @@ export const CreateActivityResponse = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "completedAt": zod.string().regex(createActivityResponseCompletedAtRegExp).nullable(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
@@ -649,6 +657,7 @@ export const ScheduleTaskBody = zod.object({
 })
 
 export const scheduleTaskResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const scheduleTaskResponseCompletedAtRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
 
 
 export const ScheduleTaskResponse = zod.object({
@@ -659,6 +668,7 @@ export const ScheduleTaskResponse = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "completedAt": zod.string().regex(scheduleTaskResponseCompletedAtRegExp).nullable(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),
@@ -821,6 +831,7 @@ export const UpdateActivityBody = zod.object({
 })
 
 export const updateActivityResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updateActivityResponseCompletedAtRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}T');
 
 
 export const UpdateActivityResponse = zod.object({
@@ -831,6 +842,7 @@ export const UpdateActivityResponse = zod.object({
   "endTime": zod.string().nullable(),
   "category": zod.union([zod.literal('work'),zod.literal('recovery'),zod.literal('managing'),zod.literal('social'),zod.literal('fun'),zod.literal(null)]).nullable(),
   "completed": zod.boolean(),
+  "completedAt": zod.string().regex(updateActivityResponseCompletedAtRegExp).nullable(),
   "locked": zod.boolean(),
   "pinned": zod.boolean(),
   "note": zod.string().nullable(),

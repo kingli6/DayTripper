@@ -1426,6 +1426,9 @@ components:
           enum: [work, recovery, managing, social, fun, null]
         completed:
           type: boolean
+        completedAt:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}T'
         locked:
           type: boolean
         pinned:
@@ -1442,6 +1445,7 @@ components:
         - endTime
         - category
         - completed
+        - completedAt
         - locked
         - pinned
         - note

@@ -169,6 +169,13 @@
       "when": 1788775462745,
       "tag": "0023_replace_task_recurrence",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1788804384592,
+      "tag": "0024_crazy_cloak",
+      "breakpoints": true
     }
   ]
 }

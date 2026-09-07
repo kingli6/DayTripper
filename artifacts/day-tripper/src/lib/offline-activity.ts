@@ -224,6 +224,7 @@ function optimisticActivity(localId: number, data: ActivityInput): Activity {
     endTime: data.endTime ?? null,
     category: data.category ?? null,
     completed: data.completed ?? false,
+    completedAt: null,
     locked: data.locked ?? false,
     pinned: data.pinned ?? false,
     note: data.note ?? null,

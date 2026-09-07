@@ -26,6 +26,14 @@ const CATEGORY_VALUES = new Set(["work", "recovery", "managing", "social", "fun"
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+function toApiActivity(activity: typeof activitiesTable.$inferSelect) {
+  return {
+    ...activity,
+    completedAt: activity.completedAt?.toISOString() ?? null,
+    updatedAt: activity.updatedAt.toISOString(),
+  };
+}
+
 type PlanningRequest = {
   intention?: string;
   currentDate: string;
@@ -998,7 +1006,11 @@ router.post("/planning/replan-proposals/apply", async (req, res): Promise<void> 
       return { updatedActivities, addedActivities, removedActivityIds };
     });
 
-    res.json(ApplyReplanningProposalResponse.parse(result));
+    res.json(ApplyReplanningProposalResponse.parse({
+      ...result,
+      updatedActivities: result.updatedActivities.map(toApiActivity),
+      addedActivities: result.addedActivities.map(toApiActivity),
+    }));
   } catch (error) {
     if (error instanceof Error && error.name === "STALE_REPLANNING_SNAPSHOT") {
       res.status(409).json({ error: error.message });

@@ -450,6 +450,11 @@ export interface Activity {
   /** @nullable */
   category: ActivityCategory;
   completed: boolean;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}T
+     */
+  completedAt: string | null;
   locked: boolean;
   pinned: boolean;
   /** @nullable */

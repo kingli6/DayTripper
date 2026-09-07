@@ -33,6 +33,7 @@ function currentTimeValue() {
 function toApiActivity(activity: typeof activitiesTable.$inferSelect) {
   return {
     ...activity,
+    completedAt: activity.completedAt?.toISOString() ?? null,
     updatedAt: activity.updatedAt.toISOString(),
   };
 }
@@ -164,9 +165,16 @@ router.patch("/activities/:id", async (req, res): Promise<void> => {
       return { kind: "conflict" as const };
     }
 
+    const completionChanged = parsed.data.completed !== undefined
+      && parsed.data.completed !== before.completed;
     const [updated] = await tx
       .update(activitiesTable)
-      .set(updateValues)
+      .set({
+        ...updateValues,
+        ...(completionChanged
+          ? { completedAt: parsed.data.completed ? new Date() : null }
+          : {}),
+      })
       .where(
         and(
           eq(activitiesTable.id, params.data.id),
