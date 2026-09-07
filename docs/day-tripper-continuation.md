@@ -1,6 +1,6 @@
 # Day Tripper Continuation Checkpoint
 
-Last reviewed: 2026-09-06
+Last reviewed: 2026-09-07
 
 This is the canonical handoff file for continuing Day Tripper across sessions or
 when the available conversation context is nearly exhausted. It is intentionally
@@ -712,3 +712,31 @@ push unless a real schema mismatch is found.
 web production build, clean API/web workflow restarts, and signed-out preview
 rendering. The authenticated create → due → complete → next-occurrence flow
 remains unverified because the available browser session is still signed out.
+
+## Active recurring-task cycle indicator
+
+**Status:** Implemented and locally verified on 2026-09-07.
+
+**Completed:**
+
+- Added a compact missed-cycle count to recurring tasks in Active tasks only,
+  derived from the existing next occurrence timestamp and minute interval.
+- Kept the existing recurring completion path and planned-anchor semantics
+  unchanged; completing an occurrence still advances the stored next occurrence
+  and resets the visible count for the next occurrence.
+- Added compact human-readable recurrence labels in Active tasks, while keeping
+  recurrence input and storage in minutes.
+- Kept the Priority matrix, database schema, migrations, notifications, and
+  reminders unchanged.
+
+**Verified:** Full workspace typecheck, API and web production builds, all 33
+API tests, clean web workflow restart, signed-out preview rendering, fresh
+workflow/browser logs, and `git diff --check`.
+
+**Not available in the current preview:** Signed-in visual verification of the
+due, missed, and completion-reset states. The implementation uses the same
+existing next-occurrence advancement path, so no API, database, or migration
+change was needed.
+
+**Do not start:** Recurrence fields, migrations, notifications, reminders, or
+Priority matrix changes for this UI slice.

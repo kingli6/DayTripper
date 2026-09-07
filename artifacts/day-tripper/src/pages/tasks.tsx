@@ -230,6 +230,44 @@ function repeatIntervalLabel(task: Task) {
   return `Every ${minutes} minutes`;
 }
 
+function activeRepeatIntervalLabel(task: Task) {
+  const minutes = task.repeatIntervalMinutes;
+  if (minutes === null) return '';
+  if (minutes === 60) return 'Every hour';
+  if (minutes === 1440) return 'Every day';
+  if (minutes % 10080 === 0) {
+    const weeks = minutes / 10080;
+    return `Every ${weeks === 1 ? 'week' : `${weeks} weeks`}`;
+  }
+
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const remainingMinutes = minutes % 60;
+  if (days > 0 && hours === 0 && remainingMinutes === 0) {
+    return `Every ${days} ${days === 1 ? 'day' : 'days'}`;
+  }
+  if (days === 0 && hours > 0 && remainingMinutes === 0) {
+    return `Every ${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  }
+
+  const parts = [
+    days > 0 ? `${days}d` : '',
+    hours > 0 ? `${hours}h` : '',
+    remainingMinutes > 0 ? `${remainingMinutes}m` : '',
+  ].filter(Boolean);
+  return `Every ${parts.join(' ')}`;
+}
+
+function missedCycleCount(task: Task, now: number) {
+  if (task.repeatIntervalMinutes === null || !task.nextOccurrenceAt) return 0;
+
+  const nextOccurrenceAt = new Date(task.nextOccurrenceAt).getTime();
+  const intervalMs = task.repeatIntervalMinutes * 60_000;
+  if (!Number.isFinite(nextOccurrenceAt) || !Number.isFinite(intervalMs) || nextOccurrenceAt > now) return 0;
+
+  return Math.floor((now - nextOccurrenceAt) / intervalMs) + 1;
+}
+
 function repeatIntervalPreset(minutes: number | null | undefined): TaskFormValues['repeatIntervalPreset'] {
   if (minutes === null || minutes === undefined) return 'none';
   if (minutes === 60) return 'hourly';
@@ -412,11 +450,12 @@ function TaskForm({
 
 const TASK_COMPLETION_HOLD_MS = 3000;
 
-function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task; onEdit: () => void; onComplete: () => void; onArchive: () => void; pending: boolean }) {
+function TaskItem({ task, now, onEdit, onComplete, onArchive, pending }: { task: Task; now: number; onEdit: () => void; onComplete: () => void; onArchive: () => void; pending: boolean }) {
   const holdTimerRef = useRef<number | null>(null);
   const holdAnimationRef = useRef<number | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
+  const missedCycles = missedCycleCount(task, now);
 
   const cancelHold = () => {
     if (holdTimerRef.current !== null) window.clearTimeout(holdTimerRef.current);
@@ -484,7 +523,7 @@ function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task
             <span title={`Interest ${task.interest} out of 5`}>I{task.interest}</span>
             <span title={`Priority ${task.importance + task.urgency} out of 10`}>P{task.importance + task.urgency}</span>
             {task.deadline && <span title={`Deadline ${formatDeadline(task.deadline)}`}>Due {formatCompactDeadline(task.deadline)}</span>}
-             {task.repeatIntervalMinutes !== null && <span title="Recurring task">{repeatIntervalLabel(task)}</span>}
+             {task.repeatIntervalMinutes !== null && <span title="Recurring task">↻ {activeRepeatIntervalLabel(task)}{missedCycles > 0 && <><span aria-hidden="true"> · </span><span className="font-semibold text-amber-700 dark:text-amber-300" title={`${missedCycles} recurrence cycle${missedCycles === 1 ? '' : 's'} missed`} data-testid={`text-missed-cycles-${task.id}`}><span aria-hidden="true">⚠</span> {missedCycles}</span></>}</span>}
           </div>
         </div>
         <button type="button" onClick={onArchive} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-task-${task.id}`} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40">
@@ -742,19 +781,29 @@ export default function TasksPage() {
   ));
   const completedTasks = tasks.filter((task) => task.status === 'completed');
   useEffect(() => {
-    const nextOccurrenceTimes = coolingDownTasks
-      .map((task) => task.nextOccurrenceAt ? new Date(task.nextOccurrenceAt).getTime() : 0)
-      .filter((time) => time > now);
-    if (!nextOccurrenceTimes.length) return;
+    const recurringTaskTimes = tasks
+      .filter((task) => (
+        (task.status === 'inbox' || task.status === 'active')
+        && task.repeatIntervalMinutes !== null
+        && task.nextOccurrenceAt
+      ))
+      .map((task) => {
+        const firstOccurrenceAt = new Date(task.nextOccurrenceAt as string).getTime();
+        const intervalMs = task.repeatIntervalMinutes! * 60_000;
+        if (firstOccurrenceAt > now) return firstOccurrenceAt;
+        return firstOccurrenceAt + (Math.floor((now - firstOccurrenceAt) / intervalMs) + 1) * intervalMs;
+      })
+      .filter((time) => Number.isFinite(time) && time > now);
+    if (!recurringTaskTimes.length) return;
 
-    const nextOccurrenceAt = Math.min(...nextOccurrenceTimes);
+    const nextOccurrenceAt = Math.min(...recurringTaskTimes);
     const delay = Math.min(
       2_147_483_647,
       Math.max(0, nextOccurrenceAt - now + 50),
     );
     const timeout = window.setTimeout(() => setNow(Date.now()), delay);
     return () => window.clearTimeout(timeout);
-  }, [coolingDownTasks, now]);
+  }, [coolingDownTasks, now, tasks]);
 
   const matrixTasks = useMemo(() => {
     const groups: Record<QuadrantKey, Task[]> = {
@@ -1047,7 +1096,7 @@ export default function TasksPage() {
                  </div>
                 {activeTasks.length === 0 ? (
                   <div className="border-y border-dashed border-border/70 px-1 py-5 text-xs text-muted-foreground" data-testid="status-tasks-empty">No active tasks.</div>
-                 ) : <div>{activeTasksForList.map((task) => <TaskItem key={task.id} task={task} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
+                  ) : <div>{activeTasksForList.map((task) => <TaskItem key={task.id} task={task} now={now} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
               </section>
                <section className="border-t border-border/60 pt-4" data-testid="section-eisenhower">
                 <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-foreground">Priority matrix</h2><span className="text-[10px] text-muted-foreground">Importance + urgency</span></div>
