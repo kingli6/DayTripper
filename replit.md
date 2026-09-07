@@ -22,8 +22,8 @@ Day Tripper is a private, forgiving day planner that helps people see what matte
 - DB: PostgreSQL hosted by Supabase for the live Render deployment; Drizzle ORM owns the schema
 - Validation: Zod (`zod/v4`), `drizzle-zod`
 - API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
-- Frontend: React + Vite + Tailwind CSS, served as a PWA-ready web shell
+- Build: esbuild (ESM bundle)
+- Frontend: React + Vite + Tailwind CSS responsive web shell; PWA installability is not currently implemented.
 - Authentication: external Clerk; Supabase is the database provider, not the authentication provider
 - AI: direct server-side Gemini configuration using `GEMINI_API_KEY`
 - Production hosting: Render runs the production Node service and connects it to Supabase
@@ -47,12 +47,13 @@ Day Tripper is a private, forgiving day planner that helps people see what matte
 ## Architecture decisions
 
 - AI configuration is server-only; clients receive safe status metadata, never credentials.
-- The initial database table is app metadata only; user-facing planner persistence is intentionally deferred.
+- PostgreSQL with Drizzle supports the implemented product domains, including activities, tasks, execution, retention, activity changes, admin data, and related tables.
+- The earlier app-metadata-only database description was historical foundation-stage context; planner persistence is now implemented across the domains above.
 - API failures return generic JSON messages to clients while detailed errors stay in structured server logs.
 
 ## Product
 
-The first section establishes the Day Tripper shell and the service foundation. Timeline planning, AI proposals, and optional reflection are intentionally deferred to later sections.
+Timeline planning, AI proposals, replanning, task scheduling, and execution guidance are implemented. Optional reflection and other explicitly deferred future work remain outside the current product scope.
 
 ## User preferences
 
