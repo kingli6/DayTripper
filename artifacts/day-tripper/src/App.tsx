@@ -170,6 +170,12 @@ function localDate(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function isOnLocalDate(timestamp: string | null | undefined, date: string) {
+  if (!timestamp) return false;
+  const parsed = new Date(timestamp);
+  return !Number.isNaN(parsed.getTime()) && localDate(parsed) === date;
+}
+
 function moveDate(date: string, amount: number) {
   const next = new Date(`${date}T12:00:00`);
   next.setDate(next.getDate() + amount);
@@ -552,23 +558,31 @@ function CompletedTaskCard({ task }: { task: Task }) {
 }
 
 function CompletedTimeline({
-  activities,
+  plannedActivities,
+  completedActivities,
   tasks,
   now,
   onEdit,
   onToggle,
 }: {
-  activities: Activity[];
+  plannedActivities: Activity[];
+  completedActivities: Activity[];
   tasks: Task[];
   now: number;
   onEdit: (activity: Activity) => void;
   onToggle: (activity: Activity) => void;
 }) {
+  const sortedCompletedActivities = useMemo(
+    () => [...completedActivities].sort((first, second) => (
+      (second.completedAt ?? '').localeCompare(first.completedAt ?? '') || first.id - second.id
+    )),
+    [completedActivities],
+  );
   const sortedTasks = useMemo(
     () => [...tasks].sort((first, second) => (second.completedAt ?? '').localeCompare(first.completedAt ?? '') || first.id - second.id),
     [tasks],
   );
-  const total = activities.length + tasks.length;
+  const total = plannedActivities.length + completedActivities.length + tasks.length;
 
   return (
     <div data-testid="timeline-completed">
@@ -577,18 +591,26 @@ function CompletedTimeline({
         <span className="h-px flex-1 bg-border/65" />
         <span className="font-mono-ui text-[10px] text-muted-foreground">{total} {total === 1 ? 'item' : 'items'}</span>
       </div>
-      {activities.length > 0 && (
+      {plannedActivities.length > 0 && (
         <section aria-labelledby="completed-schedule-title">
-          <h3 id="completed-schedule-title" className="mb-2 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">Scheduled</h3>
-          <Timeline activities={activities} now={now} onEdit={onEdit} onToggle={onToggle} />
+          <h3 id="completed-schedule-title" className="mb-2 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">Planned</h3>
+          <Timeline activities={plannedActivities} now={now} onEdit={onEdit} onToggle={onToggle} />
         </section>
       )}
-      {sortedTasks.length > 0 && (
-        <section className={activities.length > 0 ? 'mt-6 border-t border-border/60 pt-5' : undefined} aria-labelledby="completed-tasks-title" data-testid="section-completed-timeline-tasks">
-          <h3 id="completed-tasks-title" className="mb-2 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">Tasks</h3>
-          <div className="rounded-[20px] border border-border/75 bg-card/75 px-4 sm:px-5">
-            {sortedTasks.map((task) => <CompletedTaskCard key={task.id} task={task} />)}
-          </div>
+      {(sortedCompletedActivities.length > 0 || sortedTasks.length > 0) && (
+        <section className={plannedActivities.length > 0 ? 'mt-6 border-t border-border/60 pt-5' : undefined} aria-labelledby="completed-items-title" data-testid="section-completed-timeline-items">
+          <h3 id="completed-items-title" className="mb-2 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">Completed</h3>
+          {sortedCompletedActivities.length > 0 && (
+            <Timeline activities={sortedCompletedActivities} now={now} onEdit={onEdit} onToggle={onToggle} />
+          )}
+          {sortedTasks.length > 0 && (
+            <div className={sortedCompletedActivities.length > 0 ? 'mt-6 border-t border-border/60 pt-5' : undefined} data-testid="section-completed-timeline-tasks">
+              <h4 className="mb-2 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Tasks</h4>
+              <div className="rounded-[20px] border border-border/75 bg-card/75 px-4 sm:px-5">
+                {sortedTasks.map((task) => <CompletedTaskCard key={task.id} task={task} />)}
+              </div>
+            </div>
+          )}
         </section>
       )}
     </div>
@@ -1343,6 +1365,10 @@ function Today() {
     () => [...getListActivitiesQueryKey({ date }), userQueryKey],
     [date, userQueryKey],
   );
+  const dayLogQueryKey = useMemo(
+    () => [...getListActivitiesQueryKey({ date, includeCompleted: true }), userQueryKey],
+    [date, userQueryKey],
+  );
   const offline = useOfflineActivitySync({
     userId: user?.id,
     date,
@@ -1359,21 +1385,48 @@ function Today() {
       enabled: offline.isOnline,
     },
   });
+  const dayLogList = useListActivities({ date, includeCompleted: true }, {
+    query: {
+      queryKey: dayLogQueryKey,
+      enabled: offline.isOnline && timelineView === 'completed',
+    },
+  });
   const taskList = useListTasks();
   const activities = list.data ?? offline.cachedActivities ?? [];
   const scheduleActivities = useMemo(() => activities.filter((activity) => !activity.completed), [activities]);
-  const completedActivities = useMemo(() => activities.filter((activity) => activity.completed), [activities]);
+  const dayLogActivities = dayLogList.data ?? (date === today ? offline.cachedActivities : null) ?? [];
+  const plannedActivities = useMemo(
+    () => dayLogActivities.filter((activity) => activity.scheduledDate === date),
+    [date, dayLogActivities],
+  );
+  const completedActivities = useMemo(
+    () => dayLogActivities.filter((activity) => isOnLocalDate(activity.completedAt, date)),
+    [date, dayLogActivities],
+  );
   const completedTasks = useMemo(
     () => (taskList.data ?? []).filter((task) => (
       task.status === 'completed'
+      && task.repeatIntervalMinutes === null
       && Boolean(task.completedAt)
-      && localDate(new Date(task.completedAt as string)) === date
+      && isOnLocalDate(task.completedAt, date)
+    )),
+    [date, taskList.data],
+  );
+  const scheduleCompletedTasks = useMemo(
+    () => (taskList.data ?? []).filter((task) => (
+      task.status === 'completed'
+      && Boolean(task.completedAt)
+      && isOnLocalDate(task.completedAt, date)
     )),
     [date, taskList.data],
   );
   const hasCachedDay = offline.cachedActivities !== null;
   const timelineLoading = list.isLoading && !hasCachedDay;
   const timelineUnavailable = !list.data && !hasCachedDay && (!offline.isOnline || list.isError);
+  const dayLogLoading = dayLogList.isLoading && !dayLogList.data && !(date === today && hasCachedDay);
+  const dayLogUnavailable = !dayLogList.data && !(date === today && hasCachedDay) && (!offline.isOnline || dayLogList.isError);
+  const activeTimelineLoading = timelineView === 'completed' ? dayLogLoading : timelineLoading;
+  const activeTimelineUnavailable = timelineView === 'completed' ? dayLogUnavailable : timelineUnavailable;
 
   useEffect(() => {
     if (list.data) offline.saveServerSnapshot(list.data);
@@ -1390,7 +1443,9 @@ function Today() {
     };
   }, []);
 
-  const completedCount = completedActivities.length + completedTasks.length;
+  const completedCount = timelineView === 'completed'
+    ? completedActivities.length + completedTasks.length
+    : activities.filter((activity) => activity.completed).length + scheduleCompletedTasks.length;
   const nextActivity = useMemo(() => scheduleActivities.filter((activity) => minutesFromTime(activity.startTime) >= now).sort((a, b) => a.startTime.localeCompare(b.startTime))[0], [scheduleActivities, now]);
 
   function openPlanToday() {
@@ -1415,6 +1470,7 @@ function Today() {
 
   async function refreshAfterMutation() {
     setEditorActivity(undefined);
+    await queryClient.invalidateQueries({ queryKey: dayLogQueryKey });
   }
 
   async function handleAccepted(count: number) {
@@ -1458,6 +1514,7 @@ function Today() {
         pinned: activityToRestore.pinned,
         note: activityToRestore.note,
       });
+      await queryClient.invalidateQueries({ queryKey: dayLogQueryKey });
       setDeletedActivity(null);
       if (deleteTimerRef.current !== null) {
         window.clearTimeout(deleteTimerRef.current);
@@ -1473,6 +1530,7 @@ function Today() {
   async function toggle(activity: Activity) {
     try {
       await offline.update(activity, { completed: !activity.completed });
+      await queryClient.invalidateQueries({ queryKey: dayLogQueryKey });
     } catch {
       // The query remains untouched; the next render keeps the activity available.
     }
@@ -1480,10 +1538,12 @@ function Today() {
 
   async function saveActivity(activity: Activity | null, data: ActivityInput) {
     await offline.save(activity, data);
+    await refreshAfterMutation();
   }
 
   async function deleteActivity(activity: Activity) {
     await offline.remove(activity);
+    await refreshAfterMutation();
   }
 
   async function wakeAndContinue() {
@@ -1557,7 +1617,7 @@ function Today() {
                       serverState={serverWake.state}
                    />
                  )}
-                 {timelineLoading ? <TimelineSkeleton /> : timelineUnavailable ? (
+                  {activeTimelineLoading ? <TimelineSkeleton /> : activeTimelineUnavailable ? (
                   <div className="rounded-[24px] border border-destructive/20 bg-destructive/[0.05] p-6" role="alert" data-testid="status-activities-error">
                     <p className="font-semibold">The timeline took a pause.</p>
                      <p className="mt-1 text-sm leading-6 text-muted-foreground">{offline.isOnline ? 'We could not bring in this day right now. Your plans have not been changed.' : 'This date has not been loaded on this device yet. The current day can be used offline once it has been opened online.'}</p>
@@ -1568,16 +1628,16 @@ function Today() {
                   </div>
                  ) : timelineView === 'schedule' ? (
                    scheduleActivities.length === 0 ? <EmptyDay onAdd={openCreate} /> : <Timeline activities={scheduleActivities} now={now} onEdit={openEdit} onToggle={(activity) => void toggle(activity)} />
-                 ) : taskList.isLoading && completedActivities.length === 0 ? (
+                  ) : taskList.isLoading && plannedActivities.length === 0 && completedActivities.length === 0 ? (
                    <TimelineSkeleton />
-                 ) : completedCount === 0 ? (
+                  ) : plannedActivities.length === 0 && completedCount === 0 ? (
                    <div className="rounded-[26px] border border-dashed border-primary/30 bg-primary/[0.045] px-6 py-14 text-center sm:px-12" data-testid="status-completed-empty">
                      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-secondary text-primary"><Check className="size-5" strokeWidth={1.8} /></div>
                      <h2 className="mt-5 font-display text-[29px] leading-tight tracking-[-0.03em]">Nothing completed yet.</h2>
                      <p className="mx-auto mt-3 max-w-[360px] text-sm leading-6 text-muted-foreground">Completed activities and tasks will collect here for this date.</p>
                    </div>
                  ) : (
-                   <CompletedTimeline activities={completedActivities} tasks={completedTasks} now={now} onEdit={openEdit} onToggle={(activity) => void toggle(activity)} />
+                    <CompletedTimeline plannedActivities={plannedActivities} completedActivities={completedActivities} tasks={completedTasks} now={now} onEdit={openEdit} onToggle={(activity) => void toggle(activity)} />
                  )}
               </section>
                 <aside className="animate-rise delay-2 space-y-4 lg:pt-1">

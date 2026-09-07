@@ -369,7 +369,8 @@ export const listActivitiesQueryDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$'
 
 
 export const ListActivitiesQueryParams = zod.object({
-  "date": zod.coerce.string().regex(listActivitiesQueryDateRegExp)
+  "date": zod.coerce.string().regex(listActivitiesQueryDateRegExp),
+  "includeCompleted": zod.coerce.boolean().optional().describe('Include all activities with a recorded completion timestamp for Day Log views.')
 })
 
 export const listActivitiesResponseScheduledDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');

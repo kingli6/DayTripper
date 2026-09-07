@@ -11,4 +11,8 @@ export type ListActivitiesParams = {
  * @pattern ^\d{4}-\d{2}-\d{2}$
  */
 date: string;
+/**
+ * Include all activities with a recorded completion timestamp for Day Log views.
+ */
+includeCompleted?: boolean;
 };

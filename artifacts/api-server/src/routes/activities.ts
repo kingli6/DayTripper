@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNotNull, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { activityChangesTable, db, activitiesTable } from "@workspace/db";
 import {
@@ -62,7 +62,12 @@ router.get("/activities", async (req, res): Promise<void> => {
     .where(
       and(
         eq(activitiesTable.ownerId, ownerId),
-        eq(activitiesTable.scheduledDate, parsed.data.date),
+        parsed.data.includeCompleted
+          ? or(
+            eq(activitiesTable.scheduledDate, parsed.data.date),
+            isNotNull(activitiesTable.completedAt),
+          )
+          : eq(activitiesTable.scheduledDate, parsed.data.date),
       ),
     )
     .orderBy(asc(activitiesTable.startTime), asc(activitiesTable.id));
