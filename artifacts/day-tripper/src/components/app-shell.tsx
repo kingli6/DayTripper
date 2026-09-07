@@ -93,6 +93,10 @@ function AccountControl({ compact = false }: { compact?: boolean }) {
             <ShieldCheck className="size-3.5 text-primary" strokeWidth={1.8} />
             Operations
           </Link>
+          <Link href="/settings" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground" data-testid="link-mobile-account-settings">
+            <Settings2 className="size-3.5 text-primary" strokeWidth={1.8} />
+            Settings
+          </Link>
           <button type="button" onClick={() => void signOut({ redirectUrl: shellBasePath || '/' })} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground" data-testid="button-mobile-sign-out">
             Sign out
           </button>
@@ -110,6 +114,10 @@ function AccountControl({ compact = false }: { compact?: boolean }) {
       <Link href="/admin" className="flex items-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-account-operations">
         <ShieldCheck className="size-3.5 text-sidebar-primary/80" strokeWidth={1.8} />
         Operations
+      </Link>
+      <Link href="/settings" className="flex items-center gap-2 rounded-lg px-2 py-2 text-[11px] font-semibold text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="link-account-settings">
+        <Settings2 className="size-3.5 text-sidebar-primary/80" strokeWidth={1.8} />
+        Settings
       </Link>
       <button type="button" onClick={() => void signOut({ redirectUrl: shellBasePath || '/' })} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[11px] font-semibold text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" data-testid="button-shell-sign-out">
         <ChevronRight className="size-3.5 rotate-180 text-sidebar-primary/70" strokeWidth={1.8} />
