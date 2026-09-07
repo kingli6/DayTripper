@@ -740,3 +740,33 @@ change was needed.
 
 **Do not start:** Recurrence fields, migrations, notifications, reminders, or
 Priority matrix changes for this UI slice.
+
+## Task-only Day Log
+
+**Status:** Implemented and locally verified on 2026-09-07.
+
+**Completed:**
+
+- Removed the Day Log's `includeCompleted` activities query and all historical
+  activity rendering from the Completed view.
+- Day Log now derives completed entries from the existing task list, requiring
+  `status === "completed"`, a non-null `completedAt`, and a matching local date.
+- Recurring tasks remain excluded from historical Day Log entries because the
+  current recurring completion path advances `nextOccurrenceAt` without
+  recording a reliable completion timestamp.
+- Schedule continues to use the existing activities query, while the Priority
+  Matrix, task completion semantics, activity schema, and migration 0024 remain
+  unchanged.
+
+**Verified:** Day Tripper typecheck, production build, API tests (33 passing),
+`git diff --check`, clean web workflow restart, no remaining
+`includeCompleted` Day Log source references, and signed-out preview rendering.
+
+**Not yet verified:** Signed-in browser checks for completing a normal Matrix
+task, seeing it on the matching Day Log date, excluding it from another date,
+excluding planned/AI activities, and confirming Schedule behavior through the
+authenticated UI. The available screenshot context remains signed out.
+
+**Do not start:** Database changes, migration 0024, new history tables,
+recurring completion-history invention, Priority Matrix changes, or Schedule
+changes as part of this slice.
