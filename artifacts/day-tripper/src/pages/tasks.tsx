@@ -754,7 +754,10 @@ export default function TasksPage() {
     setNotice({ tone: 'success', text });
     window.setTimeout(() => setNotice(null), 3200);
   };
-  const invalidateTasks = () => queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+  const invalidateTasks = () => {
+    setNow(Date.now());
+    return queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+  };
 
   const addTriagedTasks = async (items: TaskTriageItem[]) => {
     let addedCount = 0;

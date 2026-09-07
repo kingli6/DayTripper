@@ -691,3 +691,24 @@ editing, and completing a recurring task remains unavailable because the
 current preview session is signed out. The next safe action is a signed-in
 runtime check of that flow; do not create another migration or force Drizzle
 push unless a real schema mismatch is found.
+
+## First recurring occurrence freshness fix
+
+**Status:** Implemented and locally verified on 2026-09-07.
+
+**Completed:**
+
+- Found that the API correctly anchors a new recurring task at the server's
+  creation time, while the Tasks page retained the `now` value from its initial
+  render.
+- Updated the existing task-list invalidation path to refresh that page clock
+  before re-reading tasks after a successful mutation. This keeps a newly
+  created or newly recurring task in the active Matrix immediately instead of
+  briefly classifying it as cooling down.
+- Did not change the recurrence schema, recurrence calculation, planned anchor,
+  missed-occurrence handling, concurrency guard, intervals, or one-off logic.
+
+**Verified:** 33 API tests, full workspace typecheck, API build, web typecheck,
+web production build, clean API/web workflow restarts, and signed-out preview
+rendering. The authenticated create → due → complete → next-occurrence flow
+remains unverified because the available browser session is still signed out.
