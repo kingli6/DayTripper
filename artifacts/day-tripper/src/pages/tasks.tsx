@@ -35,17 +35,17 @@ const taskSchema = z.object({
   interest: z.preprocess((value) => Number(value), z.number().int().min(1).max(5)),
   estimatedMinutes: z.preprocess((value) => Number(value), z.number().int().min(1).max(1440)),
   deadline: z.string(),
-  recurrence: z.enum(['none', 'daily', 'interval']),
-  recurrenceIntervalDays: z.preprocess(
+  repeatIntervalPreset: z.enum(['none', 'hourly', 'daily', 'weekly', 'custom']),
+  repeatIntervalMinutes: z.preprocess(
     (value) => value === '' || value === undefined ? undefined : Number(value),
     z.number().int().min(1).optional(),
   ),
 }).superRefine((values, context) => {
-  if (values.recurrence === 'interval' && values.recurrenceIntervalDays === undefined) {
+  if (values.repeatIntervalPreset === 'custom' && values.repeatIntervalMinutes === undefined) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
-      path: ['recurrenceIntervalDays'],
-      message: 'Choose how many days should be between occurrences.',
+      path: ['repeatIntervalMinutes'],
+      message: 'Choose how many minutes should be between occurrences.',
     });
   }
 });
@@ -185,14 +185,27 @@ function defaultScheduleStart(estimatedMinutes: number) {
   return candidate + estimatedMinutes < 24 * 60 ? timeFromMinutes(candidate) : '09:00';
 }
 
-function recurrenceLabel(task: Task) {
-  if (!task.recurrence) return '';
-  return task.recurrence.type === 'daily' ? 'Every day' : `Every ${task.recurrence.intervalDays} days`;
+function repeatIntervalLabel(task: Task) {
+  const minutes = task.repeatIntervalMinutes;
+  if (minutes === null) return '';
+  if (minutes === 60) return 'Every hour';
+  if (minutes === 1440) return 'Every day';
+  if (minutes % 1440 === 0) return `Every ${minutes / 1440} days`;
+  if (minutes % 60 === 0) return `Every ${minutes / 60} hours`;
+  return `Every ${minutes} minutes`;
+}
+
+function repeatIntervalPreset(minutes: number | null | undefined): TaskFormValues['repeatIntervalPreset'] {
+  if (minutes === null || minutes === undefined) return 'none';
+  if (minutes === 60) return 'hourly';
+  if (minutes === 1440) return 'daily';
+  if (minutes === 10080) return 'weekly';
+  return 'custom';
 }
 
 function isCoolingDown(task: Task, now: number) {
   return Boolean(
-    task.recurrence
+    task.repeatIntervalMinutes !== null
       && task.nextOccurrenceAt
       && new Date(task.nextOccurrenceAt).getTime() > now,
   );
@@ -210,11 +223,11 @@ function remainingOccurrenceLabel(nextOccurrenceAt: string, now: number) {
   return `${daysAway} days`;
 }
 
-function recurrenceFromForm(values: TaskFormValues): NonNullable<TaskInput['recurrence']> | null {
-  if (values.recurrence === 'daily') return { type: 'daily' };
-  if (values.recurrence === 'interval') {
-    return { type: 'interval', intervalDays: values.recurrenceIntervalDays ?? 1 };
-  }
+function repeatIntervalFromForm(values: TaskFormValues): number | null {
+  if (values.repeatIntervalPreset === 'hourly') return 60;
+  if (values.repeatIntervalPreset === 'daily') return 1440;
+  if (values.repeatIntervalPreset === 'weekly') return 10080;
+  if (values.repeatIntervalPreset === 'custom') return values.repeatIntervalMinutes ?? 1;
   return null;
 }
 
@@ -242,12 +255,12 @@ function TaskForm({
       interest: task?.interest ?? 3,
       estimatedMinutes: task?.estimatedMinutes ?? 30,
       deadline: task?.deadline ? task.deadline.slice(0, 16) : '',
-      recurrence: task?.recurrence?.type ?? 'none',
-      recurrenceIntervalDays: task?.recurrence?.type === 'interval' ? task.recurrence.intervalDays : undefined,
+      repeatIntervalPreset: repeatIntervalPreset(task?.repeatIntervalMinutes),
+      repeatIntervalMinutes: task?.repeatIntervalMinutes ?? undefined,
     },
   });
 
-  const recurrence = form.watch('recurrence');
+  const repeatInterval = form.watch('repeatIntervalPreset');
   const [showDetails, setShowDetails] = useState(Boolean(task));
   const titleField = (
     <FormField control={form.control} name="title" render={({ field }) => (
@@ -292,22 +305,24 @@ function TaskForm({
             <FormMessage />
           </FormItem>
         )} />
-        <FormField control={form.control} name="recurrence" render={({ field }) => (
+        <FormField control={form.control} name="repeatIntervalPreset" render={({ field }) => (
           <FormItem>
             <FormLabel className="text-xs font-semibold text-foreground">Repeat</FormLabel>
             <FormControl>
               <select {...field} data-testid="select-task-recurrence" className="flex h-10 w-full rounded-lg border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
                 <option value="none">Never</option>
+                <option value="hourly">Every hour</option>
                 <option value="daily">Every day</option>
-                <option value="interval">Every N days</option>
+                <option value="weekly">Every 7 days</option>
+                <option value="custom">Custom interval</option>
               </select>
             </FormControl>
             <FormMessage />
           </FormItem>
         )} />
-        {recurrence === 'interval' && <FormField control={form.control} name="recurrenceIntervalDays" render={({ field }) => (
+        {repeatInterval === 'custom' && <FormField control={form.control} name="repeatIntervalMinutes" render={({ field }) => (
           <FormItem>
-            <FormLabel className="text-xs font-semibold text-foreground">Interval in days</FormLabel>
+            <FormLabel className="text-xs font-semibold text-foreground">Interval in minutes</FormLabel>
             <FormControl><input {...field} value={field.value ?? ''} type="number" min={1} step={1} inputMode="numeric" data-testid="input-task-recurrence-interval" className="flex h-10 w-full rounded-lg border border-input bg-background/70 px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" /></FormControl>
             <FormMessage />
           </FormItem>
@@ -434,7 +449,7 @@ function TaskItem({ task, onEdit, onComplete, onArchive, pending }: { task: Task
             <span title={`Interest ${task.interest} out of 5`}>I{task.interest}</span>
             <span title={`Priority ${task.importance + task.urgency} out of 10`}>P{task.importance + task.urgency}</span>
             {task.deadline && <span title={`Deadline ${formatDeadline(task.deadline)}`}>Due {formatCompactDeadline(task.deadline)}</span>}
-             {task.recurrence && <span title="Recurring task">{recurrenceLabel(task)}</span>}
+             {task.repeatIntervalMinutes !== null && <span title="Recurring task">{repeatIntervalLabel(task)}</span>}
           </div>
         </div>
         <button type="button" onClick={onArchive} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-task-${task.id}`} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40">
@@ -449,7 +464,7 @@ function MatrixTaskCard({ task, onEdit }: { task: Task; onEdit: () => void }) {
   return (
     <button type="button" onClick={onEdit} className="flex w-full items-center justify-between gap-3 border-b border-border/55 px-1 py-2 text-left text-xs transition-colors last:border-0 hover:text-primary" data-testid={`card-matrix-task-${task.id}`}>
       <p className="min-w-0 truncate font-medium text-foreground">{task.title}</p>
-      <span className="shrink-0 text-[10px] text-muted-foreground" title={`Estimated ${task.estimatedMinutes} minutes, priority ${task.importance + task.urgency} out of 10`}>{task.estimatedMinutes}m · P{task.importance + task.urgency}{task.recurrence ? ` · ${recurrenceLabel(task)}` : ''}</span>
+      <span className="shrink-0 text-[10px] text-muted-foreground" title={`Estimated ${task.estimatedMinutes} minutes, priority ${task.importance + task.urgency} out of 10`}>{task.estimatedMinutes}m · P{task.importance + task.urgency}{task.repeatIntervalMinutes !== null ? ` · ${repeatIntervalLabel(task)}` : ''}</span>
     </button>
   );
 }
@@ -464,7 +479,7 @@ function CoolingDownTaskRow({ task, now, onEdit }: { task: Task; now: number; on
     >
       <span className="min-w-0 truncate font-medium">{task.title}</span>
       <span className="flex shrink-0 items-center gap-2 text-[10px]">
-        <span>{recurrenceLabel(task)}</span>
+        <span>{repeatIntervalLabel(task)}</span>
         <span className="font-semibold text-muted-foreground/80">
           {task.nextOccurrenceAt ? remainingOccurrenceLabel(task.nextOccurrenceAt, now) : ''}
         </span>
@@ -779,7 +794,7 @@ export default function TasksPage() {
       interest: values.interest,
       estimatedMinutes: values.estimatedMinutes,
       deadline: values.deadline ? new Date(values.deadline).toISOString() : null,
-        recurrence: recurrenceFromForm(values),
+        repeatIntervalMinutes: repeatIntervalFromForm(values),
     };
     try {
       await createTask.mutateAsync({ data });
@@ -800,7 +815,7 @@ export default function TasksPage() {
       interest: values.interest,
       estimatedMinutes: values.estimatedMinutes,
       deadline: values.deadline ? new Date(values.deadline).toISOString() : null,
-      recurrence: recurrenceFromForm(values),
+      repeatIntervalMinutes: repeatIntervalFromForm(values),
     };
     try {
       await updateTask.mutateAsync({ id: task.id, data });
@@ -816,12 +831,12 @@ export default function TasksPage() {
     try {
       await completeTask.mutateAsync({
         id: task.id,
-        ...(task.recurrence && task.nextOccurrenceAt
+        ...(task.repeatIntervalMinutes !== null && task.nextOccurrenceAt
           ? { data: { expectedNextOccurrenceAt: task.nextOccurrenceAt } }
           : {}),
       });
       await invalidateTasks();
-      showSuccess(task.recurrence ? 'Occurrence completed. The task stays active.' : 'Task completed.');
+      showSuccess(task.repeatIntervalMinutes !== null ? 'Occurrence completed. The task stays active.' : 'Task completed.');
     } catch (error) {
       setNotice({ tone: 'error', text: errorMessage(error) });
     }

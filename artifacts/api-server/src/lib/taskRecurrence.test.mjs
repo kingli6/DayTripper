@@ -1,48 +1,48 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  INVALID_RECURRENCE,
+  INVALID_REPEAT_INTERVAL,
   nextOccurrenceAfter,
-  normalizeRecurrence,
-  sameRecurrence,
+  normalizeRepeatInterval,
+  sameRepeatInterval,
 } from "./taskRecurrence.ts";
 
-test("daily recurrence advances from the planned occurrence", () => {
+test("minute recurrence advances from the planned occurrence", () => {
   const planned = new Date("2026-09-07T09:00:00.000Z");
-  const completed = new Date("2026-09-08T10:00:00.000Z");
+  const completed = new Date("2026-09-07T10:00:00.000Z");
 
   assert.equal(
-    nextOccurrenceAfter(planned, { type: "daily" }, completed).toISOString(),
-    "2026-09-09T09:00:00.000Z",
+    nextOccurrenceAfter(planned, 60, completed).toISOString(),
+    "2026-09-07T11:00:00.000Z",
   );
 });
 
-test("every-four-days recurrence uses the planned anchor, not completion time", () => {
+test("minute recurrence uses the planned anchor, not completion time", () => {
   const planned = new Date("2026-09-07T09:00:00.000Z");
-  const completed = new Date("2026-09-08T10:00:00.000Z");
+  const completed = new Date("2026-09-07T10:15:00.000Z");
 
   assert.equal(
-    nextOccurrenceAfter(planned, { type: "interval", intervalDays: 4 }, completed).toISOString(),
-    "2026-09-11T09:00:00.000Z",
+    nextOccurrenceAfter(planned, 360, completed).toISOString(),
+    "2026-09-07T15:00:00.000Z",
   );
 });
 
 test("missed occurrences are skipped without creating a backlog", () => {
   const planned = new Date("2026-09-07T09:00:00.000Z");
-  const completed = new Date("2026-09-20T10:00:00.000Z");
+  const completed = new Date("2026-09-08T10:00:00.000Z");
 
   assert.equal(
-    nextOccurrenceAfter(planned, { type: "interval", intervalDays: 4 }, completed).toISOString(),
-    "2026-09-23T09:00:00.000Z",
+    nextOccurrenceAfter(planned, 60, completed).toISOString(),
+    "2026-09-08T11:00:00.000Z",
   );
 });
 
-test("recurrence input accepts the MVP rules and rejects invalid intervals", () => {
-  assert.deepEqual(normalizeRecurrence(null), null);
-  assert.deepEqual(normalizeRecurrence({ type: "daily" }), { type: "daily" });
-  assert.deepEqual(normalizeRecurrence({ type: "interval", intervalDays: 4 }), { type: "interval", intervalDays: 4 });
-  assert.equal(normalizeRecurrence({ type: "interval", intervalDays: 1.5 }), INVALID_RECURRENCE);
-  assert.equal(normalizeRecurrence({ type: "weekly" }), INVALID_RECURRENCE);
-  assert.equal(sameRecurrence({ type: "interval", intervalDays: 4 }, { type: "interval", intervalDays: 4 }), true);
-  assert.equal(sameRecurrence({ type: "interval", intervalDays: 4 }, { type: "interval", intervalDays: 5 }), false);
+test("repeat interval input accepts positive integers and rejects invalid values", () => {
+  assert.equal(normalizeRepeatInterval(null), null);
+  assert.equal(normalizeRepeatInterval(90), 90);
+  assert.equal(normalizeRepeatInterval(1.5), INVALID_REPEAT_INTERVAL);
+  assert.equal(normalizeRepeatInterval(0), INVALID_REPEAT_INTERVAL);
+  assert.equal(normalizeRepeatInterval(2_147_483_648), INVALID_REPEAT_INTERVAL);
+  assert.equal(sameRepeatInterval(90, 90), true);
+  assert.equal(sameRepeatInterval(90, 120), false);
 });

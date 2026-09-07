@@ -1478,10 +1478,9 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
-        recurrence:
-          allOf:
-            - $ref: "#/components/schemas/TaskRecurrence"
-          nullable: true
+        repeatIntervalMinutes:
+          type: ["number", "null"]
+          minimum: 1
         nextOccurrenceAt:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
@@ -1504,7 +1503,7 @@ components:
         - interest
         - estimatedMinutes
         - deadline
-        - recurrence
+        - repeatIntervalMinutes
         - nextOccurrenceAt
         - status
         - createdAt
@@ -1543,10 +1542,9 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
-        recurrence:
-          allOf:
-            - $ref: "#/components/schemas/TaskRecurrence"
-          nullable: true
+        repeatIntervalMinutes:
+          type: ["number", "null"]
+          minimum: 1
       required:
         - title
         - importance
@@ -1587,10 +1585,9 @@ components:
         deadline:
           type: ["string", "null"]
           pattern: '^\d{4}-\d{2}-\d{2}T'
-        recurrence:
-          allOf:
-            - $ref: "#/components/schemas/TaskRecurrence"
-          nullable: true
+        repeatIntervalMinutes:
+          type: ["number", "null"]
+          minimum: 1
         status:
           type: string
           enum: [inbox, active]
@@ -1601,17 +1598,6 @@ components:
           type: string
           pattern: '^\d{4}-\d{2}-\d{2}T'
       required: []
-    TaskRecurrence:
-      type: object
-      properties:
-        type:
-          type: string
-          enum: [daily, interval]
-        intervalDays:
-          type: number
-          minimum: 1
-      required:
-        - type
     TaskRecommendationInput:
       type: object
       properties:

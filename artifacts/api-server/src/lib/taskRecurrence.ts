@@ -1,38 +1,28 @@
-import type { TaskRecurrence } from "@workspace/db";
+export const INVALID_REPEAT_INTERVAL = Symbol("invalid repeat interval");
 
-export const INVALID_RECURRENCE = Symbol("invalid recurrence");
-
-export function normalizeRecurrence(value: unknown): TaskRecurrence | null | undefined | typeof INVALID_RECURRENCE {
+export function normalizeRepeatInterval(value: unknown): number | null | undefined | typeof INVALID_REPEAT_INTERVAL {
   if (value === undefined || value === null) return value;
-  if (typeof value !== "object") return INVALID_RECURRENCE;
-
-  const candidate = value as { type?: unknown; intervalDays?: unknown };
-  if (candidate.type === "daily") return { type: "daily" };
   if (
-    candidate.type === "interval"
-    && typeof candidate.intervalDays === "number"
-    && Number.isInteger(candidate.intervalDays)
-    && candidate.intervalDays >= 1
+    typeof value === "number"
+    && Number.isInteger(value)
+    && value >= 1
+    && value <= 2_147_483_647
   ) {
-    return { type: "interval", intervalDays: candidate.intervalDays };
+    return value;
   }
 
-  return INVALID_RECURRENCE;
+  return INVALID_REPEAT_INTERVAL;
 }
 
-export function sameRecurrence(first: TaskRecurrence | null | undefined, second: TaskRecurrence | null | undefined) {
-  if (!first || !second) return first === second;
-  if (first.type !== second.type) return false;
-  if (first.type === "daily") return true;
-  return second.type === "interval" && first.intervalDays === second.intervalDays;
+export function sameRepeatInterval(first: number | null | undefined, second: number | null | undefined) {
+  return first === second;
 }
 
-export function nextOccurrenceAfter(plannedOccurrence: Date, recurrence: TaskRecurrence, now: Date) {
+export function nextOccurrenceAfter(plannedOccurrence: Date, repeatIntervalMinutes: number, now: Date) {
   const nextOccurrence = new Date(plannedOccurrence);
-  const intervalDays = recurrence.type === "daily" ? 1 : recurrence.intervalDays;
 
   do {
-    nextOccurrence.setUTCDate(nextOccurrence.getUTCDate() + intervalDays);
+    nextOccurrence.setUTCMinutes(nextOccurrence.getUTCMinutes() + repeatIntervalMinutes);
   } while (nextOccurrence <= now);
 
   return nextOccurrence;

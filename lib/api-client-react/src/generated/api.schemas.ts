@@ -473,20 +473,6 @@ export const TaskStatus = {
   archived: 'archived',
 } as const;
 
-export type TaskRecurrenceType = typeof TaskRecurrenceType[keyof typeof TaskRecurrenceType];
-
-
-export const TaskRecurrenceType = {
-  daily: 'daily',
-  interval: 'interval',
-} as const;
-
-export interface TaskRecurrence {
-  type: TaskRecurrenceType;
-  /** @minimum 1 */
-  intervalDays?: number;
-}
-
 export interface Task {
   id: number;
   title: string;
@@ -522,7 +508,11 @@ export interface Task {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline: string | null;
-  recurrence: TaskRecurrence | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  repeatIntervalMinutes: number | null;
   /**
      * @nullable
      * @pattern ^\d{4}-\d{2}-\d{2}T
@@ -576,7 +566,11 @@ export interface TaskInput {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline?: string | null;
-  recurrence?: TaskRecurrence | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  repeatIntervalMinutes?: number | null;
 }
 
 export type TaskUpdateStatus = typeof TaskUpdateStatus[keyof typeof TaskUpdateStatus];
@@ -628,7 +622,11 @@ export interface TaskUpdate {
      * @pattern ^\d{4}-\d{2}-\d{2}T
      */
   deadline?: string | null;
-  recurrence?: TaskRecurrence | null;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  repeatIntervalMinutes?: number | null;
   status?: TaskUpdateStatus;
 }
 

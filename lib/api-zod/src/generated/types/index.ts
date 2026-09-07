@@ -98,8 +98,6 @@ export * from './taskRecommendationInput';
 export * from './taskRecommendationResponse';
 export * from './taskRecommendationResponseRecommendationsItem';
 export * from './taskRecommendationResponseSource';
-export * from './taskRecurrence';
-export * from './taskRecurrenceType';
 export * from './taskScheduleInput';
 export * from './taskStatus';
 export * from './taskTriageInput';

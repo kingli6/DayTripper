@@ -452,10 +452,7 @@ export const ListTasksResponseItem = zod.object({
   "interest": zod.number().min(1).max(listTasksResponseInterestMax),
   "estimatedMinutes": zod.number().min(1).max(listTasksResponseEstimatedMinutesMax),
   "deadline": zod.string().regex(listTasksResponseDeadlineRegExp).nullable(),
-  "recurrence": zod.object({
-  "type": zod.enum(['daily', 'interval']),
-  "intervalDays": zod.number().min(1).optional()
-}).nullable(),
+  "repeatIntervalMinutes": zod.number().min(1).nullable(),
   "nextOccurrenceAt": zod.string().regex(listTasksResponseNextOccurrenceAtRegExp).nullable(),
   "status": zod.enum(['inbox', 'active', 'completed', 'archived']),
   "createdAt": zod.string(),
@@ -495,10 +492,7 @@ export const CreateTaskBody = zod.object({
   "interest": zod.number().min(1).max(createTaskBodyInterestMax),
   "estimatedMinutes": zod.number().min(1).max(createTaskBodyEstimatedMinutesMax),
   "deadline": zod.string().regex(createTaskBodyDeadlineRegExp).nullish(),
-  "recurrence": zod.object({
-  "type": zod.enum(['daily', 'interval']),
-  "intervalDays": zod.number().min(1).optional()
-}).nullish()
+  "repeatIntervalMinutes": zod.number().min(1).nullish()
 })
 
 export const createTaskResponseImportanceMax = 5;
@@ -526,10 +520,7 @@ export const CreateTaskResponse = zod.object({
   "interest": zod.number().min(1).max(createTaskResponseInterestMax),
   "estimatedMinutes": zod.number().min(1).max(createTaskResponseEstimatedMinutesMax),
   "deadline": zod.string().regex(createTaskResponseDeadlineRegExp).nullable(),
-  "recurrence": zod.object({
-  "type": zod.enum(['daily', 'interval']),
-  "intervalDays": zod.number().min(1).optional()
-}).nullable(),
+  "repeatIntervalMinutes": zod.number().min(1).nullable(),
   "nextOccurrenceAt": zod.string().regex(createTaskResponseNextOccurrenceAtRegExp).nullable(),
   "status": zod.enum(['inbox', 'active', 'completed', 'archived']),
   "createdAt": zod.string(),
@@ -709,10 +700,7 @@ export const UpdateTaskBody = zod.object({
   "interest": zod.number().min(1).max(updateTaskBodyInterestMax).optional(),
   "estimatedMinutes": zod.number().min(1).max(updateTaskBodyEstimatedMinutesMax).optional(),
   "deadline": zod.string().regex(updateTaskBodyDeadlineRegExp).nullish(),
-  "recurrence": zod.object({
-  "type": zod.enum(['daily', 'interval']),
-  "intervalDays": zod.number().min(1).optional()
-}).nullish(),
+  "repeatIntervalMinutes": zod.number().min(1).nullish(),
   "status": zod.enum(['inbox', 'active']).optional()
 })
 
@@ -741,10 +729,7 @@ export const UpdateTaskResponse = zod.object({
   "interest": zod.number().min(1).max(updateTaskResponseInterestMax),
   "estimatedMinutes": zod.number().min(1).max(updateTaskResponseEstimatedMinutesMax),
   "deadline": zod.string().regex(updateTaskResponseDeadlineRegExp).nullable(),
-  "recurrence": zod.object({
-  "type": zod.enum(['daily', 'interval']),
-  "intervalDays": zod.number().min(1).optional()
-}).nullable(),
+  "repeatIntervalMinutes": zod.number().min(1).nullable(),
   "nextOccurrenceAt": zod.string().regex(updateTaskResponseNextOccurrenceAtRegExp).nullable(),
   "status": zod.enum(['inbox', 'active', 'completed', 'archived']),
   "createdAt": zod.string(),
@@ -802,10 +787,7 @@ export const CompleteTaskResponse = zod.object({
   "interest": zod.number().min(1).max(completeTaskResponseInterestMax),
   "estimatedMinutes": zod.number().min(1).max(completeTaskResponseEstimatedMinutesMax),
   "deadline": zod.string().regex(completeTaskResponseDeadlineRegExp).nullable(),
-  "recurrence": zod.object({
-  "type": zod.enum(['daily', 'interval']),
-  "intervalDays": zod.number().min(1).optional()
-}).nullable(),
+  "repeatIntervalMinutes": zod.number().min(1).nullable(),
   "nextOccurrenceAt": zod.string().regex(completeTaskResponseNextOccurrenceAtRegExp).nullable(),
   "status": zod.enum(['inbox', 'active', 'completed', 'archived']),
   "createdAt": zod.string(),

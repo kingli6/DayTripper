@@ -658,3 +658,36 @@ active-session exclusion, invalid timestamp/duration, minimum-evidence,
 repeated-pattern, task-duration context, and non-persistence behavior; full
 workspace typecheck; API typecheck/build; web production build; OpenAPI
 codegen; clean API/web workflow restarts; and `git diff --check`.
+
+## Task recurrence schema replacement
+
+**Status:** Implemented and locally verified on 2026-09-07.
+
+**Completed:**
+
+- Replaced the legacy `tasks.recurrence` JSON column with nullable
+  `tasks.repeat_interval_minutes`; `next_occurrence_at` remains a nullable
+  timestamp.
+- Kept one-off tasks represented by two null values and recurring tasks
+  represented by a positive interval plus a planned next occurrence.
+- Kept the planned-anchor advancement, missed-occurrence skipping,
+  expected-occurrence concurrency guard, and inbox/active recurring-task
+  behavior already implemented in the API and Tasks UI.
+- Kept the recurrence schema replacement as one coherent append-only migration
+  in `0023_replace_task_recurrence.sql`. Removed the redundant `0024` journal
+  entry and migration bookkeeping.
+- Kept the Drizzle source definition and generated `0023` snapshot aligned with
+  the intended columns and both consistency checks.
+
+**Verified:** Drizzle generation reports no schema changes; the development
+database has no legacy `recurrence` column, has the two intended nullable
+columns and both checks, and all four existing task rows satisfy the
+invariant. OpenAPI codegen, full workspace typecheck, 33 API tests, API build,
+web typecheck, web production build, clean API/web workflow restarts, signed-out
+preview rendering, workflow logs, and `git diff --check` all pass.
+
+**Not yet verified:** Authenticated browser click-through for creating,
+editing, and completing a recurring task remains unavailable because the
+current preview session is signed out. The next safe action is a signed-in
+runtime check of that flow; do not create another migration or force Drizzle
+push unless a real schema mismatch is found.

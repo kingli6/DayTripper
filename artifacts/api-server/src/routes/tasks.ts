@@ -37,10 +37,10 @@ import {
   validateExecutionDecisionForTask,
 } from "../lib/executionDecision";
 import {
-  INVALID_RECURRENCE,
   nextOccurrenceAfter,
-  normalizeRecurrence,
-  sameRecurrence,
+  INVALID_REPEAT_INTERVAL,
+  normalizeRepeatInterval,
+  sameRepeatInterval,
 } from "../lib/taskRecurrence";
 
 const router: IRouter = Router();
@@ -56,7 +56,7 @@ function toApiTask(task: typeof tasksTable.$inferSelect) {
     ...task,
     notes: task.notes ?? null,
     deadline: task.deadline?.toISOString() ?? null,
-    recurrence: task.recurrence ?? null,
+    repeatIntervalMinutes: task.repeatIntervalMinutes ?? null,
     nextOccurrenceAt: task.nextOccurrenceAt?.toISOString() ?? null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
@@ -581,13 +581,13 @@ router.post("/tasks", async (req, res): Promise<void> => {
     return;
   }
 
-  const recurrence = normalizeRecurrence(parsed.data.recurrence);
-  if (recurrence === INVALID_RECURRENCE) {
-    res.status(400).json({ error: "Please choose a valid recurrence interval." });
+  const repeatIntervalMinutes = normalizeRepeatInterval(parsed.data.repeatIntervalMinutes);
+  if (repeatIntervalMinutes === INVALID_REPEAT_INTERVAL) {
+    res.status(400).json({ error: "Please choose a valid repeat interval." });
     return;
   }
 
-  const nextOccurrenceAt = recurrence ? new Date() : null;
+  const nextOccurrenceAt = repeatIntervalMinutes ? new Date() : null;
   const [task] = await db.insert(tasksTable).values({
     ownerId: res.locals.userId as string,
     title: parsed.data.title.trim(),
@@ -598,7 +598,7 @@ router.post("/tasks", async (req, res): Promise<void> => {
     interest: parsed.data.interest,
     estimatedMinutes: parsed.data.estimatedMinutes,
     deadline: parsed.data.deadline ? new Date(parsed.data.deadline) : null,
-    recurrence,
+    repeatIntervalMinutes,
     nextOccurrenceAt,
     status: "inbox",
   }).returning();
@@ -827,13 +827,13 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const recurrence = normalizeRecurrence(parsed.data.recurrence);
-  if (recurrence === INVALID_RECURRENCE) {
-    res.status(400).json({ error: "Please choose a valid recurrence interval." });
+  const repeatIntervalMinutes = normalizeRepeatInterval(parsed.data.repeatIntervalMinutes);
+  if (repeatIntervalMinutes === INVALID_REPEAT_INTERVAL) {
+    res.status(400).json({ error: "Please choose a valid repeat interval." });
     return;
   }
 
-  const { deadline, recurrence: _recurrence, status, ...data } = parsed.data;
+  const { deadline, repeatIntervalMinutes: _repeatIntervalMinutes, status, ...data } = parsed.data;
   const [existingTask] = await db
     .select()
     .from(tasksTable)
@@ -849,8 +849,8 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const recurrenceChanged = recurrence !== undefined
-    && !sameRecurrence(existingTask.recurrence, recurrence);
+  const repeatIntervalChanged = repeatIntervalMinutes !== undefined
+    && !sameRepeatInterval(existingTask.repeatIntervalMinutes, repeatIntervalMinutes);
   const [task] = await db
     .update(tasksTable)
     .set({
@@ -858,11 +858,11 @@ router.patch("/tasks/:id", async (req, res): Promise<void> => {
       ...(data.title !== undefined ? { title: data.title.trim() } : {}),
       ...(data.notes !== undefined ? { notes: data.notes?.trim() || null } : {}),
       ...(deadline !== undefined ? { deadline: deadline ? new Date(deadline) : null } : {}),
-      ...(recurrence !== undefined
+      ...(repeatIntervalMinutes !== undefined
         ? {
-            recurrence,
-            ...(recurrenceChanged
-              ? { nextOccurrenceAt: recurrence ? new Date() : null }
+            repeatIntervalMinutes,
+            ...(repeatIntervalChanged
+              ? { nextOccurrenceAt: repeatIntervalMinutes ? new Date() : null }
               : {}),
           }
         : {}),
@@ -917,7 +917,7 @@ router.post("/tasks/:id/complete", async (req, res): Promise<void> => {
 
     if (!currentTask) return { kind: "missing" as const };
 
-    if (currentTask.recurrence) {
+    if (currentTask.repeatIntervalMinutes !== null) {
       if (
         !expectedNextOccurrenceAt
         || !currentTask.nextOccurrenceAt
@@ -928,7 +928,7 @@ router.post("/tasks/:id/complete", async (req, res): Promise<void> => {
 
       const nextOccurrenceAt = nextOccurrenceAfter(
         currentTask.nextOccurrenceAt,
-        currentTask.recurrence,
+        currentTask.repeatIntervalMinutes,
         new Date(),
       );
       const [advancedTask] = await tx
