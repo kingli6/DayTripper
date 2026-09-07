@@ -1400,7 +1400,10 @@ function Today() {
     [date, dayLogActivities],
   );
   const completedActivities = useMemo(
-    () => dayLogActivities.filter((activity) => isOnLocalDate(activity.completedAt, date)),
+    () => dayLogActivities.filter((activity) => (
+      activity.completed === true
+      && isOnLocalDate(activity.completedAt, date)
+    )),
     [date, dayLogActivities],
   );
   const completedTasks = useMemo(

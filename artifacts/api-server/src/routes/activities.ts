@@ -65,7 +65,10 @@ router.get("/activities", async (req, res): Promise<void> => {
         parsed.data.includeCompleted
           ? or(
             eq(activitiesTable.scheduledDate, parsed.data.date),
-            isNotNull(activitiesTable.completedAt),
+            and(
+              eq(activitiesTable.completed, true),
+              isNotNull(activitiesTable.completedAt),
+            ),
           )
           : eq(activitiesTable.scheduledDate, parsed.data.date),
       ),
