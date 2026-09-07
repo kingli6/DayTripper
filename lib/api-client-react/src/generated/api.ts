@@ -60,6 +60,8 @@ import type {
   TaskRecommendationInput,
   TaskRecommendationResponse,
   TaskScheduleInput,
+  TaskTriageInput,
+  TaskTriageResponse,
   TaskUpdate
 } from './api.schemas';
 
@@ -907,6 +909,78 @@ export const useRecommendTasks = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getRecommendTasksMutationOptions(options));
+    }
+
+export const getTriageTasksUrl = () => {
+
+
+
+
+  return `/api/tasks/triage`
+}
+
+/**
+ * Uses Gemini to classify each supplied line, preserving ambiguous or non-actionable items as unsorted for human review.
+ * @summary Sort an actionable list into the priority matrix
+ */
+export const triageTasks = async (taskTriageInput: TaskTriageInput, options?: Parameters<typeof customFetch>[1]): Promise<TaskTriageResponse> => {
+
+  return customFetch<TaskTriageResponse>(getTriageTasksUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taskTriageInput)
+  }
+);}
+
+
+
+
+
+export const getTriageTasksMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triageTasks>>, TError,{data: BodyType<TaskTriageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof triageTasks>>, TError,{data: BodyType<TaskTriageInput>}, TContext> => {
+
+const mutationKey = ['triageTasks'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triageTasks>>, {data: BodyType<TaskTriageInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  triageTasks(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TriageTasksMutationResult = NonNullable<Awaited<ReturnType<typeof triageTasks>>>
+    export type TriageTasksMutationBody = BodyType<TaskTriageInput>
+    export type TriageTasksMutationError = ErrorType<void>
+
+    /**
+ * @summary Sort an actionable list into the priority matrix
+ */
+export const useTriageTasks = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triageTasks>>, TError,{data: BodyType<TaskTriageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof triageTasks>>,
+        TError,
+        {data: BodyType<TaskTriageInput>},
+        TContext
+      > => {
+      return useMutation(getTriageTasksMutationOptions(options));
     }
 
 export const getDecideExecutionTaskUrl = () => {

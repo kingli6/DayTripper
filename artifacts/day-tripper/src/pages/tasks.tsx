@@ -15,13 +15,14 @@ import {
   useStopExecutionSession,
   useUpdateTask,
 } from '@workspace/api-client-react';
-import type { ExecutionDecision, ExecutionSession, Task, TaskInput, TaskScheduleInput, TaskUpdate } from '@workspace/api-client-react';
+import type { ExecutionDecision, ExecutionSession, Task, TaskInput, TaskScheduleInput, TaskTriageItem, TaskUpdate } from '@workspace/api-client-react';
 import { Archive, Check, Clock3, ListTodo, RotateCcw, Square, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useLocation } from 'wouter';
 import { z } from 'zod';
 import { AppShell } from '@/components/app-shell';
+import { TaskTriagePanel } from '@/components/task-triage-panel';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -628,6 +629,34 @@ export default function TasksPage() {
   };
   const invalidateTasks = () => queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
 
+  const addTriagedTasks = async (items: TaskTriageItem[]) => {
+    let addedCount = 0;
+    try {
+      for (const item of items) {
+        const important = item.quadrant === 'importantUrgent' || item.quadrant === 'importantNotUrgent';
+        const urgent = item.quadrant === 'importantUrgent' || item.quadrant === 'notImportantUrgent';
+        await createTask.mutateAsync({
+          data: {
+            title: item.text.trim(),
+            notes: null,
+            importance: important ? 4 : 2,
+            urgency: urgent ? 4 : 2,
+            energyRequired: 3,
+            interest: 3,
+            estimatedMinutes: 30,
+            deadline: null,
+          },
+        });
+        addedCount += 1;
+      }
+      await invalidateTasks();
+      showSuccess(`${addedCount} task${addedCount === 1 ? '' : 's'} added.`);
+    } catch (error) {
+      setNotice({ tone: 'error', text: addedCount ? `${addedCount} task${addedCount === 1 ? '' : 's'} added, but the rest could not be saved. ${errorMessage(error)}` : errorMessage(error) });
+      throw error;
+    }
+  };
+
   const create = async (values: TaskFormValues) => {
     const data: TaskInput = {
       title: values.title,
@@ -774,6 +803,7 @@ export default function TasksPage() {
             <section className="border-b border-border/60 pb-5" data-testid="section-add-task">
               <TaskForm compactCreate pending={createTask.isPending} onSubmit={(values) => void create(values)} />
             </section>
+             <TaskTriagePanel onConfirm={addTriagedTasks} />
              <section className="rounded-md border border-border/70 bg-card/55 p-3.5" data-testid="section-recommendations">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <h2 className="text-base font-semibold text-foreground">What should I work on?</h2>

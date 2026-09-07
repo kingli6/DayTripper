@@ -664,6 +664,52 @@ export interface TaskRecommendationResponse {
   source: TaskRecommendationResponseSource;
 }
 
+export interface TaskTriageInput {
+  /**
+     * @minLength 1
+     * @maxLength 6000
+     */
+  input: string;
+}
+
+export type TaskTriageItemQuadrant = typeof TaskTriageItemQuadrant[keyof typeof TaskTriageItemQuadrant];
+
+
+export const TaskTriageItemQuadrant = {
+  importantUrgent: 'importantUrgent',
+  importantNotUrgent: 'importantNotUrgent',
+  notImportantUrgent: 'notImportantUrgent',
+  notImportantNotUrgent: 'notImportantNotUrgent',
+  unsorted: 'unsorted',
+} as const;
+
+export interface TaskTriageItem {
+  /**
+     * @minLength 1
+     * @maxLength 20
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  text: string;
+  quadrant: TaskTriageItemQuadrant;
+  /**
+     * @minLength 1
+     * @maxLength 300
+     */
+  reason: string;
+}
+
+export interface TaskTriageResponse {
+  /**
+     * @minItems 1
+     * @maxItems 40
+     */
+  items: TaskTriageItem[];
+}
+
 export interface ExecutionDecision {
   /** @minimum 1 */
   taskId: number;

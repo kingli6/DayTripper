@@ -241,6 +241,31 @@ paths:
                 $ref: "#/components/schemas/TaskRecommendationResponse"
         "400":
           description: Invalid recommendation inputs
+  /tasks/triage:
+    post:
+      operationId: triageTasks
+      tags: [tasks]
+      summary: Sort an actionable list into the priority matrix
+      description: Uses Gemini to classify each supplied line, preserving ambiguous or non-actionable items as unsorted for human review.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TaskTriageInput"
+      responses:
+        "200":
+          description: Classified task list ready for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaskTriageResponse"
+        "400":
+          description: Invalid task list
+        "502":
+          description: The sorting provider returned an invalid response
+        "503":
+          description: Sorting service is unavailable
   /tasks/decision:
     post:
       operationId: decideExecutionTask
@@ -1601,6 +1626,57 @@ components:
       required:
         - recommendations
         - source
+    TaskTriageInput:
+      type: object
+      additionalProperties: false
+      properties:
+        input:
+          type: string
+          minLength: 1
+          maxLength: 6000
+      required:
+        - input
+    TaskTriageItem:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 20
+        text:
+          type: string
+          minLength: 1
+          maxLength: 200
+        quadrant:
+          type: string
+          enum:
+            - importantUrgent
+            - importantNotUrgent
+            - notImportantUrgent
+            - notImportantNotUrgent
+            - unsorted
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 300
+      required:
+        - id
+        - text
+        - quadrant
+        - reason
+    TaskTriageResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 40
+          items:
+            $ref: "#/components/schemas/TaskTriageItem"
+      required:
+        - items
     ExecutionDecision:
       type: object
       additionalProperties: false

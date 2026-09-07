@@ -21,6 +21,8 @@ import {
   ScheduleTaskBody,
   ScheduleTaskParams,
   ScheduleTaskResponse,
+  TriageTasksBody,
+  TriageTasksResponse,
   UpdateTaskBody,
   UpdateTaskParams,
   UpdateTaskResponse,
@@ -278,6 +280,118 @@ ${JSON.stringify(tasks.map((task) => ({
   }
 }
 
+type TriageSourceItem = {
+  id: string;
+  text: string;
+};
+
+function parseTriageSource(input: string): TriageSourceItem[] | null {
+  const items = input
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (items.length === 0 || items.length > 40 || items.some((text) => text.length > 200)) {
+    return null;
+  }
+
+  return items.map((text, index) => ({
+    id: `item-${index + 1}`,
+    text,
+  }));
+}
+
+async function geminiTriage(
+  items: TriageSourceItem[],
+  log: { warn: (object: unknown, message: string) => void },
+) {
+  if (!isGeminiConfigured()) return null;
+
+  const config = getGeminiConfig();
+  const prompt = `Classify a user's actionable list into an Eisenhower priority matrix. Return only JSON in this exact shape:
+{"items":[{"id":"item-1","text":"Original item text","quadrant":"importantUrgent","reason":"Short explanation."}]}
+
+Rules:
+- Return exactly one result for every supplied item ID, with no extra IDs.
+- Preserve the supplied item text exactly. Do not rewrite, combine, split, or invent items.
+- Use importantUrgent, importantNotUrgent, notImportantUrgent, or notImportantNotUrgent only when the item's importance and urgency are sufficiently clear.
+- Put vague thoughts, reflections, background information, non-actionable statements, and genuinely ambiguous items in unsorted.
+- Never invent a task from a vague thought.
+- Keep each reason short and explain the classification or why the item remains unsorted.
+
+Items:
+${JSON.stringify(items, null, 2)}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const response = await fetch(`${config.baseUrl}/models/${config.model}:generateContent?key=${encodeURIComponent(config.apiKey)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          maxOutputTokens: 8192,
+          temperature: 0.1,
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      log.warn({ status: response.status }, "Task triage provider request failed");
+      return null;
+    }
+
+    const text = extractGeminiText(await response.json());
+    if (!text) return null;
+
+    let candidate: unknown;
+    try {
+      candidate = parseGeminiJson(text);
+    } catch {
+      log.warn({}, "Task triage provider returned invalid JSON");
+      return null;
+    }
+
+    const parsed = TriageTasksResponse.safeParse(candidate);
+    if (!parsed.success) {
+      log.warn({ errors: parsed.error.flatten() }, "Task triage provider returned an invalid shape");
+      return null;
+    }
+
+    const sourceById = new Map(items.map((item) => [item.id, item]));
+    const returnedIds = new Set<string>();
+    for (const item of parsed.data.items) {
+      if (!sourceById.has(item.id) || returnedIds.has(item.id)) return null;
+      returnedIds.add(item.id);
+    }
+    if (returnedIds.size !== items.length) return null;
+
+    const result = {
+      items: items.map((source) => {
+        const classified = parsed.data.items.find((item) => item.id === source.id);
+        if (!classified) throw new Error("Task triage response omitted an input item.");
+        return {
+          id: source.id,
+          text: source.text,
+          quadrant: classified.quadrant,
+          reason: classified.reason,
+        };
+      }),
+    };
+
+    return TriageTasksResponse.parse(result);
+  } catch (error) {
+    log.warn({ err: error }, "Task triage provider request failed");
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 type ExecutionDecisionState = {
   energy: ExecutionPolicyStateLevel;
   stress: ExecutionPolicyStateLevel;
@@ -512,6 +626,36 @@ router.post("/tasks/recommend", async (req, res): Promise<void> => {
   const aiResult = await geminiRecommendations(tasks, inputs, req.log);
   res.setHeader("Cache-Control", "private, no-store");
   res.json(RecommendTasksResponse.parse(aiResult ?? fallback));
+});
+
+router.post("/tasks/triage", async (req, res): Promise<void> => {
+  const parsed = TriageTasksBody.safeParse(req.body);
+  if (!parsed.success) {
+    req.log.warn({ errors: parsed.error.flatten() }, "Invalid task triage input");
+    res.status(400).json({ error: "Please provide one actionable item per line, with no more than 40 items." });
+    return;
+  }
+
+  const items = parseTriageSource(parsed.data.input);
+  if (!items) {
+    res.status(400).json({ error: "Please provide one actionable item per line, with no more than 40 items of 200 characters each." });
+    return;
+  }
+
+  if (!isGeminiConfigured()) {
+    req.log.warn({}, "Task triage requested while Gemini is not configured");
+    res.status(503).json({ error: "Sorting is temporarily unavailable. Try again later." });
+    return;
+  }
+
+  const result = await geminiTriage(items, req.log);
+  if (!result) {
+    res.status(502).json({ error: "The list could not be sorted safely. Try again." });
+    return;
+  }
+
+  res.setHeader("Cache-Control", "private, no-store");
+  res.json(result);
 });
 
 router.post("/tasks/decision", async (req, res): Promise<void> => {

@@ -553,6 +553,38 @@ export const RecommendTasksResponse = zod.object({
 
 
 /**
+ * Uses Gemini to classify each supplied line, preserving ambiguous or non-actionable items as unsorted for human review.
+ * @summary Sort an actionable list into the priority matrix
+ */
+export const triageTasksBodyInputMax = 6000;
+
+
+
+export const TriageTasksBody = zod.object({
+  "input": zod.string().min(1).max(triageTasksBodyInputMax)
+})
+
+export const triageTasksResponseItemsItemIdMax = 20;
+
+export const triageTasksResponseItemsItemTextMax = 200;
+
+export const triageTasksResponseItemsItemReasonMax = 300;
+
+export const triageTasksResponseItemsMax = 40;
+
+
+
+export const TriageTasksResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string().min(1).max(triageTasksResponseItemsItemIdMax),
+  "text": zod.string().min(1).max(triageTasksResponseItemsItemTextMax),
+  "quadrant": zod.enum(['importantUrgent', 'importantNotUrgent', 'notImportantUrgent', 'notImportantNotUrgent', 'unsorted']),
+  "reason": zod.string().min(1).max(triageTasksResponseItemsItemReasonMax)
+})).min(1).max(triageTasksResponseItemsMax)
+})
+
+
+/**
  * Returns one bounded execution decision using deterministic policy constraints, relevant user guidance, and Gemini when available
  * @summary Decide what the user should work on next
  */
