@@ -19,6 +19,28 @@ import {
 
 const app: Express = express();
 
+const productionFrontendOrigin = "https://daytripper-hco6.onrender.com";
+const localFrontendOrigins = new Set([
+  "http://localhost:25445",
+  "http://127.0.0.1:25445",
+]);
+
+function configuredReplitOrigins(): string[] {
+  return ["REPLIT_DEV_DOMAIN", "REPLIT_DOMAINS"]
+    .flatMap((key) => (process.env[key] ?? "").split(/[,\s]+/))
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => (value.startsWith("http://") || value.startsWith("https://")
+      ? value.replace(/\/+$/, "")
+      : `https://${value}`));
+}
+
+function isAllowedCorsOrigin(origin: string): boolean {
+  return origin === productionFrontendOrigin
+    || localFrontendOrigins.has(origin)
+    || configuredReplitOrigins().includes(origin);
+}
+
 app.use(
   pinoHttp({
     logger,
@@ -40,7 +62,12 @@ app.use(
 );
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
-app.use(cors({ credentials: true, origin: true }));
+app.use(cors({
+  credentials: true,
+  origin(origin, callback) {
+    callback(null, !origin || isAllowedCorsOrigin(origin));
+  },
+}));
 
 app.use(
   clerkMiddleware((req) => ({
