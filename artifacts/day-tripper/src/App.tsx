@@ -558,22 +558,55 @@ function CompletedTaskCard({ task }: { task: Task }) {
 }
 
 function CompletedTimeline({
+  activities,
   tasks,
+  now,
+  onEditActivity,
+  onToggleActivity,
 }: {
+  activities: Activity[];
   tasks: Task[];
+  now: number;
+  onEditActivity: (activity: Activity) => void;
+  onToggleActivity: (activity: Activity) => void;
 }) {
+  const sortedActivities = useMemo(
+    () => [...activities].sort((first, second) => (
+      (second.completedAt ?? '').localeCompare(first.completedAt ?? '')
+      || first.startTime.localeCompare(second.startTime)
+      || first.id - second.id
+    )),
+    [activities],
+  );
   const sortedTasks = useMemo(
     () => [...tasks].sort((first, second) => (second.completedAt ?? '').localeCompare(first.completedAt ?? '') || first.id - second.id),
     [tasks],
   );
+  const itemCount = activities.length + tasks.length;
 
   return (
     <div data-testid="timeline-completed">
       <div className="mb-6 flex items-center gap-3">
         <span className="font-mono-ui text-[10px] uppercase tracking-[0.16em] text-muted-foreground">A record of what moved</span>
         <span className="h-px flex-1 bg-border/65" />
-        <span className="font-mono-ui text-[10px] text-muted-foreground">{tasks.length} {tasks.length === 1 ? 'item' : 'items'}</span>
+        <span className="font-mono-ui text-[10px] text-muted-foreground">{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
       </div>
+      {sortedActivities.length > 0 && (
+        <section aria-labelledby="completed-activities-title" data-testid="section-completed-timeline-activities">
+          <h3 id="completed-activities-title" className="mb-2 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">Completed activities</h3>
+          <div>
+            {sortedActivities.map((activity) => (
+              <ActivityCard
+                key={activity.id}
+                activity={activity}
+                now={now}
+                onEdit={onEditActivity}
+                onToggle={onToggleActivity}
+              />
+            ))}
+          </div>
+        </section>
+      )}
       {sortedTasks.length > 0 && (
         <section aria-labelledby="completed-items-title" data-testid="section-completed-timeline-items">
           <h3 id="completed-items-title" className="mb-2 font-mono-ui text-[10px] uppercase tracking-[0.14em] text-primary">Completed</h3>
@@ -1353,6 +1386,7 @@ function Today() {
   const taskList = useListTasks();
   const activities = list.data ?? offline.cachedActivities ?? [];
   const scheduleActivities = useMemo(() => activities.filter((activity) => !activity.completed), [activities]);
+  const completedActivities = useMemo(() => activities.filter((activity) => activity.completed), [activities]);
   const completedTasks = useMemo(
     () => (taskList.data ?? []).filter((task) => (
       task.status === 'completed'
@@ -1373,7 +1407,9 @@ function Today() {
   const hasCachedDay = offline.cachedActivities !== null;
   const timelineLoading = list.isLoading && !hasCachedDay;
   const timelineUnavailable = !list.data && !hasCachedDay && (!offline.isOnline || list.isError);
-  const activeTimelineLoading = timelineView === 'completed' ? taskList.isLoading : timelineLoading;
+  const activeTimelineLoading = timelineView === 'completed'
+    ? taskList.isLoading || timelineLoading
+    : timelineLoading;
   const activeTimelineUnavailable = timelineView === 'completed'
     ? !taskList.data && (!offline.isOnline || taskList.isError)
     : timelineUnavailable;
@@ -1394,8 +1430,8 @@ function Today() {
   }, []);
 
   const completedCount = timelineView === 'completed'
-    ? completedTasks.length
-    : activities.filter((activity) => activity.completed).length + scheduleCompletedTasks.length;
+    ? completedActivities.length + completedTasks.length
+    : completedActivities.length + scheduleCompletedTasks.length;
   const nextActivity = useMemo(() => scheduleActivities.filter((activity) => minutesFromTime(activity.startTime) >= now).sort((a, b) => a.startTime.localeCompare(b.startTime))[0], [scheduleActivities, now]);
 
   function openPlanToday() {
@@ -1584,14 +1620,20 @@ function Today() {
                    scheduleActivities.length === 0 ? <EmptyDay onAdd={openCreate} /> : <Timeline activities={scheduleActivities} now={now} onEdit={openEdit} onToggle={(activity) => void toggle(activity)} />
                   ) : taskList.isLoading ? (
                    <TimelineSkeleton />
-                  ) : completedTasks.length === 0 ? (
+                   ) : completedActivities.length === 0 && completedTasks.length === 0 ? (
                    <div className="rounded-[26px] border border-dashed border-primary/30 bg-primary/[0.045] px-6 py-14 text-center sm:px-12" data-testid="status-completed-empty">
                      <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-secondary text-primary"><Check className="size-5" strokeWidth={1.8} /></div>
                      <h2 className="mt-5 font-display text-[29px] leading-tight tracking-[-0.03em]">Nothing completed yet.</h2>
                       <p className="mx-auto mt-3 max-w-[360px] text-sm leading-6 text-muted-foreground">Completed tasks will collect here for this date.</p>
                    </div>
                  ) : (
-                     <CompletedTimeline tasks={completedTasks} />
+                      <CompletedTimeline
+                        activities={completedActivities}
+                        tasks={completedTasks}
+                        now={now}
+                        onEditActivity={openEdit}
+                        onToggleActivity={(activity) => void toggle(activity)}
+                      />
                  )}
               </section>
                 <aside className="animate-rise delay-2 space-y-4 lg:pt-1">
