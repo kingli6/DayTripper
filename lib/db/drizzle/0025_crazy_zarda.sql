@@ -1,0 +1,1 @@
+ALTER TABLE "execution_sessions" ADD COLUMN "expected_next_occurrence_at" timestamp with time zone;

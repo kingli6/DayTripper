@@ -1764,6 +1764,8 @@ components:
           type: number
           minimum: 1
           maximum: 1440
+        expectedNextOccurrenceAt:
+          type: ["string", "null"]
         endedAt:
           type: ["string", "null"]
         status:
@@ -1781,6 +1783,7 @@ components:
         - taskId
         - startedAt
         - plannedMinutes
+        - expectedNextOccurrenceAt
         - endedAt
         - status
         - firstAction

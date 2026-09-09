@@ -17,3 +17,4 @@
 - [Drizzle schema drift](drizzle-schema-drift.md) — do not force schema push when legacy journal_entries drift prompts deletion; apply only verified additive changes.
 - [Push-created database migrations](push-created-database-migrations.md) — when development schema history is empty, apply a verified new migration without replaying the full journal.
 - [OpenAPI same-shape contracts](openapi-same-shape-contracts.md) — after adding a duplicate-shaped schema, verify each operation’s generated input type so refs do not silently swap.
+- [Execution session atomicity](execution-session-atomicity.md) — serialize completion on the session row before mutating its task; recurrence CAS alone is not enough for one-off tasks.

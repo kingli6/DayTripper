@@ -14,6 +14,13 @@ export type ExecutionSessionStartResult = {
   stoppingPoint: string;
 };
 
+export function expectedNextOccurrenceAtForTask(task: {
+  repeatIntervalMinutes: number | null;
+  nextOccurrenceAt: Date | null;
+}): Date | null {
+  return task.repeatIntervalMinutes === null ? null : task.nextOccurrenceAt;
+}
+
 export function validateExecutionSessionStart(input: ExecutionSessionStartInput): ExecutionSessionStartResult {
   if (!Number.isInteger(input.taskId) || input.taskId < 1) {
     throw new TypeError("Task id must be a positive whole number.");

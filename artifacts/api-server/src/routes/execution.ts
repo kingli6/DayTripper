@@ -30,9 +30,13 @@ import { requireAuth } from "../middlewares/requireAuth";
 import {
   canStartExecutionSession,
   endExecutionSessionStatus,
+  expectedNextOccurrenceAtForTask,
   validateExecutionSessionStart,
 } from "../lib/executionSession";
 import { analyzeExecutionHistory } from "../lib/executionAnalysis";
+import {
+  completeExecutionSessionInTransaction,
+} from "../lib/executionCompletion";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -77,6 +81,7 @@ function serializeSession(session: typeof executionSessionsTable.$inferSelect) {
     startedAt: session.startedAt.toISOString(),
     plannedMinutes: session.plannedMinutes,
     endedAt: session.endedAt?.toISOString() ?? null,
+    expectedNextOccurrenceAt: session.expectedNextOccurrenceAt?.toISOString() ?? null,
     status: session.status,
     firstAction: session.firstAction,
     stoppingPoint: session.stoppingPoint,
@@ -445,7 +450,13 @@ router.post("/execution/sessions", async (req, res): Promise<void> => {
   }
 
   const [task] = await db
-    .select({ id: tasksTable.id, ownerId: tasksTable.ownerId, status: tasksTable.status })
+    .select({
+      id: tasksTable.id,
+      ownerId: tasksTable.ownerId,
+      status: tasksTable.status,
+      repeatIntervalMinutes: tasksTable.repeatIntervalMinutes,
+      nextOccurrenceAt: tasksTable.nextOccurrenceAt,
+    })
     .from(tasksTable)
     .where(and(
       eq(tasksTable.id, sessionInput.taskId),
@@ -484,6 +495,7 @@ router.post("/execution/sessions", async (req, res): Promise<void> => {
         ownerId,
         taskId: sessionInput.taskId,
         plannedMinutes: sessionInput.plannedMinutes,
+        expectedNextOccurrenceAt: expectedNextOccurrenceAtForTask(task),
         firstAction: sessionInput.firstAction,
         stoppingPoint: sessionInput.stoppingPoint,
         status: "active",
@@ -561,7 +573,29 @@ router.post("/execution/sessions/:sessionId/complete", async (req, res): Promise
     res.status(400).json({ error: "A valid execution session is required." });
     return;
   }
-  await endExecutionSession(params.data.sessionId, ownerId, "completed", res, req.log);
+  const result = await db.transaction((tx) => completeExecutionSessionInTransaction(tx, {
+    sessionId: params.data.sessionId,
+    ownerId,
+  }));
+
+  if (result.kind === "missing") {
+    res.status(404).json({ error: "Execution session not found." });
+    return;
+  }
+  if (result.kind === "ended") {
+    res.status(400).json({ error: "This execution session has already ended." });
+    return;
+  }
+  if (result.kind === "task-missing") {
+    res.status(409).json({ error: "The task is no longer available for execution." });
+    return;
+  }
+  if (result.kind === "conflict") {
+    res.status(409).json({ error: "This recurring task occurrence has already advanced. Refresh the task and try again." });
+    return;
+  }
+
+  res.json(CompleteExecutionSessionResponse.parse(serializeSession(result.session)));
 });
 
 router.post("/execution/sessions/:sessionId/stop", async (req, res): Promise<void> => {

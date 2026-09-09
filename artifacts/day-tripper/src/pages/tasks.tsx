@@ -1054,15 +1054,15 @@ export default function TasksPage() {
     try {
       if (action === 'complete') {
         await completeSession.mutateAsync({ sessionId: activeSession.id });
-        if (activeSessionTask?.repeatIntervalMinutes === null) {
-          await completeTask.mutateAsync({ id: activeSession.taskId });
-          await invalidateTasks();
-        }
       } else {
         await stopSession.mutateAsync({ sessionId: activeSession.id });
       }
       queryClient.setQueryData(getGetActiveExecutionSessionQueryKey(), undefined);
-      await queryClient.invalidateQueries({ queryKey: getGetActiveExecutionSessionQueryKey() });
+      const activeSessionRefresh = queryClient.invalidateQueries({ queryKey: getGetActiveExecutionSessionQueryKey() });
+      setRecommendationRun(null);
+      setExecutionDecision(null);
+      if (action === 'complete') await invalidateTasks();
+      await activeSessionRefresh;
       showSuccess(action === 'complete' ? 'Session completed.' : 'Session stopped.');
     } catch (error) {
       setNotice({ tone: 'error', text: errorMessage(error) });

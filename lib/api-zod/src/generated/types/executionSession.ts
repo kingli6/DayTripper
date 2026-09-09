@@ -19,6 +19,8 @@ export interface ExecutionSession {
      */
   plannedMinutes: number;
   /** @nullable */
+  expectedNextOccurrenceAt: string | null;
+  /** @nullable */
   endedAt: string | null;
   status: ExecutionSessionStatus;
   /**
