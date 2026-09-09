@@ -2,15 +2,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   getListActivitiesQueryKey,
   getListTasksQueryKey,
+  getGetExecutionStateQueryKey,
   getGetActiveExecutionSessionQueryKey,
   useArchiveTask,
   useCompleteTask,
   useCompleteExecutionSession,
   useCreateTask,
   useDecideExecutionTask,
+  useGetExecutionState,
   useGetActiveExecutionSession,
   useListTasks,
   useScheduleTask,
+  useSetExecutionState,
   useStartExecutionSession,
   useStopExecutionSession,
   useUpdateTask,
@@ -57,6 +60,11 @@ type RecommendationInputs = {
   energy: number;
 };
 
+type RecommendationDraft = {
+  availableMinutes: string;
+  energy: string;
+};
+
 type QuadrantKey = 'importantUrgent' | 'importantNotUrgent' | 'notImportantUrgent' | 'notImportantNotUrgent';
 type ActiveTaskSort = 'default' | 'lowest-time' | 'lowest-energy' | 'highest-priority' | 'lowest-mental-load';
 
@@ -85,6 +93,18 @@ function focusScore(task: Task) {
 
 function numericTaskValue(value: unknown) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function recommendationEnergyFromLevel(level: string | null | undefined) {
+  if (level === 'low') return '2';
+  if (level === 'high') return '4';
+  return '3';
+}
+
+function recommendationEnergyLevel(value: number) {
+  if (value <= 2) return 'low' as const;
+  if (value >= 4) return 'high' as const;
+  return 'normal' as const;
 }
 
 function compareTaskNumbers(first: number | null, second: number | null, direction: 'asc' | 'desc') {
@@ -417,9 +437,12 @@ function TaskForm({
         <form onSubmit={form.handleSubmit((values) => onSubmit({ ...values, title: values.title.trim(), notes: values.notes.trim() }))} className="space-y-3" data-testid="form-create-task">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
             {titleField}
-            <button type="submit" disabled={pending} data-testid="button-save-task" className="min-h-11 rounded-lg bg-primary px-5 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60">
-              {pending ? 'Adding…' : 'Add'}
-            </button>
+            <div className="flex gap-2">
+              {onCancel && <button type="button" onClick={onCancel} disabled={pending} data-testid="button-cancel-task" className="min-h-11 rounded-lg border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:border-primary/45 hover:text-foreground disabled:opacity-50">Cancel</button>}
+              <button type="submit" disabled={pending} data-testid="button-save-task" className="min-h-11 rounded-lg bg-primary px-5 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-60">
+                {pending ? 'Adding…' : 'Add'}
+              </button>
+            </div>
           </div>
           <button type="button" onClick={() => setShowDetails((open) => !open)} aria-expanded={showDetails} data-testid="button-toggle-task-details" className="text-[11px] font-semibold text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground">
             {showDetails ? 'Hide details' : 'More details'}
@@ -450,7 +473,7 @@ function TaskForm({
 
 const TASK_COMPLETION_HOLD_MS = 3000;
 
-function TaskItem({ task, now, onEdit, onComplete, onArchive, pending }: { task: Task; now: number; onEdit: () => void; onComplete: () => void; onArchive: () => void; pending: boolean }) {
+function TaskItem({ task, now, onEdit, onComplete, pending }: { task: Task; now: number; onEdit: () => void; onComplete: () => void; pending: boolean }) {
   const holdTimerRef = useRef<number | null>(null);
   const holdAnimationRef = useRef<number | null>(null);
   const [holdProgress, setHoldProgress] = useState(0);
@@ -494,8 +517,9 @@ function TaskItem({ task, now, onEdit, onComplete, onArchive, pending }: { task:
   };
 
   return (
-    <article className="group border-b border-border/65 py-3 first:border-t" data-testid={`card-task-${task.id}`}>
-      <div className="flex min-w-0 items-center gap-2.5">
+    <article className="group relative overflow-hidden border-b border-border/65 py-3 first:border-t" data-testid={`card-task-${task.id}`}>
+      <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 bg-primary/[0.09]" style={{ width: `${holdProgress}%` }} />
+      <div className="relative z-10 flex min-w-0 items-center gap-2.5">
         <button
           type="button"
           onPointerDown={(event) => { event.preventDefault(); startHold(); }}
@@ -510,7 +534,6 @@ function TaskItem({ task, now, onEdit, onComplete, onArchive, pending }: { task:
           data-testid={`button-complete-task-${task.id}`}
           className={`relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 text-transparent transition-colors disabled:opacity-40 ${isHolding ? 'border-primary bg-primary/10 text-primary' : 'border-primary/45 hover:bg-primary hover:text-primary-foreground'}`}
         >
-          <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-primary/80" style={{ width: `${holdProgress}%` }} />
           <Check className="relative size-3" strokeWidth={2.4} />
         </button>
         <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
@@ -526,9 +549,6 @@ function TaskItem({ task, now, onEdit, onComplete, onArchive, pending }: { task:
              {task.repeatIntervalMinutes !== null && <span title="Recurring task">↻ {activeRepeatIntervalLabel(task)}{missedCycles > 0 && <><span aria-hidden="true"> · </span><span className="font-semibold text-amber-700 dark:text-amber-300" title={`${missedCycles} recurrence cycle${missedCycles === 1 ? '' : 's'} missed`} data-testid={`text-missed-cycles-${task.id}`}><span aria-hidden="true">⚠</span> {missedCycles}</span></>}</span>}
           </div>
         </div>
-        <button type="button" onClick={onArchive} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-task-${task.id}`} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-40">
-          <Archive className="size-3.5" strokeWidth={1.8} />
-        </button>
       </div>
     </article>
   );
@@ -724,7 +744,7 @@ function ScheduleTaskModal({ task, recommendedDurationMinutes, pending, onSchedu
   );
 }
 
-function TaskEditModal({ task, pending, onSave, onClose }: { task: Task; pending: boolean; onSave: (values: TaskFormValues) => void; onClose: () => void }) {
+function TaskEditModal({ task, pending, onSave, onArchive, onClose }: { task: Task; pending: boolean; onSave: (values: TaskFormValues) => void; onArchive: () => void; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="edit-task-title" className="paper-grain max-h-[94dvh] w-full max-w-[620px] overflow-y-auto rounded-t-[28px] border border-border bg-background p-5 shadow-[0_24px_80px_hsl(205_32%_20%/0.2)] sm:rounded-[28px] sm:p-7" data-testid={`dialog-edit-task-${task.id}`}>
@@ -738,6 +758,32 @@ function TaskEditModal({ task, pending, onSave, onClose }: { task: Task; pending
           </button>
         </div>
         <div className="mt-7"><TaskForm task={task} pending={pending} onSubmit={onSave} onCancel={onClose} /></div>
+        <div className="mt-4 border-t border-border/60 pt-4">
+          <button type="button" onClick={onArchive} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-task-${task.id}`} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-destructive/25 px-4 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50">
+            <Archive className="size-3.5" strokeWidth={1.8} />
+            Archive task
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function TaskCreateModal({ pending, onSave, onClose }: { pending: boolean; onSave: (values: TaskFormValues) => void; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/25 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !pending) onClose(); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="create-task-title" aria-describedby="create-task-description" className="paper-grain max-h-[94dvh] w-full max-w-[620px] overflow-y-auto rounded-t-[28px] border border-border bg-background p-5 shadow-[0_24px_80px_hsl(205_32%_20%/0.2)] sm:rounded-[28px] sm:p-7" data-testid="dialog-create-task">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono-ui text-[10px] uppercase tracking-[0.18em] text-primary">Add task</p>
+            <h2 id="create-task-title" className="mt-2 font-display text-[31px] leading-none tracking-[-0.04em]">Make it easier to start.</h2>
+            <p id="create-task-description" className="mt-3 text-sm leading-6 text-muted-foreground">Capture the next concrete thing without opening the keyboard until you choose to add it.</p>
+          </div>
+          <button type="button" onClick={onClose} disabled={pending} aria-label="Close create task dialog" data-testid="button-close-create-task" className="flex size-11 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground hover:border-primary/40 hover:text-primary disabled:opacity-40">
+            <X className="size-4" strokeWidth={1.8} />
+          </button>
+        </div>
+        <div className="mt-7"><TaskForm compactCreate pending={pending} onSubmit={onSave} onCancel={onClose} /></div>
       </section>
     </div>
   );
@@ -749,6 +795,8 @@ export default function TasksPage() {
   const list = useListTasks();
   const createTask = useCreateTask();
   const decideTask = useDecideExecutionTask();
+  const executionStateQuery = useGetExecutionState({ query: { queryKey: getGetExecutionStateQueryKey(), retry: false, staleTime: 0 } });
+  const setExecutionState = useSetExecutionState();
   const activeSessionQuery = useGetActiveExecutionSession({ query: { queryKey: getGetActiveExecutionSessionQueryKey(), retry: false, staleTime: 0 } });
   const startSession = useStartExecutionSession();
   const completeSession = useCompleteExecutionSession();
@@ -758,13 +806,27 @@ export default function TasksPage() {
   const completeTask = useCompleteTask();
   const archiveTask = useArchiveTask();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [creatingTask, setCreatingTask] = useState(false);
   const [schedulingTask, setSchedulingTask] = useState<{ task: Task; durationMinutes?: number } | null>(null);
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null);
-  const [recommendationInputs, setRecommendationInputs] = useState<RecommendationInputs>({ availableMinutes: 60, energy: 3 });
+  const [recommendationInputs, setRecommendationInputs] = useState<RecommendationDraft>({ availableMinutes: '60', energy: '3' });
+  const [recommendationError, setRecommendationError] = useState('');
   const [recommendationRun, setRecommendationRun] = useState<RecommendationInputs | null>(null);
   const [executionDecision, setExecutionDecision] = useState<ExecutionDecision | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [activeTaskSort, setActiveTaskSort] = useState<ActiveTaskSort>('default');
+  const recommendationInputsInitialized = useRef(false);
+
+  useEffect(() => {
+    if (recommendationInputsInitialized.current || executionStateQuery.isPending) return;
+    const savedMinutes = executionStateQuery.data?.availableMinutes;
+    const availableMinutes = typeof savedMinutes === 'number' && Number.isInteger(savedMinutes) && savedMinutes > 0 ? savedMinutes : 60;
+    recommendationInputsInitialized.current = true;
+    setRecommendationInputs({
+      availableMinutes: `${availableMinutes}`,
+      energy: recommendationEnergyFromLevel(executionStateQuery.data?.energy),
+    });
+  }, [executionStateQuery.data?.availableMinutes, executionStateQuery.data?.energy, executionStateQuery.isPending]);
 
   const tasks = useMemo(() => [...(list.data ?? [])].filter((task) => task.status !== 'archived').sort((a, b) => focusScore(b) - focusScore(a) || a.id - b.id), [list.data]);
   const activeTasks = tasks.filter((task) => (
@@ -839,6 +901,12 @@ export default function TasksPage() {
   const decisionTask = decision ? activeTasks.find((task) => task.id === decision.taskId) : undefined;
   const activeSession = activeSessionQuery.data;
   const activeSessionTask = activeSession ? tasks.find((task) => task.id === activeSession.taskId) : undefined;
+  useEffect(() => {
+    if ((!recommendationRun && !executionDecision) || decisionTask) return;
+    setRecommendationRun(null);
+    setExecutionDecision(null);
+  }, [decisionTask, executionDecision, recommendationRun]);
+
   const showSuccess = (text: string) => {
     setNotice({ tone: 'success', text });
     window.setTimeout(() => setNotice(null), 3200);
@@ -891,6 +959,7 @@ export default function TasksPage() {
     try {
       await createTask.mutateAsync({ data });
       await invalidateTasks();
+      setCreatingTask(false);
       showSuccess('Task added.');
     } catch (error) {
       setNotice({ tone: 'error', text: errorMessage(error) });
@@ -949,6 +1018,7 @@ export default function TasksPage() {
     try {
       await archiveTask.mutateAsync({ id: task.id });
       await invalidateTasks();
+      setEditingTask(null);
       showSuccess('Task archived.');
     } catch (error) {
       setNotice({ tone: 'error', text: errorMessage(error) });
@@ -999,11 +1069,43 @@ export default function TasksPage() {
     }
   };
 
+  const parseRecommendationInputs = (): RecommendationInputs | null => {
+    const availableMinutes = Number(recommendationInputs.availableMinutes);
+    const energy = Number(recommendationInputs.energy);
+    if (!/^\d+$/.test(recommendationInputs.availableMinutes) || !Number.isInteger(availableMinutes) || availableMinutes < 1 || availableMinutes > 1440) {
+      setRecommendationError('Available time must be a whole number from 1 to 1,440 minutes.');
+      return null;
+    }
+    if (!/^\d+$/.test(recommendationInputs.energy) || !Number.isInteger(energy) || energy < 1 || energy > 5) {
+      setRecommendationError('Energy must be a whole number from 1 to 5.');
+      return null;
+    }
+    setRecommendationError('');
+    return { availableMinutes, energy };
+  };
+
+  const resetRecommendations = () => {
+    setRecommendationRun(null);
+    setExecutionDecision(null);
+    setRecommendationError('');
+  };
+
   const runRecommendations = async () => {
-    if (!activeTasks.length) return;
-    const inputs = { ...recommendationInputs };
+    const inputs = parseRecommendationInputs();
+    if (!inputs || !activeTasks.length) return;
     setRecommendationRun(inputs);
     setExecutionDecision(null);
+
+    try {
+      await setExecutionState.mutateAsync({
+        data: {
+          availableMinutes: inputs.availableMinutes,
+          energy: recommendationEnergyLevel(inputs.energy),
+        },
+      });
+    } catch (error) {
+      setNotice({ tone: 'error', text: `Recommendation ran, but the current state could not be saved. ${errorMessage(error)}` });
+    }
 
     try {
       const response = await decideTask.mutateAsync({
@@ -1030,25 +1132,33 @@ export default function TasksPage() {
             <Link href="/today" data-testid="link-tasks-back-today" className="hidden items-center rounded-full border border-border bg-card px-3 py-2 text-[11px] font-semibold text-muted-foreground hover:border-primary/45 hover:text-primary sm:inline-flex">Today</Link>
           </header>
            <div className="mt-4 max-w-[920px] space-y-4">
-            <section className="border-b border-border/60 pb-5" data-testid="section-add-task">
-              <TaskForm compactCreate pending={createTask.isPending} onSubmit={(values) => void create(values)} />
-            </section>
+             <section className="border-b border-border/60 pb-5" data-testid="section-add-task">
+               <button type="button" onClick={() => setCreatingTask(true)} data-testid="button-open-create-task" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2 text-xs font-bold text-primary-foreground transition-colors hover:bg-primary/90">
+                 Add task
+               </button>
+             </section>
              <TaskTriagePanel onConfirm={addTriagedTasks} />
-             <section className="rounded-md border border-border/70 bg-card/55 p-3.5" data-testid="section-recommendations">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <h2 className="text-base font-semibold text-foreground">What should I work on?</h2>
-                <div className="grid grid-cols-2 gap-2 sm:w-[220px]">
-                  <label className="text-[10px] font-semibold text-muted-foreground">
-                    <span className="mb-1 block">Available</span>
-                    <input type="number" min={1} max={1440} value={recommendationInputs.availableMinutes} onChange={(event) => setRecommendationInputs((current) => ({ ...current, availableMinutes: Math.max(1, Number(event.target.value) || 1) }))} data-testid="input-recommendation-minutes" className="h-9 w-full rounded-lg border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                  </label>
-                  <label className="text-[10px] font-semibold text-muted-foreground">
-                    <span className="mb-1 block">Energy</span>
-                    <input type="number" min={1} max={5} value={recommendationInputs.energy} onChange={(event) => setRecommendationInputs((current) => ({ ...current, energy: Math.min(5, Math.max(1, Number(event.target.value) || 1)) }))} data-testid="input-recommendation-energy" className="h-9 w-full rounded-lg border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
-                  </label>
-                </div>
-              </div>
-               <button type="button" onClick={() => void runRecommendations()} disabled={!activeTasks.length || decideTask.isPending || Boolean(activeSession)} data-testid="button-recommend-tasks" className="mt-3 min-h-10 w-full rounded-lg bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">{decideTask.isPending ? 'Choosing one next step…' : 'WHAT SHOULD I WORK ON?'}</button>
+              <section className="rounded-md border border-border/70 bg-card/55 p-3.5" data-testid="section-recommendations">
+               <form onSubmit={(event) => { event.preventDefault(); void runRecommendations(); }}>
+                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                   <h2 className="text-base font-semibold text-foreground">What should I work on?</h2>
+                   <div className="grid grid-cols-2 gap-2 sm:w-[220px]">
+                     <label className="text-[10px] font-semibold text-muted-foreground">
+                       <span className="mb-1 block">Available</span>
+                       <input type="number" min={1} max={1440} step={1} inputMode="numeric" value={recommendationInputs.availableMinutes} onChange={(event) => { setRecommendationError(''); setRecommendationInputs((current) => ({ ...current, availableMinutes: event.target.value })); }} data-testid="input-recommendation-minutes" className="h-9 w-full rounded-lg border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                     </label>
+                     <label className="text-[10px] font-semibold text-muted-foreground">
+                       <span className="mb-1 block">Energy</span>
+                       <input type="number" min={1} max={5} step={1} inputMode="numeric" value={recommendationInputs.energy} onChange={(event) => { setRecommendationError(''); setRecommendationInputs((current) => ({ ...current, energy: event.target.value })); }} data-testid="input-recommendation-energy" className="h-9 w-full rounded-lg border border-input bg-background/70 px-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
+                     </label>
+                   </div>
+                 </div>
+                 {recommendationError && <p className="mt-3 rounded-lg bg-destructive/[0.07] px-3 py-2.5 text-[11px] leading-5 text-destructive" role="alert" data-testid="status-recommendation-error">{recommendationError}</p>}
+                 <div className="mt-3 flex gap-2">
+                   <button type="submit" disabled={!activeTasks.length || decideTask.isPending || setExecutionState.isPending || Boolean(activeSession)} data-testid="button-recommend-tasks" className="min-h-10 min-w-0 flex-1 rounded-lg bg-primary px-4 py-2 text-xs font-bold tracking-[0.04em] text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-45">{decideTask.isPending ? 'Choosing one next step…' : 'WHAT SHOULD I WORK ON?'}</button>
+                   <button type="button" onClick={resetRecommendations} disabled={!recommendationRun && !executionDecision} data-testid="button-reset-recommendations" className="min-h-10 rounded-lg border border-border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:border-primary/45 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45">Reset</button>
+                 </div>
+               </form>
                {activeSession ? (
                  <div className="mt-3">
                    <ExecutionSessionPanel session={activeSession} task={activeSessionTask} pending={sessionPending} onComplete={() => void endSession('complete')} onStop={() => void endSession('stop')} />
@@ -1096,7 +1206,7 @@ export default function TasksPage() {
                  </div>
                 {activeTasks.length === 0 ? (
                   <div className="border-y border-dashed border-border/70 px-1 py-5 text-xs text-muted-foreground" data-testid="status-tasks-empty">No active tasks.</div>
-                  ) : <div>{activeTasksForList.map((task) => <TaskItem key={task.id} task={task} now={now} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} onArchive={() => void archive(task)} />)}</div>}
+                   ) : <div>{activeTasksForList.map((task) => <TaskItem key={task.id} task={task} now={now} pending={pending} onEdit={() => setEditingTask(task)} onComplete={() => void complete(task)} />)}</div>}
               </section>
                <section className="border-t border-border/60 pt-4" data-testid="section-eisenhower">
                 <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-foreground">Priority matrix</h2><span className="text-[10px] text-muted-foreground">Importance + urgency</span></div>
@@ -1123,14 +1233,15 @@ export default function TasksPage() {
                    {coolingDownTasks.map((task) => <CoolingDownTaskRow key={task.id} task={task} now={now} onEdit={() => setEditingTask(task)} />)}
                  </div>
                </section>}
-              {completedTasks.length > 0 && <section className="border-t border-border/60 pt-5" data-testid="section-completed-tasks"><div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-semibold text-muted-foreground">Completed</h2><span className="text-[10px] text-muted-foreground">{completedTasks.length}</span></div><div>{completedTasks.map((task) => <div key={task.id} className="flex items-center gap-2.5 border-b border-border/55 py-2.5 last:border-0" data-testid={`row-completed-task-${task.id}`}><button type="button" onClick={() => void restore(task)} disabled={pending} aria-label={`Restore ${task.title}`} data-testid={`button-restore-task-${task.id}`} className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-40"><Check className="size-3" /></button><p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{task.title}</p><button type="button" onClick={() => void archive(task)} disabled={pending} aria-label={`Archive ${task.title}`} title="Archive task" data-testid={`button-archive-completed-task-${task.id}`} className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"><Archive className="size-3.5" /></button></div>)}</div></section>}
+               {completedTasks.length > 0 && <section className="border-t border-border/60 pt-5" data-testid="section-completed-tasks"><div className="mb-2 flex items-center justify-between"><h2 className="text-sm font-semibold text-muted-foreground">Completed</h2><span className="text-[10px] text-muted-foreground">{completedTasks.length}</span></div><div>{completedTasks.map((task) => <div key={task.id} className="flex items-center gap-2.5 border-b border-border/55 py-2.5 last:border-0" data-testid={`row-completed-task-${task.id}`}><button type="button" onClick={() => void restore(task)} disabled={pending} aria-label={`Restore ${task.title}`} data-testid={`button-restore-task-${task.id}`} className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-40"><Check className="size-3" /></button><button type="button" onClick={() => setEditingTask(task)} aria-label={`Edit ${task.title}`} data-testid={`button-edit-completed-task-${task.id}`} className="min-w-0 flex-1 truncate text-left text-xs text-muted-foreground hover:text-primary">{task.title}</button></div>)}</div></section>}
             </>
           )}
           </div>
         </main>
       </AppShell>
       {notice && <div className={`fixed bottom-5 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-[520px] -translate-x-1/2 items-center gap-3 rounded-2xl border bg-card px-4 py-3 shadow-[0_18px_50px_hsl(205_32%_20%/0.18)] ${notice.tone === 'error' ? 'border-destructive/25' : 'border-primary/25'}`} role="status" data-testid="status-tasks-notice"><span className={`flex size-7 shrink-0 items-center justify-center rounded-full ${notice.tone === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>{notice.tone === 'error' ? <X className="size-3.5" /> : <Check className="size-3.5" />}</span><p className="min-w-0 flex-1 text-xs font-semibold text-foreground">{notice.text}</p><button type="button" onClick={() => setNotice(null)} aria-label="Dismiss task message" data-testid="button-dismiss-tasks-notice" className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"><X className="size-3.5" /></button></div>}
-      {editingTask && <TaskEditModal task={editingTask} pending={updateTask.isPending} onSave={(values) => void update(editingTask, values)} onClose={() => setEditingTask(null)} />}
+       {creatingTask && <TaskCreateModal pending={createTask.isPending} onSave={(values) => void create(values)} onClose={() => setCreatingTask(false)} />}
+       {editingTask && <TaskEditModal task={editingTask} pending={pending} onSave={(values) => void update(editingTask, values)} onArchive={() => void archive(editingTask)} onClose={() => setEditingTask(null)} />}
       {schedulingTask && <ScheduleTaskModal task={schedulingTask.task} recommendedDurationMinutes={schedulingTask.durationMinutes} pending={scheduleTask.isPending} onSchedule={(data) => schedule(schedulingTask.task, data)} onClose={() => setSchedulingTask(null)} />}
     </div>
   );
