@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { activityChangesTable, db, activitiesTable } from "@workspace/db";
@@ -19,12 +20,72 @@ import type {
   ReplanningRequest,
 } from "@workspace/api-zod";
 import { requireAuth } from "../middlewares/requireAuth";
-import { getGeminiConfig, isGeminiConfigured } from "../lib/ai";
+import { geminiPublicConfig, getGeminiConfig, isGeminiConfigured } from "../lib/ai";
 
 const router: IRouter = Router();
 const CATEGORY_VALUES = new Set(["work", "recovery", "managing", "social", "fun"]);
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const PLANNING_PROPOSAL_OPERATION = "planning.proposal_generation";
+
+function boundedDiagnosticText(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/([?&]key=)[^&\s]+/gi, "$1[redacted]")
+    .replace(/AIza[0-9A-Za-z_-]+/g, "[redacted]");
+  if (!normalized) return undefined;
+  return normalized.length <= 240 ? normalized : `${normalized.slice(0, 237)}...`;
+}
+
+function providerErrorDetails(payload: unknown): {
+  providerErrorCode?: number | string;
+  providerErrorMessage?: string;
+} {
+  if (!payload || typeof payload !== "object") return {};
+  const error = (payload as { error?: unknown }).error;
+  if (!error || typeof error !== "object") return {};
+
+  const code = (error as { code?: unknown }).code;
+  const message = boundedDiagnosticText((error as { message?: unknown }).message);
+
+  return {
+    ...(typeof code === "number"
+      ? { providerErrorCode: code }
+      : boundedDiagnosticText(code) ? { providerErrorCode: boundedDiagnosticText(code) } : {}),
+    ...(message ? { providerErrorMessage: message } : {}),
+  };
+}
+
+async function readProviderErrorDetails(response: Response) {
+  try {
+    return providerErrorDetails(JSON.parse(await response.text()));
+  } catch {
+    return {};
+  }
+}
+
+function providerExceptionDetails(error: unknown): {
+  errorType: string;
+  errorMessage?: string;
+} {
+  if (error instanceof Error) {
+    return {
+      errorType: error.name,
+      ...(boundedDiagnosticText(error.message)
+        ? { errorMessage: boundedDiagnosticText(error.message) }
+        : {}),
+    };
+  }
+
+  return {
+    errorType: typeof error,
+    ...(boundedDiagnosticText(String(error))
+      ? { errorMessage: boundedDiagnosticText(String(error)) }
+      : {}),
+  };
+}
 
 function toApiActivity(activity: typeof activitiesTable.$inferSelect) {
   return {
@@ -1033,10 +1094,18 @@ router.post("/planning/replan-proposals/apply", async (req, res): Promise<void> 
 });
 
 router.post("/planning/proposals", async (req, res): Promise<void> => {
+  const correlationId = req.id ?? randomUUID();
   const parsed = CreatePlanningProposalBody.safeParse(req.body);
 
   if (!parsed.success) {
-    req.log.warn({ errors: parsed.error.flatten() }, "Invalid planning request");
+    req.log.warn(
+      {
+        correlationId,
+        operation: PLANNING_PROPOSAL_OPERATION,
+        errors: parsed.error.flatten(),
+      },
+      "Invalid planning request",
+    );
     res.status(400).json({ error: "Please check the planning details." });
     return;
   }
@@ -1049,7 +1118,14 @@ router.post("/planning/proposals", async (req, res): Promise<void> => {
   }
 
   if (!isGeminiConfigured()) {
-    req.log.warn("Planning requested while Gemini is not configured");
+    req.log.warn(
+      {
+        correlationId,
+        model: geminiPublicConfig.model,
+        operation: PLANNING_PROPOSAL_OPERATION,
+      },
+      "Planning requested while Gemini is not configured",
+    );
     res.status(503).json({ error: "Planning is not available right now." });
     return;
   }
@@ -1100,7 +1176,17 @@ router.post("/planning/proposals", async (req, res): Promise<void> => {
       });
 
       if (!response.ok) {
-        req.log.error({ status: response.status }, "Planning provider request failed");
+        const errorDetails = await readProviderErrorDetails(response);
+        req.log.error(
+          {
+            correlationId,
+            status: response.status,
+            ...errorDetails,
+            model: config.model,
+            operation: PLANNING_PROPOSAL_OPERATION,
+          },
+          "Planning provider request failed",
+        );
         res.status(503).json({ error: "Planning is not available right now." });
         return;
       }
@@ -1160,7 +1246,15 @@ router.post("/planning/proposals", async (req, res): Promise<void> => {
       return;
     }
   } catch (error) {
-    req.log.error({ err: error }, "Planning provider integration failed");
+    req.log.error(
+      {
+        correlationId,
+        ...providerExceptionDetails(error),
+        model: geminiPublicConfig.model,
+        operation: PLANNING_PROPOSAL_OPERATION,
+      },
+      "Planning provider integration failed",
+    );
     res.status(503).json({ error: "Planning is not available right now." });
   }
 });
