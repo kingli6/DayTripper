@@ -1014,14 +1014,14 @@ function PlanningStudio({ date, activities, onClose, onAccepted }: { date: strin
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <div className="flex items-center justify-between gap-2">
-                  <label htmlFor="planning-current-time" className="text-xs font-semibold text-foreground">Current time</label>
-                  <button type="button" onClick={() => setCurrentTime(currentTimeValue())} data-testid="button-planning-current-time-now" className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-primary/25 px-2 py-1 text-[10px] font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Now</button>
-                </div>
+                <label htmlFor="planning-current-time" className="text-xs font-semibold text-foreground">Current time</label>
                 <input id="planning-current-time" type="time" required value={currentTime} onChange={(event) => setCurrentTime(event.target.value)} data-testid="input-planning-current-time" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
               </div>
               <div>
-                <label htmlFor="planning-open-start" className="text-xs font-semibold text-foreground">Open from</label>
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="planning-open-start" className="text-xs font-semibold text-foreground">Open from</label>
+                  <button type="button" onClick={() => setAvailableStart(currentTimeValue())} data-testid="button-planning-open-start-now" className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-primary/25 px-2 py-1 text-[10px] font-semibold text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Now</button>
+                </div>
                 <input id="planning-open-start" type="time" required value={availableStart} onChange={(event) => setAvailableStart(event.target.value)} data-testid="input-planning-open-start" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
               </div>
               <div>
