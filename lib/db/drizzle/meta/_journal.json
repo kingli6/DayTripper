@@ -176,6 +176,13 @@
       "when": 1788804384592,
       "tag": "0024_crazy_cloak",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1788948931230,
+      "tag": "0025_crazy_zarda",
+      "breakpoints": true
     }
   ]
 }

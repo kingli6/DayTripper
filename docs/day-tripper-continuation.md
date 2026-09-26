@@ -770,3 +770,44 @@ authenticated UI. The available screenshot context remains signed out.
 **Do not start:** Database changes, migration 0024, new history tables,
 recurring completion-history invention, Priority Matrix changes, or Schedule
 changes as part of this slice.
+
+## Pass 2 — Atomic execution-session completion
+
+**Status:** Implemented and locally verified on 2026-09-09.
+
+**Completed:**
+
+- Persisted the nullable recurring-occurrence anchor on execution sessions and
+  added the additive `0025_crazy_zarda` migration.
+- Start now stores `null` for one-off tasks and the task's current
+  `nextOccurrenceAt` for recurring tasks.
+- Complete now locks and validates the active owner-scoped session, applies the
+  shared task completion/recurrence CAS mutation, and completes the session in
+  one Drizzle transaction. A stale occurrence returns a conflict without
+  ending the session.
+- Kept the existing public Task completion API and recurrence behavior intact by
+  routing it through the shared mutation helper.
+- Removed the client-side two-request Complete sequence. The Tasks UI now calls
+  only the atomic session Complete operation, immediately clears the active
+  session display, refreshes the task list, and clears recommendation state.
+- Stop remains session-only and now also clears recommendation/execution-decision
+  state after success; it does not mutate the Task.
+- Regenerated the OpenAPI-derived client/Zod contracts for the persisted session
+  field.
+- Added focused completion-rule and session-anchor tests.
+
+**Verified:** OpenAPI codegen, API typecheck/build, 37 API tests, generated
+migration, development column and migration-ledger inspection, clean API/web
+workflow restarts, signed-out root preview, browser logs without new
+application errors, and `git diff --check`.
+
+**Not yet verified:** Authenticated browser click-through for Start → Complete,
+recurring occurrence advancement, stale-occurrence conflict, and Stop remains
+unavailable because the current preview session is signed out. The existing web
+typecheck still reports two unrelated missing Radix package declarations in
+`components/ui/alert-dialog.tsx` and `components/ui/dialog.tsx`; the web
+production build passes.
+
+**Do not start:** Any other Tasks redesign, recurrence model change, Day Log
+change, new execution analytics, or changes to countdown expiry behavior as
+part of this pass.

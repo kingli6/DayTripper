@@ -42,6 +42,7 @@ export const executionSessionsTable = pgTable("execution_sessions", {
   taskId: integer("task_id").notNull(),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   plannedMinutes: integer("planned_minutes").notNull(),
+  expectedNextOccurrenceAt: timestamp("expected_next_occurrence_at", { withTimezone: true }),
   endedAt: timestamp("ended_at", { withTimezone: true }),
   status: text("status").notNull().default("active"),
   firstAction: text("first_action").notNull(),

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canStartExecutionSession,
   endExecutionSessionStatus,
+  expectedNextOccurrenceAtForTask,
   remainingExecutionSessionSeconds,
   validateExecutionSessionStart,
 } from "./executionSession.ts";
@@ -21,6 +22,18 @@ test("valid execution session input is trimmed and preserved", () => {
       firstAction: "Test appointment creation.",
       stoppingPoint: "Confirm whether it works.",
     },
+  );
+});
+
+test("execution sessions anchor recurring tasks but not one-off tasks", () => {
+  const occurrence = new Date("2026-09-09T10:00:00.000Z");
+  assert.equal(
+    expectedNextOccurrenceAtForTask({ repeatIntervalMinutes: null, nextOccurrenceAt: null }),
+    null,
+  );
+  assert.equal(
+    expectedNextOccurrenceAtForTask({ repeatIntervalMinutes: 60, nextOccurrenceAt: occurrence }),
+    occurrence,
   );
 });
 

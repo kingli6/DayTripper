@@ -42,6 +42,7 @@ import {
   normalizeRepeatInterval,
   sameRepeatInterval,
 } from "../lib/taskRecurrence";
+import { completeTaskInTransaction } from "../lib/taskCompletion";
 
 const router: IRouter = Router();
 router.use(requireAuth);
@@ -904,63 +905,11 @@ router.post("/tasks/:id/complete", async (req, res): Promise<void> => {
     return;
   }
 
-  const result = await db.transaction(async (tx) => {
-    const [currentTask] = await tx
-      .select()
-      .from(tasksTable)
-      .where(and(
-        eq(tasksTable.id, params.data.id),
-        eq(tasksTable.ownerId, res.locals.userId as string),
-        ne(tasksTable.status, "archived"),
-      ))
-      .limit(1);
-
-    if (!currentTask) return { kind: "missing" as const };
-
-    if (currentTask.repeatIntervalMinutes !== null) {
-      if (
-        !expectedNextOccurrenceAt
-        || !currentTask.nextOccurrenceAt
-        || currentTask.nextOccurrenceAt.getTime() !== expectedNextOccurrenceAt.getTime()
-      ) {
-        return { kind: "conflict" as const };
-      }
-
-      const nextOccurrenceAt = nextOccurrenceAfter(
-        currentTask.nextOccurrenceAt,
-        currentTask.repeatIntervalMinutes,
-        new Date(),
-      );
-      const [advancedTask] = await tx
-        .update(tasksTable)
-        .set({ nextOccurrenceAt })
-        .where(and(
-          eq(tasksTable.id, params.data.id),
-          eq(tasksTable.ownerId, res.locals.userId as string),
-          ne(tasksTable.status, "archived"),
-          eq(tasksTable.nextOccurrenceAt, expectedNextOccurrenceAt),
-        ))
-        .returning();
-
-      return advancedTask
-        ? { kind: "advanced" as const, task: advancedTask }
-        : { kind: "conflict" as const };
-    }
-
-    const [completedTask] = await tx
-      .update(tasksTable)
-      .set({ status: "completed", completedAt: new Date() })
-      .where(and(
-        eq(tasksTable.id, params.data.id),
-        eq(tasksTable.ownerId, res.locals.userId as string),
-        ne(tasksTable.status, "archived"),
-      ))
-      .returning();
-
-    return completedTask
-      ? { kind: "completed" as const, task: completedTask }
-      : { kind: "missing" as const };
-  });
+  const result = await db.transaction((tx) => completeTaskInTransaction(tx, {
+    taskId: params.data.id,
+    ownerId: res.locals.userId as string,
+    expectedNextOccurrenceAt,
+  }));
 
   if (result.kind === "missing") {
     res.status(404).json({ error: "Task not found." });
