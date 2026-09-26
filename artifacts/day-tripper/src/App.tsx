@@ -1280,7 +1280,10 @@ function ActivityModal({ date, activity, onClose, onSave, onDelete, onDeleted }:
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label htmlFor="activity-start" className="text-xs font-semibold text-foreground">Starts</label>
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="activity-start" className="text-xs font-semibold text-foreground">Starts</label>
+                    <button type="button" onClick={() => setStartTime(currentTimeValue())} data-testid="button-activity-start-now" className="text-[11px] font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Now</button>
+                  </div>
                   <input id="activity-start" required type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} data-testid="input-activity-start" className="mt-2 min-h-11 w-full rounded-xl border border-input bg-card px-3 py-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15" />
                 </div>
                 <div>
